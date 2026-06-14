@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { C, glow } from "./theme.js";
 import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
+import AnimatedBackground from "./AnimatedBackground.jsx";
 import {
   BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target,
   Building2, ChevronDown, ArrowRight,
@@ -690,11 +691,13 @@ export default function Landing({ onStart }) {
   };
 
   return (
-    <div style={{ background: C.bgGradient, color: C.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative" }}>
+    <div style={{ color: C.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      <AnimatedBackground />
 
-      <ScrollProgressBar />
+      <div className="relative z-10">
+        <ScrollProgressBar />
 
-      <HeroBackground />
+        <HeroBackground />
 
       {/* ── NAVBAR ── */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-16 py-4"
@@ -1139,6 +1142,7 @@ export default function Landing({ onStart }) {
           </p>
         </div>
       </footer>
+      </div>
 
       {legalModal && <LegalModal id={legalModal} onClose={() => setLegalModal(null)} />}
       {showPourquoi && <PourquoiModal onClose={() => setShowPourquoi(false)} />}

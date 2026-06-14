@@ -56,7 +56,9 @@
       "Bash(git add *)",
       "Bash(git commit -m 'Phase 1-4 Complete: Design System Overhaul *)",
       "Bash(git commit -m 'Add comprehensive design system documentation *)",
-      "Bash(git commit -m 'Add animated background integration guide *)"
+      "Bash(git commit -m 'Add animated background integration guide *)",
+      "Bash(pkill -f \"vite\\\\|node\")",
+      "Bash(git commit -m 'Integrate AnimatedBackground into Landing page *)"
     ]
   }
 }

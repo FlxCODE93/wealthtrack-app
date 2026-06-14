@@ -3,6 +3,7 @@ import { C, glow } from "./theme.js";
 import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
 import ShaderBackground from "./ShaderBackground.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import {
   BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target,
   Building2, ChevronDown, ArrowRight,
@@ -715,6 +716,7 @@ export default function Landing({ onStart }) {
             onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
             Se connecter
           </button>
+          <ThemeToggle />
           <button onClick={onStart} className="text-sm font-semibold px-5 py-2.5 rounded-xl"
             style={btn.primary} {...primaryHover}>
             Accès gratuit

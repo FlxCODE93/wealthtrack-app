@@ -62,7 +62,8 @@
       "Bash(pkill -9 vite node)",
       "Bash(git commit -m 'Fix AnimatedBackground visibility issues *)",
       "Bash(git commit -m 'Integrate Three.js Aurora Shader Background *)",
-      "Bash(git commit -m 'Add Dark/Light Mode Toggle *)"
+      "Bash(git commit -m 'Add Dark/Light Mode Toggle *)",
+      "Bash(git commit -m 'Fix Three.js Shader Animation - WebGL Compilation Issue *)"
     ]
   }
 }

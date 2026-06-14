@@ -8,18 +8,27 @@ const ShaderBackground = () => {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-      powerPreference: "high-performance",
-    });
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setClearColor(0x0f172a, 1);
-    container.appendChild(renderer.domElement);
+    try {
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance",
+      });
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setClearColor(0x0f172a, 1);
+
+      // Ensure container is clear before appending
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      container.appendChild(renderer.domElement);
+
+      console.log("✅ Three.js renderer created successfully");
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -73,54 +82,66 @@ const ShaderBackground = () => {
 
           float f = 2.0 + fbm(p + vec2(iTime * 5.0, 0.0)) * 0.5;
 
-          for (float i = 0.0; i < 35.0; i++) {
-            v = p + cos(i * i + (iTime + p.x * 0.08) * 0.025 + i * vec2(13.0, 11.0)) * 3.5 + vec2(sin(iTime * 3.0 + i) * 0.003, cos(iTime * 3.5 - i) * 0.003);
-            float tailNoise = fbm(v + vec2(iTime * 0.5, i)) * 0.3 * (1.0 - (i / 35.0));
+          for (int i = 0; i < 35; i++) {
+            float fi = float(i);
+            v = p + cos(fi * fi + (iTime + p.x * 0.08) * 0.025 + fi * vec2(13.0, 11.0)) * 3.5 + vec2(sin(iTime * 3.0 + fi) * 0.003, cos(iTime * 3.5 - fi) * 0.003);
+            float tailNoise = fbm(v + vec2(iTime * 0.5, fi)) * 0.3 * (1.0 - (fi / 35.0));
             vec4 auroraColors = vec4(
-              0.1 + 0.3 * sin(i * 0.2 + iTime * 0.4),
-              0.3 + 0.5 * cos(i * 0.3 + iTime * 0.5),
-              0.7 + 0.3 * sin(i * 0.4 + iTime * 0.3),
+              0.1 + 0.5 * sin(fi * 0.2 + iTime * 0.4),
+              0.3 + 0.7 * cos(fi * 0.3 + iTime * 0.5),
+              0.8 + 0.3 * sin(fi * 0.4 + iTime * 0.3),
               1.0
             );
-            vec4 currentContribution = auroraColors * exp(sin(i * i + iTime * 0.8)) / length(max(v, vec2(v.x * f * 0.015, v.y * 1.5)));
-            float thinnessFactor = smoothstep(0.0, 1.0, i / 35.0) * 0.6;
+            vec4 currentContribution = auroraColors * exp(sin(fi * fi + iTime * 0.8)) / length(max(v, vec2(v.x * f * 0.015, v.y * 1.5)));
+            float thinnessFactor = smoothstep(0.0, 1.0, fi / 35.0) * 0.8;
             o += currentContribution * (1.0 + tailNoise * 0.8) * thinnessFactor;
           }
 
-          o = tanh(pow(o / 100.0, vec4(1.6)));
-          gl_FragColor = o * 1.5;
+          o = tanh(pow(o / 80.0, vec4(1.4)));
+          gl_FragColor = o * 2.0;
         }
       `,
     });
 
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+      const geometry = new THREE.PlaneGeometry(2, 2);
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
 
-    let frameId;
-    const animate = () => {
-      material.uniforms.iTime.value += 0.016;
-      renderer.render(scene, camera);
-      frameId = requestAnimationFrame(animate);
-    };
-    animate();
+      let frameId;
+      let frameCount = 0;
+      const animate = () => {
+        frameCount++;
+        if (frameCount === 1) {
+          console.log("✅ Animation loop started");
+        }
+        material.uniforms.iTime.value += 0.016;
+        renderer.render(scene, camera);
+        frameId = requestAnimationFrame(animate);
+      };
+      animate();
 
-    const handleResize = () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      material.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
-    };
-    window.addEventListener("resize", handleResize);
+      console.log("✅ Shader material compiled and mesh added");
 
-    return () => {
-      cancelAnimationFrame(frameId);
-      window.removeEventListener("resize", handleResize);
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-    };
+      const handleResize = () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        material.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
+      };
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        cancelAnimationFrame(frameId);
+        window.removeEventListener("resize", handleResize);
+        if (container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        geometry.dispose();
+        material.dispose();
+        renderer.dispose();
+      };
+    } catch (error) {
+      console.error("❌ Three.js Shader Error:", error);
+      return () => {};
+    }
   }, []);
 
   return (

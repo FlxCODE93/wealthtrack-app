@@ -1,0 +1,6830 @@
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { C, glow } from "./theme.js";
+import InfoTooltip from "./InfoTooltip.jsx";
+import Landing from "./Landing.jsx";
+import TransactionImportTab from "./TransactionImportTab.jsx";
+import Chatbot from "./Chatbot.jsx";
+import Plans   from "./Plans.jsx";
+import Crypto  from "./Crypto.jsx";
+import DeFi    from "./DeFi.jsx";
+import Tax     from "./Tax.jsx";
+import FI      from "./FI.jsx";
+import {
+  FinTechLineChart, FinTechAreaChart, FinTechBarChart,
+  FinTechPieChart, FinTechScatterChart, FinTechComposedChart,
+} from "./ChartComponents.jsx";
+import {
+  BarChart3, TrendingUp, Shield, Zap, Wallet, PiggyBank, Home,
+  User, LayoutDashboard, ListTree, Plus, Upload, Sparkles, Activity,
+  ArrowUpRight, ArrowDownRight, Search, Lock, Sun, LogOut,
+  Users, Building2, Briefcase, Check, X, RefreshCw,
+  ExternalLink, Landmark, ChevronDown, ChevronUp, CreditCard,
+  MessageCircle, Lightbulb, Bitcoin, AlertTriangle, Calculator, Flag, Info,
+  Crown, Star, FileText, ChevronRight,
+  Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
+  Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
+  Plane, Palmtree, Car, GraduationCap,
+} from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart,
+} from "recharts";
+import {
+  RATE_A, RATE_C, RATE_BTC, RATE_ETH, RATE_IMMO_APPRECIATION, RATE_DISCLAIMER,
+  SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET,
+  fv, fvMonthly, fvSeries, fvDetailedSeries, loanFromPayment, longTermGain,
+} from "./finance.js";
+import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
+
+/* ------------------------------------------------------------------ */
+/*  Persistence                                                        */
+/* ------------------------------------------------------------------ */
+function useLocalStorage(key, defaultValue) {
+  const [state, setState] = useState(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultValue;
+    } catch { return defaultValue; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+  }, [key, state]);
+  return [state, setState];
+}
+
+const CAT_COLORS = {
+  Logement: "#2f9bff", WPEA: "#22c79a", Bourse: "#f5a623", Alimentation: "#a855f7",
+  Loisirs: "#ff5a5f", "Frais pro": "#14b8a6", Assurances: "#ec4899",
+  Transport: "#eab308", Abonnements: "#8b5cf6", Épargne: "#38bdf8", Santé: "#6366f1",
+};
+
+/* ------------------------------------------------------------------ */
+/*  Multi-devise — taux de change indicatifs (mis à jour manuellement)*/
+/* ------------------------------------------------------------------ */
+const FX_RATES    = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, CAD: 0.67, JPY: 0.0062, BTC: 95000, ETH: 3200 };
+const CURRENCIES  = ["EUR", "USD", "GBP", "CHF", "CAD", "JPY", "BTC", "ETH"];
+const toEUR = (native, cur) => (native || 0) * (FX_RATES[cur] || 1);
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+const eur = (n) =>
+  new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n)) + " €";
+const pct = (n) => n.toFixed(1).replace(".", ",") + " %";
+
+// Décale un libellé "Mois AAAA" (ex: "Juil 2025") de `delta` mois (peut être négatif)
+const MOIS_ABBR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+function shiftMonthLabel(label, delta) {
+  const [moisStr, anneeStr] = label.split(" ");
+  let idx = MOIS_ABBR.indexOf(moisStr);
+  let annee = parseInt(anneeStr, 10);
+  idx += delta;
+  while (idx < 0) { idx += 12; annee -= 1; }
+  while (idx > 11) { idx -= 12; annee += 1; }
+  return `${MOIS_ABBR[idx]} ${annee}`;
+}
+
+// Garantit au moins `minMonths` points dans l'historique de patrimoine, en
+// extrapolant en arrière (taux de croissance moyen observé) si nécessaire —
+// évite que les sélecteurs "2 ans" / "3 ans" affichent toujours les mêmes
+// mois quand l'historique réel est plus court que la période demandée.
+function ensureHistoriqueDepth(historique, minMonths = 36) {
+  if (!historique || historique.length === 0) return historique || [];
+  if (historique.length >= minMonths) return historique;
+
+  const first = historique[0];
+  const last = historique[historique.length - 1];
+  const months = historique.length - 1;
+  const growth = months > 0 && first.v > 0 ? Math.pow(last.v / first.v, 1 / months) : 1;
+  const safeGrowth = isFinite(growth) && growth > 0 ? growth : 1;
+
+  const missing = minMonths - historique.length;
+  const extra = [];
+  let v = first.v;
+  let label = first.m;
+  for (let i = 0; i < missing; i++) {
+    v = v / safeGrowth;
+    label = shiftMonthLabel(label, -1);
+    extra.unshift({ m: label, v: Math.round(v) });
+  }
+  return [...extra, ...historique];
+}
+
+// Détection du type de profil à partir des transactions
+function detectProfileType(transactions) {
+  const revenues = transactions.filter((t) => t.type === "revenu");
+  if (revenues.some((t) => t.cat === "Freelance") || transactions.some((t) => t.cat === "Frais pro")) {
+    return "independant";
+  }
+  if (revenues.some((t) => /int[ée]rim/i.test(t.label))) return "interimaire";
+  return "salarie_stable";
+}
+const PROFILE_CONFIG = {
+  salarie_stable: { label: "Salarié CDI", color: "#22c79a", revenueRatio: 1.0, capacityMult: 1.0,
+    note: null },
+  interimaire:    { label: "Intérimaire / Variable", color: "#f5a623", revenueRatio: 0.85, capacityMult: 0.7,
+    note: "Revenu variable : les banques retiennent 85 % de vos revenus et réduisent la capacité de 30 %. Un apport conséquent améliorait votre dossier." },
+  independant:    { label: "Indépendant / Freelance", color: "#f5a623", revenueRatio: 0.70, capacityMult: 0.5,
+    note: "Statut indépendant : les banques retiennent 70 % des revenus déclarés et exigent 2–3 ans de bilans comptables." },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Constantes financières & simulation                               */
+/* ------------------------------------------------------------------ */
+const SIM_START_YEAR = 2026;
+
+const logFmt = (v) => {
+  const n = Math.round(Math.pow(10, v));
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + "M€";
+  if (n >= 1_000)     return (n / 1_000).toFixed(0)     + "k€";
+  return "€" + n;
+};
+
+/* Échelle Y intelligente — paliers adaptés à la plage de données ──── */
+function generateSmartYTicks(max) {
+  if (max <= 0) return [0];
+  const target = 6;
+  const raw    = max / target;
+  const mag    = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm   = raw / mag;
+  let step;
+  if      (norm <= 1)   step = 1   * mag;
+  else if (norm <= 2)   step = 2   * mag;
+  else if (norm <= 2.5) step = 2.5 * mag;
+  else if (norm <= 5)   step = 5   * mag;
+  else                  step = 10  * mag;
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.01; v += step) ticks.push(Math.round(v));
+  return ticks;
+}
+const simsYFmt = (v) => {
+  if (v >= 1_000_000) return (v / 1_000_000 % 1 === 0 ? (v / 1_000_000).toFixed(0) : (v / 1_000_000).toFixed(1)) + " M";
+  if (v >= 1_000)     return Math.round(v / 1_000) + " k";
+  return String(v);
+};
+
+/* ------------------------------------------------------------------ */
+/*  Données d'exemple (en mémoire — remplaçables par une vraie API)    */
+/* ------------------------------------------------------------------ */
+const TX = [
+  { id: 1, label: "Versement programmé", cat: "WPEA", type: "investissement", amount: -500 },
+  { id: 2, label: "Investissement Bourse", cat: "Bourse", type: "investissement", amount: -489 },
+  { id: 3, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4781 },
+  { id: 4, label: "Loyer appartement", cat: "Logement", type: "charge_fixe", amount: -900 },
+  { id: 5, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -200 },
+  { id: 6, label: "Frais professionnels", cat: "Frais pro", type: "charge_fixe", amount: -251 },
+  { id: 7, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -100 },
+  { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -381 },
+  { id: 9, label: "Loisirs & sorties", cat: "Loisirs", type: "depense_variable", amount: -269 },
+  { id: 10, label: "Transport", cat: "Transport", type: "depense_variable", amount: -187 },
+];
+
+const HISTO = [
+  { m: "Aoû 2025", rev: 4520, dep: 2250, inv:  980 },
+  { m: "Sep 2025", rev: 4781, dep: 2340, inv:  989 },
+  { m: "Oct 2025", rev: 5100, dep: 2200, inv:  989 },
+  { m: "Nov 2025", rev: 4650, dep: 2280, inv:  989 },
+  { m: "Déc 2025", rev: 3800, dep: 2900, inv:  700 },
+  { m: "Jan 2026", rev: 5500, dep: 2100, inv: 1200 },
+  { m: "Fév 2026", rev: 4781, dep: 2280, inv:  989 },
+  { m: "Mar 2026", rev: 5230, dep: 2480, inv: 1300 },
+  { m: "Avr 2026", rev: 4410, dep: 2510, inv: 1280 },
+  { m: "Mai 2026", rev: 4920, dep: 2470, inv: 1300 },
+  { m: "Jun 2026", rev: 5270, dep: 2480, inv: 1290 },
+  { m: "Jul 2026", rev: 4781, dep: 2350, inv:  989 },
+];
+
+const WHATIF = [
+  { id: "salaire", label: "Négocier une augmentation de +15% sur mon salaire", gain: 717 },
+  { id: "fumer", label: "Arrêter de fumer / vapoter", gain: 90 },
+  { id: "abos", label: "Résilier mes abonnements optionnels", gain: 45 },
+  { id: "repas", label: "Réduire les livraisons de repas de moitié", gain: 60 },
+];
+
+/* ------------------------------------------------------------------ */
+/*  Profils de test                                                    */
+/* ------------------------------------------------------------------ */
+const TEST_PROFILES = [
+  {
+    id: "prudent",
+    label: "Le Prudent",
+    description: "CDI stable, divorcée, disciplinée, faible marge budgétaire",
+    profile: { firstName: "Marie", lastName: "Dupont", age: 38, email: "marie.dupont@email.com" },
+    transactions: [
+      { id: 1, label: "Salaire CDI", cat: "Salaire", type: "revenu", amount: 2500 },
+      { id: 2, label: "Loyer", cat: "Logement", type: "charge_fixe", amount: -900 },
+      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -80 },
+      { id: 4, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -170 },
+      { id: 5, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -60 },
+      { id: 6, label: "Cantine enfant", cat: "Alimentation", type: "depense_variable", amount: -40 },
+      { id: 7, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -300 },
+      { id: 8, label: "Pharmacie", cat: "Santé", type: "depense_variable", amount: -50 },
+      { id: 9, label: "Essence", cat: "Transport", type: "depense_variable", amount: -120 },
+      { id: 10, label: "Loisirs", cat: "Loisirs", type: "depense_variable", amount: -60 },
+      { id: 11, label: "Livret A", cat: "Épargne", type: "investissement", amount: -200 },
+    ],
+    histo: [
+      { m: "Aoû 2023", rev: 2300, dep: 1598, inv: 150 },
+      { m: "Sep 2023", rev: 2308, dep: 1613, inv: 150 },
+      { m: "Oct 2023", rev: 2316, dep: 1610, inv: 150 },
+      { m: "Nov 2023", rev: 2323, dep: 1630, inv: 150 },
+      { m: "Déc 2023", rev: 2931, dep: 2135, inv: 150 },
+      { m: "Jan 2024", rev: 2339, dep: 1682, inv: 150 },
+      { m: "Fév 2024", rev: 2347, dep: 1665, inv: 150 },
+      { m: "Mar 2024", rev: 2355, dep: 1687, inv: 150 },
+      { m: "Avr 2024", rev: 2363, dep: 1683, inv: 150 },
+      { m: "Mai 2024", rev: 2370, dep: 1670, inv: 150 },
+      { m: "Jun 2024", rev: 2378, dep: 1664, inv: 150 },
+      { m: "Jul 2024", rev: 2386, dep: 1668, inv: 150 },
+      { m: "Aoû 2024", rev: 2394, dep: 1706, inv: 150 },
+      { m: "Sep 2024", rev: 2402, dep: 1705, inv: 150 },
+      { m: "Oct 2024", rev: 2410, dep: 1732, inv: 150 },
+      { m: "Nov 2024", rev: 2417, dep: 1729, inv: 150 },
+      { m: "Déc 2024", rev: 3025, dep: 2208, inv: 150 },
+      { m: "Jan 2025", rev: 2433, dep: 1728, inv: 200 },
+      { m: "Fév 2025", rev: 2441, dep: 1754, inv: 200 },
+      { m: "Mar 2025", rev: 2449, dep: 1772, inv: 200 },
+      { m: "Avr 2025", rev: 2457, dep: 1752, inv: 200 },
+      { m: "Mai 2025", rev: 2464, dep: 1762, inv: 200 },
+      { m: "Jun 2025", rev: 2472, dep: 1750, inv: 200 },
+      { m: "Jul 2025", rev: 2480, dep: 1781, inv: 200 },
+      { m: "Aoû 2025", rev: 2500, dep: 1780, inv: 200 },
+      { m: "Sep 2025", rev: 2500, dep: 1750, inv: 200 },
+      { m: "Oct 2025", rev: 2500, dep: 1800, inv: 200 },
+      { m: "Nov 2025", rev: 2500, dep: 1820, inv: 200 },
+      { m: "Déc 2025", rev: 3100, dep: 2280, inv: 200 },
+      { m: "Jan 2026", rev: 2500, dep: 1620, inv: 200 },
+      { m: "Fév 2026", rev: 2500, dep: 1730, inv: 200 },
+      { m: "Mar 2026", rev: 2500, dep: 1760, inv: 200 },
+      { m: "Avr 2026", rev: 2500, dep: 1810, inv: 200 },
+      { m: "Mai 2026", rev: 2500, dep: 1740, inv: 200 },
+      { m: "Jun 2026", rev: 2500, dep: 1790, inv: 200 },
+      { m: "Jul 2026", rev: 2500, dep: 2100, inv: 200 },
+    ],
+    simParams: { monthly: 200, initial: 10000, price: 150000, horizon: 30 },
+    patrimoine: {
+      actifs: [
+        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 12000 }] },
+        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF PEA", value: 18000 }] },
+        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [{ label: "Résidence principale", value: 150000 }] },
+        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
+      ],
+      passifs: [
+        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [{ label: "Prêt résidence principale", value: 95000 }] },
+        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [] },
+      ],
+      historique: [
+        { m: "Juil 2023", v: 45000 }, { m: "Aoû 2023", v: 45677 }, { m: "Sep 2023", v: 46833 },
+        { m: "Oct 2023", v: 47794 }, { m: "Nov 2023", v: 48868 }, { m: "Déc 2023", v: 49570 },
+        { m: "Jan 2024", v: 50776 }, { m: "Fév 2024", v: 51773 }, { m: "Mar 2024", v: 53030 },
+        { m: "Avr 2024", v: 53955 }, { m: "Mai 2024", v: 55219 }, { m: "Jun 2024", v: 56345 },
+        { m: "Juil 2024", v: 57770 }, { m: "Aoû 2024", v: 59251 }, { m: "Sep 2024", v: 60572 },
+        { m: "Oct 2024", v: 61620 }, { m: "Nov 2024", v: 63046 }, { m: "Déc 2024", v: 64522 },
+        { m: "Jan 2025", v: 65780 }, { m: "Fév 2025", v: 67233 }, { m: "Mar 2025", v: 68887 },
+        { m: "Avr 2025", v: 70253 }, { m: "Mai 2025", v: 72062 }, { m: "Jun 2025", v: 73312 },
+        { m: "Juil 2025", v: 75000 }, { m: "Aoû 2025", v: 76000 }, { m: "Sep 2025", v: 76800 },
+        { m: "Oct 2025", v: 77500 }, { m: "Nov 2025", v: 78200 }, { m: "Déc 2025", v: 79000 },
+        { m: "Jan 2026", v: 79800 }, { m: "Fév 2026", v: 80500 }, { m: "Mar 2026", v: 81200 },
+        { m: "Avr 2026", v: 82000 }, { m: "Mai 2026", v: 83500 }, { m: "Jun 2026", v: 85000 },
+      ],
+    },
+  },
+  {
+    id: "interimaire",
+    label: "L'Intérimaire",
+    description: "Intérimaire célibataire, dépenses impulsives, quasi zéro épargne",
+    profile: { firstName: "Lucas", lastName: "Moreau", age: 26, email: "lucas.moreau@email.com" },
+    transactions: [
+      { id: 1, label: "Mission intérim", cat: "Salaire", type: "revenu", amount: 2800 },
+      { id: 2, label: "Loyer coloc", cat: "Logement", type: "charge_fixe", amount: -600 },
+      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -80 },
+      { id: 4, label: "Téléphone", cat: "Abonnements", type: "charge_fixe", amount: -50 },
+      { id: 5, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -300 },
+      { id: 6, label: "Restos & apéros", cat: "Alimentation", type: "depense_variable", amount: -300 },
+      { id: 7, label: "Bars & clubs", cat: "Loisirs", type: "depense_variable", amount: -900 },
+      { id: 8, label: "Jeux & loisirs", cat: "Loisirs", type: "depense_variable", amount: -80 },
+      { id: 9, label: "Essence", cat: "Transport", type: "depense_variable", amount: -100 },
+      { id: 10, label: "Livret A", cat: "Épargne", type: "investissement", amount: -50 },
+    ],
+    histo: [
+      { m: "Aoû 2023", rev: 2587, dep: 2358, inv: 0 },
+      { m: "Sep 2023", rev: 2583, dep: 2340, inv: 0 },
+      { m: "Oct 2023", rev: 2600, dep: 2405, inv: 0 },
+      { m: "Nov 2023", rev: 1400, dep: 1254, inv: 0 },
+      { m: "Déc 2023", rev: 2537, dep: 2902, inv: 0 },
+      { m: "Jan 2024", rev: 2517, dep: 2506, inv: 0 },
+      { m: "Fév 2024", rev: 2584, dep: 2323, inv: 0 },
+      { m: "Mar 2024", rev: 2664, dep: 2413, inv: 0 },
+      { m: "Avr 2024", rev: 0, dep: 1255, inv: 0 },
+      { m: "Mai 2024", rev: 2541, dep: 2372, inv: 0 },
+      { m: "Jun 2024", rev: 2578, dep: 2394, inv: 0 },
+      { m: "Jul 2024", rev: 2571, dep: 2603, inv: 0 },
+      { m: "Aoû 2024", rev: 2640, dep: 2554, inv: 50 },
+      { m: "Sep 2024", rev: 1400, dep: 1292, inv: 0 },
+      { m: "Oct 2024", rev: 2588, dep: 2483, inv: 50 },
+      { m: "Nov 2024", rev: 2537, dep: 2578, inv: 50 },
+      { m: "Déc 2024", rev: 2555, dep: 3086, inv: 50 },
+      { m: "Jan 2025", rev: 2572, dep: 2577, inv: 50 },
+      { m: "Fév 2025", rev: 0, dep: 1309, inv: 0 },
+      { m: "Mar 2025", rev: 2591, dep: 2724, inv: 50 },
+      { m: "Avr 2025", rev: 2559, dep: 2702, inv: 50 },
+      { m: "Mai 2025", rev: 2646, dep: 2689, inv: 50 },
+      { m: "Jun 2025", rev: 0, dep: 1281, inv: 0 },
+      { m: "Jul 2025", rev: 2608, dep: 2595, inv: 50 },
+      { m: "Aoû 2025", rev: 2800, dep: 2750, inv:  50 },
+      { m: "Sep 2025", rev: 1400, dep: 2200, inv:   0 },
+      { m: "Oct 2025", rev: 2800, dep: 2580, inv:  50 },
+      { m: "Nov 2025", rev: 2800, dep: 2650, inv:   0 },
+      { m: "Déc 2025", rev: 2800, dep: 3300, inv:   0 },
+      { m: "Jan 2026", rev:    0, dep: 1350, inv:   0 },
+      { m: "Fév 2026", rev: 2800, dep: 2450, inv:  50 },
+      { m: "Mar 2026", rev: 2800, dep: 2420, inv:  50 },
+      { m: "Avr 2026", rev: 2800, dep: 2750, inv:   0 },
+      { m: "Mai 2026", rev: 1400, dep: 2100, inv:   0 },
+      { m: "Jun 2026", rev: 2800, dep: 2620, inv:  50 },
+      { m: "Jul 2026", rev: 2800, dep: 3150, inv:   0 },
+    ],
+    simParams: { monthly: 50, initial: 2000, price: 150000, horizon: 20 },
+    patrimoine: {
+      actifs: [
+        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 6000 }, { label: "Compte chèques", value: 2000 }] },
+        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "Crypto", value: 2000 }] },
+        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [] },
+        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
+      ],
+      passifs: [
+        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [] },
+        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [{ label: "Découvert bancaire", value: 2000 }] },
+      ],
+      historique: [
+        { m: "Juil 2023", v: 4000 }, { m: "Aoû 2023", v: 3693 }, { m: "Sep 2023", v: 5005 },
+        { m: "Oct 2023", v: 4901 }, { m: "Nov 2023", v: 3986 }, { m: "Déc 2023", v: 5207 },
+        { m: "Jan 2024", v: 5236 }, { m: "Fév 2024", v: 3885 }, { m: "Mar 2024", v: 5177 },
+        { m: "Avr 2024", v: 5289 }, { m: "Mai 2024", v: 4392 }, { m: "Jun 2024", v: 6019 },
+        { m: "Juil 2024", v: 5326 }, { m: "Aoû 2024", v: 5466 }, { m: "Sep 2024", v: 6432 },
+        { m: "Oct 2024", v: 5076 }, { m: "Nov 2024", v: 5627 }, { m: "Déc 2024", v: 6436 },
+        { m: "Jan 2025", v: 5557 }, { m: "Fév 2025", v: 6824 }, { m: "Mar 2025", v: 6850 },
+        { m: "Avr 2025", v: 7317 }, { m: "Mai 2025", v: 6306 }, { m: "Jun 2025", v: 6663 },
+        { m: "Juil 2025", v: 7200 }, { m: "Aoû 2025", v: 6800 }, { m: "Sep 2025", v: 7500 },
+        { m: "Oct 2025", v: 6200 }, { m: "Nov 2025", v: 7800 }, { m: "Déc 2025", v: 6500 },
+        { m: "Jan 2026", v: 7200 }, { m: "Fév 2026", v: 8500 }, { m: "Mar 2026", v: 7000 },
+        { m: "Avr 2026", v: 6800 }, { m: "Mai 2026", v: 7500 }, { m: "Jun 2026", v: 8000 },
+      ],
+    },
+  },
+  {
+    id: "independant",
+    label: "L'Indépendante",
+    description: "Consultante, très disciplinée, stratégie long terme, ~26% d'épargne",
+    profile: { firstName: "Sophie", lastName: "Laurent", age: 35, email: "sophie.laurent@email.com" },
+    transactions: [
+      { id: 1, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4500 },
+      { id: 2, label: "Loyer bureau", cat: "Logement", type: "charge_fixe", amount: -1200 },
+      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -150 },
+      { id: 4, label: "Assurances pro", cat: "Assurances", type: "charge_fixe", amount: -200 },
+      { id: 5, label: "Santé & retraite", cat: "Assurances", type: "charge_fixe", amount: -150 },
+      { id: 6, label: "Téléphone pro", cat: "Abonnements", type: "charge_fixe", amount: -40 },
+      { id: 7, label: "Logiciels & outils", cat: "Frais pro", type: "charge_fixe", amount: -60 },
+      { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -400 },
+      { id: 9, label: "Restaurant", cat: "Alimentation", type: "depense_variable", amount: -300 },
+      { id: 10, label: "Salle de sport", cat: "Loisirs", type: "depense_variable", amount: -50 },
+      { id: 11, label: "Transport", cat: "Transport", type: "depense_variable", amount: -150 },
+      { id: 12, label: "VPEA ETF World", cat: "WPEA", type: "investissement", amount: -800 },
+      { id: 13, label: "Fonds immo", cat: "Bourse", type: "investissement", amount: -400 },
+    ],
+    histo: [
+      { m: "Aoû 2023", rev: 2401, dep: 1956, inv: 600 },
+      { m: "Sep 2023", rev: 3875, dep: 2083, inv: 650 },
+      { m: "Oct 2023", rev: 3036, dep: 2083, inv: 650 },
+      { m: "Nov 2023", rev: 2829, dep: 2115, inv: 700 },
+      { m: "Déc 2023", rev: 2967, dep: 2540, inv: 500 },
+      { m: "Jan 2024", rev: 2717, dep: 2132, inv: 750 },
+      { m: "Fév 2024", rev: 2933, dep: 2018, inv: 750 },
+      { m: "Mar 2024", rev: 4421, dep: 2164, inv: 800 },
+      { m: "Avr 2024", rev: 2556, dep: 2080, inv: 800 },
+      { m: "Mai 2024", rev: 2625, dep: 2085, inv: 850 },
+      { m: "Jun 2024", rev: 3055, dep: 2184, inv: 850 },
+      { m: "Jul 2024", rev: 3710, dep: 2177, inv: 900 },
+      { m: "Aoû 2024", rev: 4793, dep: 2095, inv: 900 },
+      { m: "Sep 2024", rev: 3809, dep: 2187, inv: 950 },
+      { m: "Oct 2024", rev: 4661, dep: 2235, inv: 950 },
+      { m: "Nov 2024", rev: 2681, dep: 2261, inv: 1000 },
+      { m: "Déc 2024", rev: 2995, dep: 2711, inv: 700 },
+      { m: "Jan 2025", rev: 4897, dep: 2198, inv: 1050 },
+      { m: "Fév 2025", rev: 4232, dep: 2197, inv: 1050 },
+      { m: "Mar 2025", rev: 3071, dep: 2230, inv: 1100 },
+      { m: "Avr 2025", rev: 3081, dep: 2313, inv: 1100 },
+      { m: "Mai 2025", rev: 4317, dep: 2221, inv: 1150 },
+      { m: "Jun 2025", rev: 4970, dep: 2319, inv: 1150 },
+      { m: "Jul 2025", rev: 3276, dep: 2211, inv: 1200 },
+      { m: "Aoû 2025", rev: 4500, dep: 2300, inv: 1200 },
+      { m: "Sep 2025", rev: 5200, dep: 2250, inv: 1200 },
+      { m: "Oct 2025", rev: 6100, dep: 2400, inv: 1200 },
+      { m: "Nov 2025", rev: 4800, dep: 2350, inv: 1200 },
+      { m: "Déc 2025", rev: 3000, dep: 2900, inv:  800 },
+      { m: "Jan 2026", rev: 7000, dep: 2200, inv: 1400 },
+      { m: "Fév 2026", rev: 4500, dep: 2300, inv: 1200 },
+      { m: "Mar 2026", rev: 5000, dep: 2350, inv: 1200 },
+      { m: "Avr 2026", rev: 4200, dep: 2300, inv: 1200 },
+      { m: "Mai 2026", rev: 5500, dep: 2400, inv: 1200 },
+      { m: "Jun 2026", rev: 6000, dep: 2350, inv: 1400 },
+      { m: "Jul 2026", rev: 3500, dep: 2500, inv:  800 },
+    ],
+    simParams: { monthly: 1200, initial: 50000, price: 250000, horizon: 30 },
+    patrimoine: {
+      actifs: [
+        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 25000 }, { label: "Compte chèques", value: 5000 }] },
+        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF World PEA", value: 100000 }, { label: "Actions", value: 20000 }] },
+        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [{ label: "Résidence principale", value: 200000 }] },
+        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
+      ],
+      passifs: [
+        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [{ label: "Prêt résidence principale", value: 65000 }] },
+        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [] },
+      ],
+      historique: [
+        { m: "Juil 2023", v: 160000 }, { m: "Aoû 2023", v: 162448 }, { m: "Sep 2023", v: 166975 },
+        { m: "Oct 2023", v: 167084 }, { m: "Nov 2023", v: 171176 }, { m: "Déc 2023", v: 172881 },
+        { m: "Jan 2024", v: 177169 }, { m: "Fév 2024", v: 180912 }, { m: "Mar 2024", v: 183561 },
+        { m: "Avr 2024", v: 186122 }, { m: "Mai 2024", v: 190143 }, { m: "Jun 2024", v: 192027 },
+        { m: "Juil 2024", v: 195064 }, { m: "Aoû 2024", v: 198269 }, { m: "Sep 2024", v: 203466 },
+        { m: "Oct 2024", v: 206071 }, { m: "Nov 2024", v: 209557 }, { m: "Déc 2024", v: 215058 },
+        { m: "Jan 2025", v: 216087 }, { m: "Fév 2025", v: 219611 }, { m: "Mar 2025", v: 225281 },
+        { m: "Avr 2025", v: 228217 }, { m: "Mai 2025", v: 231345 }, { m: "Jun 2025", v: 236637 },
+        { m: "Juil 2025", v: 240000 }, { m: "Aoû 2025", v: 245000 }, { m: "Sep 2025", v: 250000 },
+        { m: "Oct 2025", v: 254000 }, { m: "Nov 2025", v: 259000 }, { m: "Déc 2025", v: 263000 },
+        { m: "Jan 2026", v: 267000 }, { m: "Fév 2026", v: 271000 }, { m: "Mar 2026", v: 275000 },
+        { m: "Avr 2026", v: 278000 }, { m: "Mai 2026", v: 281000 }, { m: "Jun 2026", v: 285000 },
+      ],
+    },
+  },
+  {
+    id: "etudiant",
+    label: "L'Étudiant",
+    description: "Étudiant en fin de cursus, revenus modestes, charges légères, début d'épargne",
+    profile: { firstName: "Tom", lastName: "Bernard", age: 26, email: "tom.bernard@email.com" },
+    transactions: [
+      { id: 1, label: "Salaire alternance / job", cat: "Salaire", type: "revenu", amount: 1800 },
+      { id: 2, label: "Loyer", cat: "Logement", type: "charge_fixe", amount: -500 },
+      { id: 3, label: "Prêt étudiant", cat: "Remboursements", type: "charge_fixe", amount: -200 },
+      { id: 4, label: "Prêt téléphone", cat: "Abonnements", type: "charge_fixe", amount: -50 },
+      { id: 5, label: "Abonnements divers", cat: "Abonnements", type: "charge_fixe", amount: -50 },
+      { id: 6, label: "Salle de sport", cat: "Transport", type: "charge_fixe", amount: -30 },
+      { id: 7, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -150 },
+      { id: 8, label: "Transports", cat: "Transport", type: "depense_variable", amount: -70 },
+      { id: 9, label: "Sorties & loisirs", cat: "Transport", type: "depense_variable", amount: -100 },
+      { id: 10, label: "ETF World PEA", cat: "Épargne", type: "investissement", amount: -750 },
+    ],
+    histo: [
+      { m: "Aoû 2023", rev: 1300, dep: 734, inv: 0 },
+      { m: "Sep 2023", rev: 1320, dep: 745, inv: 0 },
+      { m: "Oct 2023", rev: 1339, dep: 759, inv: 0 },
+      { m: "Nov 2023", rev: 1359, dep: 774, inv: 0 },
+      { m: "Déc 2023", rev: 1378, dep: 956, inv: 0 },
+      { m: "Jan 2024", rev: 1398, dep: 754, inv: 0 },
+      { m: "Fév 2024", rev: 1417, dep: 787, inv: 400 },
+      { m: "Mar 2024", rev: 1437, dep: 797, inv: 400 },
+      { m: "Avr 2024", rev: 1457, dep: 789, inv: 400 },
+      { m: "Mai 2024", rev: 1476, dep: 817, inv: 400 },
+      { m: "Jun 2024", rev: 1496, dep: 795, inv: 400 },
+      { m: "Jul 2024", rev: 1515, dep: 832, inv: 400 },
+      { m: "Aoû 2024", rev: 1535, dep: 793, inv: 400 },
+      { m: "Sep 2024", rev: 1554, dep: 815, inv: 400 },
+      { m: "Oct 2024", rev: 1574, dep: 839, inv: 650 },
+      { m: "Nov 2024", rev: 1593, dep: 814, inv: 650 },
+      { m: "Déc 2024", rev: 1613, dep: 1005, inv: 650 },
+      { m: "Jan 2025", rev: 1633, dep: 846, inv: 650 },
+      { m: "Fév 2025", rev: 1652, dep: 848, inv: 650 },
+      { m: "Mar 2025", rev: 1672, dep: 843, inv: 650 },
+      { m: "Avr 2025", rev: 1691, dep: 856, inv: 650 },
+      { m: "Mai 2025", rev: 1711, dep: 863, inv: 650 },
+      { m: "Jun 2025", rev: 1730, dep: 876, inv: 650 },
+      { m: "Jul 2025", rev: 1750, dep: 859, inv: 650 },
+      { m: "Aoû 2025", rev: 1800, dep: 900, inv: 750 },
+      { m: "Sep 2025", rev: 1800, dep: 950, inv: 750 },
+      { m: "Oct 2025", rev: 1800, dep: 880, inv: 750 },
+      { m: "Nov 2025", rev: 1800, dep: 920, inv: 750 },
+      { m: "Déc 2025", rev: 1800, dep: 1100, inv: 500 },
+      { m: "Jan 2026", rev: 1800, dep: 870, inv: 750 },
+      { m: "Fév 2026", rev: 1800, dep: 910, inv: 750 },
+      { m: "Mar 2026", rev: 1800, dep: 890, inv: 750 },
+      { m: "Avr 2026", rev: 1800, dep: 940, inv: 750 },
+      { m: "Mai 2026", rev: 1800, dep: 860, inv: 750 },
+      { m: "Jun 2026", rev: 1800, dep: 930, inv: 750 },
+      { m: "Jul 2026", rev: 1800, dep: 980, inv: 750 },
+    ],
+    simParams: { monthly: 750, initial: 16000, price: 150000, horizon: 30 },
+    patrimoine: {
+      actifs: [
+        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "LDDS", value: 12000 }, { label: "Livret A", value: 1500 }] },
+        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF World", value: 2500 }, { label: "Bitcoin", value: 500 }] },
+        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [] },
+        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
+      ],
+      passifs: [
+        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [] },
+        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [{ label: "Prêt étudiant (0 %)", value: 23500 }] },
+      ],
+      historique: [
+        { m: "Juil 2023", v: -22500 }, { m: "Aoû 2023", v: -22283 }, { m: "Sep 2023", v: -21845 },
+        { m: "Oct 2023", v: -21461 }, { m: "Nov 2023", v: -21229 }, { m: "Déc 2023", v: -20846 },
+        { m: "Jan 2024", v: -20794 }, { m: "Fév 2024", v: -20145 }, { m: "Mar 2024", v: -19946 },
+        { m: "Avr 2024", v: -19278 }, { m: "Mai 2024", v: -19084 }, { m: "Jun 2024", v: -18627 },
+        { m: "Juil 2024", v: -17982 }, { m: "Aoû 2024", v: -17379 }, { m: "Sep 2024", v: -16972 },
+        { m: "Oct 2024", v: -16703 }, { m: "Nov 2024", v: -15973 }, { m: "Déc 2024", v: -15384 },
+        { m: "Jan 2025", v: -14904 }, { m: "Fév 2025", v: -14314 }, { m: "Mar 2025", v: -13513 },
+        { m: "Avr 2025", v: -12875 }, { m: "Mai 2025", v: -12211 }, { m: "Jun 2025", v: -11664 },
+        { m: "Juil 2025", v: -11000 }, { m: "Aoû 2025", v: -10400 }, { m: "Sep 2025", v: -9800 },
+        { m: "Oct 2025", v: -9300 },  { m: "Nov 2025", v: -8900 },  { m: "Déc 2025", v: -8600 },
+        { m: "Jan 2026", v: -8200 },  { m: "Fév 2026", v: -7900 },  { m: "Mar 2026", v: -7700 },
+        { m: "Avr 2026", v: -7700 },  { m: "Mai 2026", v: -7600 },  { m: "Jun 2026", v: -7500 },
+      ],
+    },
+  },
+];
+
+const DEFAULT_PATRIMOINE = {
+  actifs: [
+    { id: "liquidites", label: "Épargne liquide", color: "#0369a1",
+      items: [{ label: "Livret A", value: 17000 }, { label: "Compte chèques", value: 5500 }] },
+    { id: "investissements", label: "Investissements", color: "#22d3ee",
+      items: [{ label: "ETF World PEA", value: 40000 }, { label: "Actions", value: 5000 }] },
+    { id: "immobilier", label: "Immobilier", color: "#2f9bff",
+      items: [{ label: "Résidence principale", value: 200000 }] },
+    { id: "autres", label: "Autres actifs", color: "#f5a623",
+      items: [{ label: "Voiture", value: 8000 }, { label: "Valuables", value: 2000 }] },
+  ],
+  passifs: [
+    { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f",
+      items: [{ label: "Prêt résidence principale", value: 125000 }] },
+    { id: "autresDettes", label: "Autres dettes", color: "#ff8c42",
+      items: [{ label: "Crédit conso", value: 5000 }, { label: "Découvert", value: 5000 }] },
+  ],
+  historique: [
+    { m: "Juil 2023", v: 68000 },  { m: "Aoû 2023", v: 69200 },  { m: "Sep 2023", v: 70500 },
+    { m: "Oct 2023", v: 71900 },  { m: "Nov 2023", v: 73000 },  { m: "Déc 2023", v: 74500 },
+    { m: "Jan 2024", v: 76200 },  { m: "Fév 2024", v: 77800 },  { m: "Mar 2024", v: 79500 },
+    { m: "Avr 2024", v: 81000 },  { m: "Mai 2024", v: 82800 },  { m: "Jun 2024", v: 84500 },
+    { m: "Juil 2024", v: 86400 }, { m: "Aoû 2024", v: 88200 },  { m: "Sep 2024", v: 90100 },
+    { m: "Oct 2024", v: 92000 },  { m: "Nov 2024", v: 93900 },  { m: "Déc 2024", v: 95800 },
+    { m: "Jan 2025", v: 98000 },  { m: "Fév 2025", v: 100100 }, { m: "Mar 2025", v: 102300 },
+    { m: "Avr 2025", v: 104600 }, { m: "Mai 2025", v: 107200 }, { m: "Jun 2025", v: 109500 },
+    { m: "Juil 2025", v: 111000 }, { m: "Aoû 2025", v: 113500 }, { m: "Sep 2025", v: 116500 },
+    { m: "Oct 2025", v: 119000 }, { m: "Nov 2025", v: 121500 }, { m: "Déc 2025", v: 123000 },
+    { m: "Jan 2026", v: 124500 }, { m: "Fév 2026", v: 126000 }, { m: "Mar 2026", v: 127250 },
+    { m: "Avr 2026", v: 126500 }, { m: "Mai 2026", v: 127250 }, { m: "Jun 2026", v: 142500 },
+  ],
+};
+
+/* ------------------------------------------------------------------ */
+/*  Petits composants UI                                               */
+/* ------------------------------------------------------------------ */
+function Card({ children, style, className = "" }) {
+  return (
+    <div
+      className={"rounded-2xl p-5 " + className}
+      style={{ background: C.card, border: `1px solid ${C.border}`, ...style }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Stat({ label, value, color, icon: Icon }) {
+  return (
+    <Card className="flex-1" style={{ minWidth: 160 }}>
+      <div className="flex items-start justify-between">
+        <span className="text-sm" style={{ color: C.muted }}>{label}</span>
+        {Icon && <Icon size={18} style={{ color }} />}
+      </div>
+      <div className="text-2xl font-bold mt-3" style={{ color }}>{value}</div>
+    </Card>
+  );
+}
+
+function Badge({ tone = "neutral", icon: Icon, label }) {
+  const palette = {
+    green:   { bg: "rgba(0,200,150,0.12)",  color: C.green },
+    red:     { bg: "rgba(255,92,122,0.12)", color: C.red },
+    neutral: { bg: "rgba(255,255,255,0.05)", color: C.muted },
+  };
+  const { bg, color } = palette[tone] || palette.neutral;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold shrink-0"
+      style={{ background: bg, color }}>
+      {Icon && <Icon size={12} />}{label}
+    </span>
+  );
+}
+
+function KpiCard({ label, value, valueColor, sub, flashRef }) {
+  return (
+    <Card style={{ position: "relative", overflow: "hidden" }}>
+      {flashRef && (
+        <div ref={flashRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "inherit" }} />
+      )}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <div className="text-sm mb-3" style={{ color: C.muted }}>{label}</div>
+        <div className="text-3xl font-bold mb-2 truncate" style={{ color: valueColor || C.text }}>{value}</div>
+        <div className="flex items-center gap-1.5 text-xs flex-wrap">{sub}</div>
+      </div>
+    </Card>
+  );
+}
+
+function Pill({ children, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-4 py-2 rounded-xl text-sm font-medium transition"
+      style={{
+        background: active ? C.blue : "rgba(255,255,255,0.04)",
+        color: active ? "#fff" : C.muted,
+        border: `1px solid ${active ? C.blue : C.border}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+const chartTip = {
+  contentStyle: {
+    background: C.panel, border: `1px solid ${C.border}`,
+    borderRadius: 12, color: C.text,
+  },
+  labelStyle: { color: C.muted },
+};
+
+// Étiquette % au centre des segments d'un donut Recharts
+const renderDonutPctLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+  if (percent < 0.01) return null;
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) / 2;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
+      {(percent * 100).toFixed(0)}%
+    </text>
+  );
+};
+
+const inputStyle = {
+  background: "rgba(255,255,255,0.04)",
+  border: `1px solid ${C.border}`,
+  color: C.text,
+  borderRadius: 12,
+  padding: "10px 14px",
+  width: "100%",
+};
+
+/* ------------------------------------------------------------------ */
+/*  NAVIGATION                                                         */
+/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/*  PLAN                                                                */
+/* ------------------------------------------------------------------ */
+const PLANS = {
+  free:   { label: "Gratuit", color: "#94a3b8", icon: null },
+  pro:    { label: "Pro",     color: "#f59e0b", icon: Crown },
+  couple: { label: "Couple",  color: "#a855f7", icon: Users },
+};
+
+const PLAN_ACCESS = {
+  free:   ["dashboard", "finances", "patrimoine", "profil", "pricing", "objectifs"],
+  pro:    ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", "pdf", "objectifs", "plans"],
+  couple: ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", "couple", "pdf", "objectifs", "plans"],
+};
+
+function canAccess(plan, feature) {
+  return (PLAN_ACCESS[plan] || PLAN_ACCESS.free).includes(feature);
+}
+
+function PaywallBanner({ feature, plan, onUpgrade }) {
+  const FEATURE_DETAILS = {
+    simulations: {
+      title: "Simulations avancées",
+      hook: "Visualisez la trajectoire de votre patrimoine sur 30 ans, arbitrage par arbitrage.",
+      bullets: ["Comparez ETF World, immobilier, Livret A, Bitcoin et Ethereum sur un même horizon", "Décomposez chaque projection entre apports versés et intérêts composés, année après année", "Cours BTC/ETH actualisés en direct, intégrés à vos simulations"],
+    },
+    fi: {
+      title: "Indépendance Financière",
+      hook: "Déterminez avec précision la date à laquelle votre patrimoine peut subvenir à vos besoins.",
+      bullets: ["Rendement projeté calculé à partir de votre allocation réelle — immobilier, ETF, liquidités, crypto", "Jalons patrimoniaux datés, avec votre âge à chaque étape et seuil Coast FI", "« Et si tout était en ETF World ? » — mesurez le gain d'une allocation pleinement investie"],
+    },
+    immobilier: {
+      title: "Simulateur Immobilier",
+      hook: "Achat ou location : un arbitrage patrimonial qui se chiffre en dizaines de milliers d'euros.",
+      bullets: ["Capacité d'emprunt calculée selon les normes bancaires en vigueur (HCSF, taux d'endettement 35 %)", "Comparatif achat vs location sur 20 ans, visualisé graphiquement", "Rentabilité nette après charges, fiscalité et remboursement de crédit"],
+    },
+    fiscalite: {
+      title: "Fiscalité Patrimoniale",
+      hook: "Une fiscalité mal arbitrée coûte souvent plusieurs points de rendement chaque année.",
+      bullets: ["Calcul de vos plus-values en méthode FIFO, lot par lot, actif par actif", "Comparateur PEA vs compte-titres selon votre durée de détention", "Détection d'opportunités d'arbitrage fiscal et export de votre récapitulatif annuel"],
+    },
+    crypto: {
+      title: "Analyse Crypto",
+      hook: "Vos crypto-actifs méritent le même niveau de suivi que le reste de votre patrimoine.",
+      bullets: ["Suivi en temps réel de votre portefeuille — valorisation, plus-values et performance par actif", "Cours et marchés en direct sur l'ensemble des crypto-actifs majeurs", "Comparatif des meilleures offres de staking et suivi de vos positions"],
+    },
+    defi: {
+      title: "DeFi Yield",
+      hook: "Des rendements potentiellement supérieurs au Livret A — pour un profil de risque radicalement différent.",
+      bullets: ["Comparatif des protocoles DeFi et de leurs rendements actuels", "Niveau de risque détaillé par protocole — liquidité, perte impermanente", "Suivi de vos positions et de vos revenus passifs estimés"],
+    },
+    assistant: {
+      title: "Assistant IA",
+      hook: "Un conseiller patrimonial disponible à tout moment, qui connaît vos chiffres mieux que quiconque.",
+      bullets: ["Réponses personnalisées fondées sur votre budget et votre patrimoine réels", "Recommandations d'optimisation de votre allocation mensuelle", "Calculs instantanés : capacité d'emprunt, indépendance financière, fiscalité"],
+    },
+    couple: {
+      title: "Mode Couple / Famille",
+      hook: "Pilotez votre patrimoine à deux, avec une vision commune et des objectifs partagés.",
+      bullets: ["Vue consolidée de vos patrimoines respectifs et combinés", "Objectifs communs et jalons partagés, avec simulation comparée", "Partage de compte sécurisé, chiffré de bout en bout"],
+    },
+    pdf: {
+      title: "Bilan PDF Patrimonial",
+      hook: "Un bilan patrimonial complet, au format attendu par vos interlocuteurs financiers.",
+      bullets: ["Synthèse patrimoniale, analyse budgétaire et trois scénarios de projection", "Matrice d'indépendance financière sur des horizons de 5 à 30 ans", "Plan d'action priorisé, prêt à partager avec un conseiller"],
+    },
+    plans: {
+      title: "Plan d'action",
+      hook: "Trois feuilles de route concrètes, construites à partir de votre situation réelle.",
+      bullets: ["Plans personnalisés — épargne, investissement, acquisition immobilière", "Étapes chiffrées avec impact estimé sur votre trajectoire patrimoniale", "Suivi de votre progression, étape par étape"],
+    },
+  };
+  const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
+  const needed = ["simulations","fi","immobilier","crypto","defi","fiscalite","assistant","plans"].includes(feature) ? "pro" : "couple";
+  const P = PLANS[needed];
+  const price = needed === "pro" ? "5,99 €" : "8,99 €";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 420, gap: 28, padding: "52px 32px", maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
+      <div style={{ width: 56, height: 56, borderRadius: 16, background: `${P.color}18`, border: `1.5px solid ${P.color}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Lock size={24} style={{ color: P.color }} />
+      </div>
+      <div>
+        <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 10 }}>{details.title}</div>
+        <div style={{ color: P.color, fontWeight: 600, fontSize: 14, marginBottom: 16, fontStyle: "italic" }}>{details.hook}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
+          {details.bullets.map((b, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div style={{ width: 18, height: 18, borderRadius: 9, background: `${P.color}22`, border: `1px solid ${P.color}55`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                <div style={{ width: 5, height: 5, borderRadius: 9, background: P.color }} />
+              </div>
+              <span style={{ color: "#b0b8c8", fontSize: 13, lineHeight: 1.55 }}>{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+        <button
+          onClick={onUpgrade}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "14px 28px", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: `linear-gradient(135deg, ${P.color}, ${P.color}cc)`, color: "#fff" }}
+        >
+          <Crown size={18} /> Passer à {P.label} — {price}/mois
+        </button>
+        <div style={{ color: "#5a6478", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <Gift size={12} /> Essai gratuit 7 jours · Sans engagement · Annulable à tout moment
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  PRICING PAGE                                                        */
+/* ------------------------------------------------------------------ */
+function PricingPage({ plan, setPlan }) {
+  const [billing, setBilling] = useState("monthly"); // "monthly" | "annual"
+  const tiers = [
+    {
+      id: "free",
+      label: "Gratuit",
+      priceMonthly: "0 €",
+      priceAnnual: "0 €",
+      period: "pour toujours",
+      color: "#94a3b8",
+      features: [
+        "Tableau de bord",
+        "Suivi des finances",
+        "Patrimoine (consultation)",
+        "Simulation ETF basique",
+      ],
+      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto & DeFi", "Immobilier", "Simulations avancées", "Assistant IA", "Bilan PDF", "Mode Couple"],
+      cta: "Plan actuel",
+    },
+    {
+      id: "pro",
+      label: "Pro",
+      priceMonthly: "5,99 €",
+      priceAnnual: "59,90 €",
+      annualEquiv: "4,99 €/mois",
+      color: "#f59e0b",
+      badge: "⭐ Populaire",
+      trial: "Essai gratuit 7 jours",
+      features: [
+        "Tout le plan Gratuit",
+        "Indépendance Financière",
+        "Simulations (tous scénarios)",
+        "Fiscalité patrimoniale",
+        "Crypto & DeFi Yield",
+        "Simulateur Immobilier",
+        "Assistant IA personnel",
+        "Bilan PDF patrimonial",
+        "Historique illimité",
+        "Support prioritaire",
+      ],
+      locked: ["Mode Couple / Famille"],
+      cta: "Activer Pro",
+    },
+    {
+      id: "couple",
+      label: "Couple",
+      priceMonthly: "8,99 €",
+      priceAnnual: "89,90 €",
+      annualEquiv: "7,49 €/mois",
+      color: "#a855f7",
+      badge: "👫 Pour deux",
+      trial: "Essai gratuit 7 jours",
+      features: [
+        "Tout le plan Pro",
+        "Patrimoine combiné & objectifs communs",
+        "Simulation comparée — ensemble vs séparément",
+        "Partage de compte sécurisé (chiffrement de bout en bout)",
+        "Support prioritaire",
+        "Accès bêta aux nouvelles fonctionnalités",
+        "Export données Excel",
+      ],
+      locked: [],
+      cta: "Activer Couple",
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Choisissez votre formule</h1>
+        <p style={{ color: C.muted, marginTop: 6 }}>Sans engagement · Résiliable à tout moment · Données locales par défaut</p>
+      </div>
+
+      {/* Toggle mensuel / annuel */}
+      <div className="inline-flex items-center gap-1 p-1 rounded-full self-start" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}` }}>
+        <button onClick={() => setBilling("monthly")} style={{
+          padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
+          background: billing === "monthly" ? C.gradientPrimary : "transparent",
+          color: billing === "monthly" ? "#fff" : C.muted,
+          transition: "all 0.2s",
+        }}>
+          Mensuel
+        </button>
+        <button onClick={() => setBilling("annual")} className="flex items-center gap-2" style={{
+          padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
+          background: billing === "annual" ? C.gradientPrimary : "transparent",
+          color: billing === "annual" ? "#fff" : C.muted,
+          transition: "all 0.2s",
+        }}>
+          Annuel
+          <span style={{
+            fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 10,
+            background: billing === "annual" ? "rgba(255,255,255,0.22)" : `${C.green}22`,
+            color: billing === "annual" ? "#fff" : C.green,
+          }}>
+            -17 %
+          </span>
+        </button>
+      </div>
+
+      {/* Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+        {tiers.map((tier) => {
+          const active = plan === tier.id;
+          const isFree = tier.id === "free";
+          const price  = billing === "annual" && !isFree ? tier.priceAnnual : tier.priceMonthly;
+          const period = isFree ? tier.period : billing === "annual" ? "an" : "mois";
+          return (
+            <div key={tier.id} style={{
+              background: C.panel,
+              border: `2px solid ${active ? tier.color : tier.id === "pro" ? tier.color + "44" : C.border}`,
+              borderRadius: 20, padding: "28px 24px",
+              display: "flex", flexDirection: "column", gap: 20,
+              position: "relative",
+              transform: tier.id === "pro" ? "scale(1.02)" : "none",
+              boxShadow: tier.id === "pro" ? `0 0 32px ${tier.color}18` : "none",
+            }}>
+              {tier.badge && (
+                <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: tier.color, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                  {tier.badge}
+                </div>
+              )}
+              {active && (
+                <div style={{ position: "absolute", top: 16, right: 16, background: tier.color + "22", border: `1px solid ${tier.color}`, borderRadius: 8, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: tier.color }}>
+                  ACTIF
+                </div>
+              )}
+
+              {/* En-tête */}
+              <div>
+                <div style={{ color: tier.color, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>{tier.label}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                  <span style={{ color: C.text, fontWeight: 900, fontSize: 32 }}>{price}</span>
+                  <span style={{ color: C.muted, fontSize: 13 }}>/{period}</span>
+                </div>
+                {billing === "annual" && !isFree && (
+                  <div style={{ color: C.green, fontSize: 12, fontWeight: 600, marginTop: 4 }}>
+                    ≈ {tier.annualEquiv} · 2 mois offerts
+                  </div>
+                )}
+                {tier.trial && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, padding: "3px 10px", borderRadius: 20, background: `${tier.color}18`, color: tier.color, fontSize: 11, fontWeight: 700 }}>
+                    <Gift size={11} /> {tier.trial}
+                  </div>
+                )}
+              </div>
+
+              {/* Features incluses */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                {tier.features.map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <Check size={14} style={{ color: tier.color, flexShrink: 0 }} />
+                    <span style={{ color: C.text }}>{f}</span>
+                  </div>
+                ))}
+                {tier.locked.map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, opacity: 0.4 }}>
+                    <Lock size={13} style={{ color: C.muted, flexShrink: 0 }} />
+                    <span style={{ color: C.muted, textDecoration: "line-through" }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => setPlan(tier.id)}
+                disabled={active}
+                style={{
+                  padding: "13px 20px", borderRadius: 12, border: "none", cursor: active ? "default" : "pointer",
+                  fontWeight: 700, fontSize: 14,
+                  background: active ? tier.color + "22" : `linear-gradient(135deg, ${tier.color}, ${tier.color}bb)`,
+                  color: active ? tier.color : "#fff",
+                  transition: "all 0.2s",
+                }}
+              >
+                {active ? "✓ Plan actuel" : tier.cta}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Garanties sécurité */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(91,141,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Fingerprint size={18} style={{ color: C.blue }} />
+          </div>
+          <div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Connexion biométrique</div>
+            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>Face ID / empreinte digitale, disponible sur tous les plans dès l'activation.</div>
+          </div>
+        </div>
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Gift size={18} style={{ color: "#22c55e" }} />
+          </div>
+          <div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
+            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>Sur Pro et Couple. Carte bancaire requise pour l'activation (pré-autorisation), débit automatique à l'issue des 7 jours sauf annulation.</div>
+          </div>
+        </div>
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ShieldCheck size={18} style={{ color: "#a855f7" }} />
+          </div>
+          <div>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Partage de compte vérifié</div>
+            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>En mode Couple, l'accès partagé est chiffré de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, padding: "28px 32px" }}>
+        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Questions fréquentes</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[
+            { q: "Mes données sont-elles en sécurité ?", r: "Par défaut, toutes vos données restent locales sur votre appareil et ne sont transmises à aucun serveur tiers." },
+            { q: "Puis-je annuler à tout moment ?", r: "Oui. Aucun engagement, annulation en un clic. Vous conservez vos données locales." },
+            { q: "Le plan Gratuit est-il vraiment gratuit ?", r: "Oui, pour toujours. Les fonctionnalités de base restent accessibles sans limite de durée." },
+            { q: "Comment fonctionne l'essai gratuit ?", r: "Activez Pro ou Couple gratuitement pendant 7 jours en renseignant votre carte bancaire (pré-autorisation, aucun débit immédiat). Passé ce délai, l'abonnement démarre automatiquement sauf annulation. Si vous ne l'activez pas, un rappel s'affiche une fois par mois pour vous le proposer." },
+            { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant — vos données restent privées." },
+            { q: "Comment fonctionne le Bilan PDF ?", r: "Il génère un document professionnel de plusieurs pages : synthèse patrimoniale, analyse budgétaire, projections IF et recommandations — prêt à partager avec un conseiller." },
+          ].map(({ q, r }) => (
+            <div key={q} style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 14 }}>
+              <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{q}</div>
+              <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{r}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p style={{ color: C.muted, fontSize: 11, textAlign: "center" }}>
+        WealthTrack n'est pas un Conseiller en Investissement Financier. Les simulations sont fournies à titre indicatif.
+      </p>
+    </div>
+  );
+}
+
+function Sidebar({ view, setView, profile, plan, setPlan }) {
+  const items = [
+    { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
+    { id: "finances",    label: "Finances",           icon: ListTree },
+    { id: "simulations", label: "Simulations",        icon: TrendingUp },
+    { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
+    { id: "fi",          label: "FIRE",               icon: Flag },
+    { id: "crypto",      label: "Crypto",             icon: Bitcoin },
+    { id: "immobilier",  label: "Immobilier",         icon: Building2 },
+    { id: "objectifs",   label: "Objectifs",          icon: Target },
+    { id: "defi",        label: "DeFi Yield",         icon: Zap },
+    { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
+    { id: "assistant",   label: "Assistant",          icon: MessageCircle },
+    ...(profile?.coupleMode ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
+    { id: "plans",       label: "Plan d'action",      icon: Star },
+    { id: "pricing",     label: "Tarifs",             icon: Crown },
+    { id: "profil",      label: "Profil",             icon: User },
+  ];
+  const planInfo = PLANS[plan] || PLANS.free;
+  return (
+    <aside
+      className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
+      style={{ width: 270, borderRight: `1px solid ${C.border}`, borderRadius: 0 }}
+    >
+      <div className="flex items-center gap-3 px-3 py-5 mb-1">
+        <div className="rounded-lg p-1.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
+          <BarChart3 size={18} style={{ color: C.blue }} />
+        </div>
+        <div>
+          <span className="text-base font-semibold tracking-tight" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+          <div className="text-xs" style={{ color: C.muted }}>Gestion patrimoniale</div>
+        </div>
+      </div>
+      {items.map((it) => {
+        const active = view === it.id;
+        const locked = !canAccess(plan, it.id);
+        const Icon = it.icon;
+        return (
+          <button
+            key={it.id}
+            onClick={() => setView(it.id)}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition"
+            style={{
+              background: active ? C.gradientPrimary : "transparent",
+              boxShadow: active ? glow(C.violet, 24, "33") : "none",
+              color: active ? "#fff" : locked ? C.muted + "88" : C.muted,
+              fontWeight: active ? 600 : 500,
+            }}
+          >
+            <Icon size={20} />
+            <span style={{ flex: 1 }}>{it.label}</span>
+            {locked && <Lock size={12} style={{ color: C.muted, opacity: 0.5 }} />}
+          </button>
+        );
+      })}
+
+      <div className="mt-auto border-t" style={{ borderColor: C.border }}>
+        {/* Upgrade CTA */}
+        {plan !== "couple" && (
+          <button
+            onClick={() => setView("pricing")}
+            style={{ margin: "12px 12px 0", width: "calc(100% - 24px)", padding: "10px 14px", borderRadius: 12, border: `1px solid ${PLANS[plan === "free" ? "pro" : "couple"].color}44`, background: `${PLANS[plan === "free" ? "pro" : "couple"].color}10`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+          >
+            <Crown size={14} style={{ color: PLANS[plan === "free" ? "pro" : "couple"].color, flexShrink: 0 }} />
+            <span style={{ color: PLANS[plan === "free" ? "pro" : "couple"].color, fontSize: 12, fontWeight: 700 }}>
+              {plan === "free" ? "Passer à Pro →" : "Passer à Couple →"}
+            </span>
+          </button>
+        )}
+        <div className="px-3 py-4 flex items-center gap-3">
+          <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
+            style={{ background: "rgba(91,141,239,0.12)", color: C.blue, border: `1px solid ${C.blue}22` }}>
+            {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "—"}
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate" style={{ color: C.text }}>
+              {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Mon compte"}
+            </div>
+            <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
+              {planInfo.label}
+            </div>
+          </div>
+        </div>
+        <div className="px-3 pb-4">
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+            <Shield size={11} />
+            <span>Données locales par défaut</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : TABLEAU DE BORD                                            */
+/* ------------------------------------------------------------------ */
+function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile }) {
+  const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
+  const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? C.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? C.amber : C.red;
+  const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
+  const [active, setActive] = useState({});
+  const [shareOpen, setShareOpen] = useState(false);
+  const [histoRange, setHistoRange] = useState(12);
+
+  // Taux d'épargne mensuel reconstitué à partir de l'historique réel (rev/dep)
+  const savingHisto = useMemo(
+    () => histo.map((h) => ({ m: h.m, v: h.rev > 0 ? Math.round(((h.rev - h.dep) / h.rev) * 1000) / 10 : 0 })),
+    [histo]
+  );
+
+  // Série d'épargne positive : nombre de mois consécutifs (les plus récents) où rev > dep
+  const savingsStreak = useMemo(() => {
+    let streak = 0;
+    for (let i = histo.length - 1; i >= 0; i--) {
+      if (histo[i].rev > histo[i].dep) streak++;
+      else break;
+    }
+    return streak;
+  }, [histo]);
+
+  const [bestStreak, setBestStreak] = useLocalStorage("wt_best_streak", 0);
+  const isNewStreakRecord = savingsStreak > 0 && savingsStreak > bestStreak;
+  useEffect(() => {
+    if (savingsStreak > bestStreak) setBestStreak(savingsStreak);
+  }, [savingsStreak, bestStreak, setBestStreak]);
+
+  // Célébration GSAP quand la série d'épargne progresse
+  const streakRef = useRef(null);
+  const streakRingRef = useRef(null);
+  const streakConfettiRef = useRef(null);
+  const prevStreak = usePrevious(savingsStreak);
+  const prevIsNewRecord = usePrevious(isNewStreakRecord);
+  const [streakToast, triggerStreakToast] = useCelebrationToast();
+  useGSAP(() => {
+    if (prevStreak != null && savingsStreak > prevStreak && streakRef.current) {
+      const newRecord = isNewStreakRecord && !prevIsNewRecord;
+      celebrate({
+        cardEl: streakRef.current, ringEl: streakRingRef.current,
+        confettiEl: streakConfettiRef.current,
+        color: newRecord ? C.amber : C.green,
+        confettiColors: newRecord ? [C.amber, C.green, "#ffd166"] : CONFETTI_COLORS,
+      });
+      if (newRecord) {
+        triggerStreakToast({
+          icon: <Trophy size={18} style={{ color: C.amber }} />,
+          title: `Nouveau record : ${savingsStreak} mois d'épargne consécutifs !`,
+          subtitle: "Votre meilleure série jusqu'ici.",
+          color: C.amber,
+        });
+      }
+    }
+  }, { dependencies: [savingsStreak] });
+
+  const profileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
+  const isSalarie = profileType === "salarie_stable" || profileType === "interimaire";
+  const visibleWhatIf = useMemo(
+    () => WHATIF.filter((w) => w.id !== "salaire" || isSalarie),
+    [isSalarie]
+  );
+
+  const healthScore = useMemo(() => calculateHealthScore(totals, patrimoine, simParams), [totals, patrimoine, simParams]);
+  const badge = getScoreBadge(healthScore.overall);
+  const scenarios = useMemo(() => calculateWhatIfScenarios(totals, simParams), [totals, simParams]);
+
+  const gainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + w.gain : s), 0);
+  const ltGainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + longTermGain(w.gain) : s), 0);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-3xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Tableau de bord</h1>
+        <p style={{ color: C.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
+      </div>
+
+      <div className="flex gap-4 flex-wrap">
+        <Stat label="Revenus" value={eur(revenus)} color={C.green} icon={ArrowUpRight} />
+        <Stat label="Charges fixes" value={eur(chargesFixes)} color={C.red} icon={ArrowDownRight} />
+        <Stat label="Dépenses variables" value={eur(depensesVar)} color={C.amber} icon={ArrowDownRight} />
+        <Stat label="Investissements" value={eur(invest)} color={C.cyan} icon={PiggyBank} />
+      </div>
+
+      {/* Score de santé gamifié */}
+      <Card style={{ border: `2px solid ${badge.color}55` }}>
+        <div className="flex flex-col sm:flex-row gap-6">
+          {/* Gauche : chiffre + breakdown */}
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
+                  <div className="w-3 h-3 rounded-full" style={{ background: badge.color }} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded"
+                    style={{ background: badge.color + "18", color: badge.color }}>
+                    {badge.level}
+                  </span>
+                </div>
+              </div>
+              {streakToast}
+              {savingsStreak > 0 && (
+                <div ref={streakRef} style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 999,
+                  background: "rgba(240,168,72,0.12)", border: `1px solid ${C.amber}44`,
+                }}>
+                  <div ref={streakConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
+                  <div ref={streakRingRef} style={{
+                    position: "absolute", inset: -3, borderRadius: 999,
+                    border: `2px solid ${C.amber}`, opacity: 0, pointerEvents: "none",
+                  }} />
+                  <Flame size={14} style={{ color: C.amber }} />
+                  <span style={{ color: C.amber, fontWeight: 800, fontSize: 13 }}>
+                    <AnimatedNumber value={savingsStreak} />
+                  </span>
+                  <span style={{ color: C.muted, fontSize: 11 }}>
+                    mois d'épargne {isNewStreakRecord && <b style={{ color: C.amber }}>· record !</b>}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="mb-4">
+              <span className="font-black" style={{ fontSize: 52, color: badge.color }}>{healthScore.overall}</span>
+              <span className="text-2xl font-normal" style={{ color: C.muted }}>/100</span>
+            </div>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>
+              DÉTAIL PAR CRITÈRE
+            </div>
+            {Object.values(healthScore.breakdown).map((b) => (
+              <div key={b.label} className="mb-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span style={{ color: C.text }}>{b.label}</span>
+                  <span style={{ color: badge.color }}>{b.score}/{b.max} pts</span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-1.5 rounded-full"
+                    style={{ width: `${(b.score / b.max) * 100}%`, background: badge.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Droite : actions */}
+          <div className="flex flex-col gap-3" style={{ minWidth: 170 }}>
+            <button
+              onClick={() => setShareOpen(true)}
+              className="rounded-xl py-3 px-4 font-semibold text-sm"
+              style={{ background: badge.color, color: "#fff" }}>
+              Partager mon score
+            </button>
+            {canAccess(plan, "pdf") ? (
+              <button
+                onClick={() => generatePDFReport(totals, patrimoine, healthScore, badge, profile, simParams)}
+                className="rounded-xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2"
+                style={{ background: "rgba(91,141,239,0.1)", color: C.blue, border: `1px solid ${C.blue}33` }}>
+                <FileText size={14} /> Bilan PDF patrimonial
+              </button>
+            ) : (
+              <button
+                onClick={() => setView("pricing")}
+                className="rounded-xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2"
+                style={{ background: "rgba(168,85,247,0.08)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.25)" }}>
+                <Lock size={14} /> Bilan PDF — Pro
+              </button>
+            )}
+            <div className="rounded-xl p-3 text-xs flex-1" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+              <div className="font-semibold mb-2" style={{ color: C.text }}>Pour progresser :</div>
+              <ul style={{ color: C.muted, paddingLeft: 14, lineHeight: 1.8, margin: 0 }}>
+                {tauxEpargne < SAVINGS_RATE_TARGET && <li>Épargner {(SAVINGS_RATE_TARGET - tauxEpargne).toFixed(0)} % de plus</li>}
+                {healthScore.breakdown.diversification.score < 25 && <li>Diversifier vos placements</li>}
+                {healthScore.breakdown.investment.score < 15 && <li>Investir ≥ 10 % de vos revenus</li>}
+                {healthScore.breakdown.health.score < 7 && <li>Réduire votre ratio dettes/actifs</li>}
+              </ul>
+            </div>
+          </div>
+        </div>
+        {shareOpen && <ShareScoreModal score={healthScore.overall} badge={badge} onClose={() => setShareOpen(false)} />}
+      </Card>
+
+      {/* Restant à vivre + taux épargne */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card style={{ background: "rgba(34,199,154,0.06)", borderColor: "rgba(34,199,154,0.25)" }}>
+          <div className="flex justify-between items-start">
+            <span style={{ color: C.muted }}>Restant à vivre</span>
+            <Wallet size={28} style={{ color: C.green, opacity: 0.5 }} />
+          </div>
+          <div className="text-4xl font-bold mt-3" style={{ color: C.green }}>{eur(restant)}</div>
+        </Card>
+        <Card style={{ background: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.25)" }}>
+          <div className="flex justify-between items-start">
+            <span style={{ color: C.muted }}>Taux d'épargne</span>
+            <ArrowUpRight size={28} style={{ color: C.blue, opacity: 0.6 }} />
+          </div>
+          <div className="text-4xl font-bold mt-3" style={{ color: savingsRateColor }}>{pct(tauxEpargne)}</div>
+          <div className="text-sm mt-1" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
+        </Card>
+      </div>
+
+      {/* Et si ? */}
+      <Card>
+        <div className="flex items-center gap-2 mb-1">
+          <Zap size={18} style={{ color: C.amber }} />
+          <h2 className="text-xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Scénarios d'optimisation</h2>
+        </div>
+        <p className="text-sm mb-4" style={{ color: C.muted }}>
+          Activez un scénario pour mesurer son impact sur votre capacité d'épargne mensuelle.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {visibleWhatIf.map((w) => {
+            const on = !!active[w.id];
+            return (
+              <button key={w.id}
+                onClick={() => setActive((a) => ({ ...a, [w.id]: !a[w.id] }))}
+                className="text-left rounded-xl p-4 flex items-start gap-3 transition"
+                style={{
+                  background: on ? "rgba(39,163,122,0.06)" : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${on ? C.green : C.border}`,
+                }}>
+                <div className="flex-1">
+                  <div className="text-sm font-medium" style={{ color: C.text }}>{w.label}</div>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-sm font-semibold" style={{ color: C.green }}>+{w.gain} €/mois</span>
+                    <span style={{ color: C.muted, fontSize: 11 }}>·</span>
+                    <span className="text-xs flex items-center gap-1" style={{ color: C.muted }}>
+                      <TrendingUp size={10} /> 20 ans : +{eur(longTermGain(w.gain))}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-4 h-4 rounded-full mt-0.5 shrink-0"
+                  style={{ border: `1.5px solid ${on ? C.green : C.muted}`, background: on ? C.green : "transparent" }} />
+              </button>
+            );
+          })}
+        </div>
+        {gainTotal > 0 && (
+          <div className="mt-4 rounded-xl p-4"
+            style={{ background: "rgba(34,199,154,0.08)", border: `1px solid ${C.green}` }}>
+            <div className="flex flex-wrap gap-6 justify-between items-center">
+              <div>
+                <div className="text-xs font-semibold mb-1" style={{ color: C.muted, letterSpacing: 0.5 }}>IMPACT MENSUEL COMBINÉ</div>
+                <div className="text-2xl font-bold" style={{ color: C.green }}>+{gainTotal} €/mois</div>
+                <div className="text-sm mt-1" style={{ color: C.muted }}>soit +{eur(gainTotal * 12)} par an</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-semibold mb-1" style={{ color: C.muted, letterSpacing: 0.5 }}>SI INVESTI 20 ANS · MSCI WORLD 10,5%</div>
+                <div className="text-2xl font-bold" style={{ color: C.cyan }}>+{eur(ltGainTotal)}</div>
+                <div className="text-sm mt-1" style={{ color: C.muted }}>de gain généré par intérêts composés</div>
+              </div>
+            </div>
+            <div className="text-xs mt-3 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}` }}>
+              ⚠ {RATE_DISCLAIMER}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Historique mensuel */}
+      <Card>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h2 className="text-xl font-bold" style={{ color: C.text }}>Historique mensuel</h2>
+          <select value={histoRange} onChange={(e) => setHistoRange(+e.target.value)}
+            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 9999, padding: "6px 14px", fontSize: 12, outline: "none", cursor: "pointer" }}>
+            <option value={6}>6 derniers mois</option>
+            <option value={12}>12 derniers mois</option>
+            <option value={24}>2 ans</option>
+            <option value={36}>3 ans</option>
+          </select>
+        </div>
+        <FinTechBarChart
+          data={histo.slice(-histoRange)}
+          bars={[
+            { dataKey: "rev", fill: C.green, name: "Revenus" },
+            { dataKey: "dep", fill: C.red, name: "Dépenses" },
+            { dataKey: "inv", fill: C.cyan, name: "Investissements" },
+          ]}
+          format={(v) => (v >= 1000 ? (v / 1000).toFixed(0) + "k" : eur(v))}
+          ariaLabel="Monthly revenue, expenses, and investments"
+        />
+      </Card>
+
+      {/* Répartition + catégories */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <h2 className="text-xl font-bold mb-2" style={{ color: C.text }}>Répartition dépenses</h2>
+          <div className="relative">
+            <FinTechPieChart
+              data={breakdown.map((b) => ({ name: b.cat, value: b.amount }))}
+              colors={breakdown.map((b) => CAT_COLORS[b.cat] || C.muted)}
+              innerRadius={60}
+              ariaLabel="Expense breakdown by category"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-sm" style={{ color: C.muted }}>Total</span>
+              <span className="text-2xl font-bold" style={{ color: C.text }}>
+                {eur(breakdown.reduce((s, b) => s + b.amount, 0))}
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Détail par catégorie</h2>
+          {breakdown.map((b) => {
+            const total = breakdown.reduce((s, x) => s + x.amount, 0);
+            const p = (b.amount / total) * 100;
+            return (
+              <div key={b.cat} className="mb-3">
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="flex items-center gap-2" style={{ color: C.text }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: CAT_COLORS[b.cat] }} />
+                    {b.cat}
+                  </span>
+                  <span><b style={{ color: C.text }}>{eur(b.amount)}</b>
+                    <span style={{ color: C.muted }}> &nbsp;{Math.round(p)}%</span></span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-1.5 rounded-full" style={{ width: `${p}%`, background: CAT_COLORS[b.cat] }} />
+                </div>
+              </div>
+            );
+          })}
+          <button
+            onClick={() => setView("assistant")}
+            className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(90deg,#7c3aed,#8b5cf6)", color: "#fff" }}>
+            <Sparkles size={18} /> Optimiser mon mois par IA
+          </button>
+        </Card>
+      </div>
+
+      {/* Évolution taux épargne */}
+      <Card>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold" style={{ color: C.text }}>Évolution du taux d'épargne</h2>
+          <p className="text-sm" style={{ color: C.muted }}>Calculé à partir de votre historique mensuel — période sélectionnée ci-dessus</p>
+        </div>
+        <FinTechAreaChart
+          data={savingHisto.slice(-histoRange)}
+          areas={[{ dataKey: "v", fill: C.cyan, stroke: C.cyan }]}
+          format={(v) => v.toFixed(1) + "%"}
+          stacked={false}
+          ariaLabel="Savings rate evolution over time"
+        />
+      </Card>
+
+      {/* Teaser Premium — visible en Free uniquement */}
+      {plan === "free" && (
+        <PremiumTeaser
+          totals={totals}
+          patrimoine={patrimoine}
+          simParams={simParams}
+          profile={profile}
+          healthScore={healthScore}
+          setView={setView}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  PREMIUM TEASER — affiché en Free dans le Dashboard                */
+/* ------------------------------------------------------------------ */
+function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, setView }) {
+  const netWorth = useMemo(() => {
+    const a = (patrimoine?.actifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+    const p = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+    return a - p;
+  }, [patrimoine]);
+
+  const monthly = simParams?.monthly || totals.invest || 0;
+  const expenses = Math.max((totals.revenus || 0) - (totals.invest || 0), 500);
+  const ifTarget = expenses * 12 * 25;
+  const r7 = 0.07 / 12;
+
+  // Années pour atteindre l'IF à 7%/an
+  let ifYears = null;
+  for (let y = 0; y <= 80; y++) {
+    const n = y * 12;
+    const fvP = netWorth * Math.pow(1 + r7, n) + (r7 > 0 ? monthly * (Math.pow(1 + r7, n) - 1) / r7 : monthly * n);
+    if (fvP >= ifTarget) { ifYears = y; break; }
+  }
+  const ifAge = ifYears != null && profile?.age ? profile.age + ifYears : null;
+  const ifAgeStr = ifAge != null ? `${ifAge} ans` : "> 80 ans";
+
+  // Patrimoine projeté à 10 ans (base 7%)
+  const n10 = 120;
+  const fv10 = Math.round(netWorth * Math.pow(1 + r7, n10) + (r7 > 0 ? monthly * (Math.pow(1 + r7, n10) - 1) / r7 : monthly * n10));
+  const fv10ETF = Math.round(fv(netWorth, monthly, RATE_A, 10));
+
+  // Points d'attention personnalisés
+  const alerts = [];
+  if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL) alerts.push({ icon: "🔴", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL} %`, feature: "simulations" });
+  else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ icon: "🟡", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
+  if (healthScore.breakdown.diversification.score < 20) alerts.push({ icon: "🔴", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
+  if (healthScore.breakdown.investment.score < 15) alerts.push({ icon: "🟡", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
+  if (totals.chargesFixes > totals.revenus * 0.55) alerts.push({ icon: "🔴", msg: `Charges fixes élevées (${((totals.chargesFixes / totals.revenus) * 100).toFixed(0)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
+  if (netWorth < 0) alerts.push({ icon: "🔴", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
+  if (alerts.length < 2) alerts.push({ icon: "💡", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
+
+  const topAlerts = alerts.slice(0, 3);
+
+  return (
+    <div style={{ borderRadius: 20, border: "1px solid rgba(245,158,11,0.2)", background: "linear-gradient(135deg, rgba(245,158,11,0.04) 0%, rgba(168,85,247,0.04) 100%)", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <Crown size={18} style={{ color: "#f59e0b" }} />
+        <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Aperçu Pro — basé sur vos données</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>Dès 5,99 €/mois · Essai gratuit 7 jours</span>
+      </div>
+
+      <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {/* Metric 1 — IF teaser */}
+        <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#f59e0b", filter: "blur(6px)", userSelect: "none" }}>{ifAgeStr}</div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+            dans {ifYears != null ? `${ifYears} ans` : "plus de 80 ans"} — scénario base 7%/an
+          </div>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
+            <button onClick={() => setView("pricing")} style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "7px 14px", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Lock size={12} /> Voir ma projection
+            </button>
+          </div>
+        </div>
+
+        {/* Metric 2 — Patrimoine projeté 10 ans */}
+        <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#22c55e", filter: "blur(6px)", userSelect: "none" }}>
+            {fv10 >= 1e6 ? (fv10 / 1e6).toFixed(1) + " M€" : Math.round(fv10 / 1e3) + " k€"}
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+            scénario base — pessimiste et optimiste inclus
+          </div>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
+            <button onClick={() => setView("pricing")} style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 10, padding: "7px 14px", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Lock size={12} /> Voir les simulations
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Points d'attention personnalisés */}
+      <div style={{ padding: "0 22px 18px" }}>
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {topAlerts.filter(a => a.icon !== "💡").length} point{topAlerts.filter(a => a.icon !== "💡").length > 1 ? "s" : ""} d'attention détecté{topAlerts.filter(a => a.icon !== "💡").length > 1 ? "s" : ""} sur votre profil
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {topAlerts.map((a, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", padding: "10px 14px" }}>
+              <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
+              <span style={{ fontSize: 13, color: "#8a97b0", lineHeight: 1.5, flex: 1 }}>{a.msg}</span>
+              <button onClick={() => setView("pricing")} style={{ background: "none", border: "none", color: "#f59e0b", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", padding: "2px 0", flexShrink: 0 }}>
+                Corriger →
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setView("pricing")}
+          style={{ width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          <Crown size={16} /> Passer à Pro — 5,99 €/mois · Essai gratuit 7 jours
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  SCORE GAMIFIÉ — helpers                                            */
+/* ------------------------------------------------------------------ */
+function calculateHealthScore(totals, patrimoine, simParams) {
+  const breakdown = {};
+
+  // 1. Taux d'épargne (40 pts)
+  const savingsRate = totals.tauxEpargne || 0;
+  let savingsScore = savingsRate >= 20 ? 40 : savingsRate >= 15 ? 35 : savingsRate >= 10 ? 30 : savingsRate >= 5 ? 20 : 10;
+  breakdown.savings = { score: savingsScore, max: 40, label: `Épargne (${savingsRate.toFixed(1)} %)` };
+
+  // 2. Diversification actifs (30 pts)
+  const nonEmptyCats = (patrimoine?.actifs || []).filter(c => c.items.some(i => i.value > 0)).length;
+  const divScore = nonEmptyCats >= 4 ? 30 : nonEmptyCats >= 3 ? 25 : nonEmptyCats >= 2 ? 20 : 10;
+  breakdown.diversification = { score: divScore, max: 30, label: "Diversification" };
+
+  // 3. Investissement mensuel (20 pts)
+  const investRate = totals.revenus > 0 ? (totals.invest / totals.revenus) * 100 : 0;
+  const investScore = investRate >= 15 ? 20 : investRate >= 10 ? 15 : investRate >= 5 ? 10 : 5;
+  breakdown.investment = { score: investScore, max: 20, label: `Investissement (${investRate.toFixed(1)} %)` };
+
+  // 4. Ratio dettes/actifs (10 pts)
+  const totalActifs = (patrimoine?.actifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+  const totalPassifs = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+  const debtRatio = totalActifs > 0 ? (totalPassifs / totalActifs) * 100 : 0;
+  const healthPts = debtRatio < 10 ? 10 : debtRatio < 30 ? 7 : debtRatio < 60 ? 4 : 2;
+  breakdown.health = { score: healthPts, max: 10, label: "Ratio dettes/actifs" };
+
+  const overall = Object.values(breakdown).reduce((s, b) => s + b.score, 0);
+  return { overall, breakdown, savingsRate, investRate };
+}
+
+function getScoreBadge(score) {
+  if (score >= 85) return { level: "Excellent",    color: "#27a37a", ring: "rgba(39,163,122,0.2)" };
+  if (score >= 70) return { level: "Satisfaisant", color: "#c8883a", ring: "rgba(200,136,58,0.2)"  };
+  if (score >= 50) return { level: "À améliorer",  color: "#d47a2a", ring: "rgba(212,122,42,0.2)"  };
+  return               { level: "Critique",      color: "#d95454", ring: "rgba(217,84,84,0.2)"   };
+}
+
+function calculateWhatIfScenarios(totals, simParams) {
+  const monthly = simParams?.monthly || 200;
+  const rate = RATE_A;
+  const mr = rate / 12;
+  const n = 20 * 12;
+  const fvFactor = (Math.pow(1 + mr, n) - 1) / mr;
+  const currentFV = Math.round(monthly * fvFactor);
+
+  return [
+    {
+      id: "epargne_plus", diff: "Moyen",
+      title: `Épargner +300 €/mois`,
+      description: `Passer de ${eur(monthly)} à ${eur(monthly + 300)} d'épargne mensuelle`,
+      impact20y: Math.round(300 * fvFactor),
+    },
+    {
+      id: "pea", diff: "Facile",
+      title: "Ouvrir un PEA",
+      description: "0 % d'impôts sur les gains après 5 ans (vs 30 % PFU)",
+      impact20y: Math.round(currentFV * 0.15),
+    },
+    {
+      id: "etf_ter", diff: "Facile",
+      title: "Réduire les frais ETF",
+      description: "TER 0,35 % → 0,15 % (CW8 → IWDA)",
+      impact20y: Math.round(monthly * ((Math.pow(1 + (rate + 0.002) / 12, n) - 1) / ((rate + 0.002) / 12) - fvFactor)),
+    },
+  ];
+}
+
+async function generatePDFReport(totals, patrimoine, healthScore, badge, profile = {}, simParams = {}) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pw  = doc.internal.pageSize.getWidth();   // 210
+  const ph  = doc.internal.pageSize.getHeight();  // 297
+  const ML  = 14;          // left margin
+  const MR  = pw - 14;     // right edge
+  const CW  = MR - ML;     // content width 182
+  const today = new Date().toLocaleDateString("fr-FR");
+  const YEAR  = new Date().getFullYear();
+
+  // ── Palette ────────────────────────────────────────────────────────────
+  const BLUE  = [47, 155, 255];
+  const GREEN = [34, 197, 94];
+  const RED   = [239, 68, 68];
+  const AMB   = [245, 158, 11];
+  const PRP   = [168, 85, 247];
+  const MUTED = [100, 112, 132];
+  const DIM   = [140, 148, 162];
+  const TEXT  = [205, 210, 220];
+  const BG    = [14, 18, 27];
+  const CARD  = [26, 33, 48];
+  const PANEL = [20, 27, 40];
+
+  // ── Data ───────────────────────────────────────────────────────────────
+  const totalActifs  = (patrimoine?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+  const totalPassifs = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+  const netWorth  = totalActifs - totalPassifs;
+  const userName  = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Client";
+  const userAge   = profile.age || 30;
+  const monthly   = simParams.monthly || totals.invest || 0;
+  const revenus   = totals.revenus || 0;
+  const tauxE     = totals.tauxEpargne ?? 0;
+  const charges   = totals.chargesFixes || 0;
+  const depVar    = totals.depensesVar  || 0;
+  const invest    = totals.invest       || 0;
+  const restant   = revenus - charges - depVar - invest;
+  const sc        = healthScore.overall;
+  const scColor   = sc >= 75 ? GREEN : sc >= 50 ? AMB : RED;
+  const nwColor   = netWorth >= 0 ? GREEN : RED;
+  const EXPENSES  = Math.max(revenus - invest, 500);
+
+  const fmtE  = v => v.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €";
+  const fmtEK = v => {
+    const a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(1).replace(".", ",") + " M€";
+    if (a >= 1e3) return Math.round(v / 1e3) + " k€";
+    return Math.round(v).toLocaleString("fr-FR") + " €";
+  };
+  const pct   = (num, den) => den > 0 ? ((num / den) * 100).toFixed(1) + "%" : "—";
+
+  // FV / PMT helpers
+  const fv = (pv, pmt, rate, years) => {
+    const r = rate / 12, n = years * 12;
+    if (r === 0) return pv + pmt * n;
+    return pv * Math.pow(1 + r, n) + pmt * ((Math.pow(1 + r, n) - 1) / r);
+  };
+  const pmtNeeded = (pv, target, rate, years) => {
+    const r = rate / 12, n = years * 12;
+    if (r === 0) return Math.max(0, (target - pv) / n);
+    const g = Math.pow(1 + r, n);
+    return Math.max(0, (target - pv * g) / ((g - 1) / r));
+  };
+  const yearsToIF = (pv, pmt, rate, target) => {
+    for (let y = 0; y <= 80; y++) if (fv(pv, pmt, rate, y) >= target) return y;
+    return null;
+  };
+
+  // ── Page state ─────────────────────────────────────────────────────────
+  let y = ML + 8;
+  let pageNum = 0;
+
+  const footer = () => {
+    const n = doc.internal.getCurrentPageInfo().pageNumber;
+    doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text(`WealthTrack Pro · Bilan Patrimonial · ${userName} · ${today} · Page ${n}`, pw / 2, ph - 9, { align: "center" });
+    doc.text("Document confidentiel — ne constitue pas un conseil en investissement agréé AMF.", pw / 2, ph - 5, { align: "center" });
+  };
+
+  const newPage = () => {
+    if (pageNum > 0) doc.addPage();
+    pageNum++;
+    doc.setFillColor(...BG); doc.rect(0, 0, pw, ph, "F");
+    doc.setFillColor(...BLUE); doc.rect(0, 0, pw, 2.5, "F");
+    y = ML + 8;
+    footer();
+  };
+
+  const checkY = (need = 14) => { if (y + need > ph - 18) newPage(); };
+
+  const secTitle = (num, title) => {
+    checkY(18);
+    doc.setFillColor(...BLUE); doc.rect(ML, y, 2.5, 9, "F");
+    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.setTextColor(...BLUE);
+    doc.text(num ? `${num}. ${title}` : title, ML + 5, y + 6.5);
+    doc.setFont(undefined, "normal");
+    doc.setDrawColor(38, 48, 68); doc.setLineWidth(0.25);
+    doc.line(ML, y + 10, MR, y + 10);
+    y += 16;
+  };
+
+  const subHead = (t) => {
+    checkY(10);
+    doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...DIM);
+    doc.text(t.toUpperCase(), ML, y + 5);
+    doc.setFont(undefined, "normal");
+    y += 10;
+  };
+
+  // Label left / value right, single line
+  const trow = (label, value, vCol = TEXT, indent = 0) => {
+    checkY(7);
+    doc.setFontSize(8); doc.setTextColor(...DIM);
+    doc.text(String(label), ML + indent, y);
+    doc.setTextColor(...vCol); doc.text(String(value), MR, y, { align: "right" });
+    y += 6;
+  };
+
+  // Horizontal filled bar (no y advance — caller does it)
+  const hbar = (filled, total, col, bx, bw, by, bh = 3.5) => {
+    doc.setFillColor(36, 44, 60); doc.roundedRect(bx, by, bw, bh, 1, 1, "F");
+    if (filled > 0 && total > 0) {
+      doc.setFillColor(...col);
+      doc.roundedRect(bx, by, Math.min(filled / total, 1) * bw, bh, 1, 1, "F");
+    }
+  };
+
+  // KPI card (does not advance y)
+  const kpiCard = (x, w, label, value, col = BLUE) => {
+    doc.setFillColor(...CARD); doc.roundedRect(x, y, w, 20, 2, 2, "F");
+    doc.setDrawColor(...col); doc.setLineWidth(0.2); doc.roundedRect(x, y, w, 20, 2, 2, "S");
+    doc.setFontSize(6.5); doc.setFont(undefined, "normal"); doc.setTextColor(...MUTED);
+    doc.text(label, x + w / 2, y + 6, { align: "center" });
+    doc.setFontSize(10); doc.setFont(undefined, "bold"); doc.setTextColor(...col);
+    doc.text(value, x + w / 2, y + 15, { align: "center" });
+    doc.setFont(undefined, "normal");
+  };
+
+  const scoreBarRow = (label, score, max, col) => {
+    checkY(10);
+    const bw = CW * 0.38; const bx = MR - bw;
+    doc.setFontSize(8); doc.setTextColor(...TEXT); doc.text(label, ML, y + 4);
+    doc.setFont(undefined, "bold"); doc.setTextColor(...col);
+    doc.text(`${score}/${max}`, bx - 4, y + 4, { align: "right" });
+    doc.setFont(undefined, "normal");
+    hbar(score, max, col, bx, bw, y + 1, 4.5);
+    y += 10;
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P1 — COUVERTURE
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+
+  // Header band
+  doc.setFillColor(18, 23, 36); doc.rect(0, 2.5, pw, 26, "F");
+  doc.setFontSize(9); doc.setFont(undefined, "bold"); doc.setTextColor(...BLUE);
+  doc.text("WEALTHTRACK", ML, 16);
+  doc.setFont(undefined, "normal"); doc.setFontSize(7); doc.setTextColor(...MUTED);
+  doc.text("Gestion patrimoniale personnelle  ·  Rapport Pro", ML, 22);
+  doc.setFontSize(7); doc.setTextColor(...DIM);
+  doc.text(today, MR, 16, { align: "right" });
+  doc.text("Confidentiel", MR, 22, { align: "right" });
+
+  // Main title
+  y = 50;
+  doc.setFontSize(26); doc.setFont(undefined, "bold"); doc.setTextColor(218, 223, 235);
+  doc.text("Bilan Patrimonial", pw / 2, y, { align: "center" });
+  doc.setFontSize(11); doc.setFont(undefined, "normal"); doc.setTextColor(...BLUE);
+  doc.text("Analyse · Projections · Recommandations", pw / 2, y + 8, { align: "center" });
+  doc.setDrawColor(...BLUE); doc.setLineWidth(0.35);
+  doc.line(pw / 2 - 38, y + 12.5, pw / 2 + 38, y + 12.5);
+  doc.setFontSize(9.5); doc.setFont(undefined, "bold"); doc.setTextColor(175, 182, 198);
+  doc.text(userName, pw / 2, y + 20, { align: "center" });
+  doc.setFont(undefined, "normal"); doc.setFontSize(8); doc.setTextColor(...MUTED);
+  doc.text(`${userAge} ans  ·  Édition ${YEAR}`, pw / 2, y + 27, { align: "center" });
+
+  // 4 KPI cards
+  y = 96;
+  const kn = 4; const kg = 4; const kw = (CW - kg * (kn - 1)) / kn;
+  kpiCard(ML,                   kw, "Patrimoine Net",    fmtEK(netWorth),         nwColor);
+  kpiCard(ML + (kw + kg),       kw, "Revenus Mensuels",  fmtEK(revenus),          BLUE);
+  kpiCard(ML + (kw + kg) * 2,   kw, "Taux d'Épargne",   `${tauxE.toFixed(1)}%`,  tauxE >= SAVINGS_RATE_TARGET ? GREEN : tauxE >= SAVINGS_RATE_CRITICAL ? AMB : RED);
+  kpiCard(ML + (kw + kg) * 3,   kw, "Score Santé",      `${sc}/100`,             scColor);
+  y += 26;
+
+  // Score badge
+  y += 6;
+  const sbW = 88; const sbX = pw / 2 - sbW / 2;
+  doc.setFillColor(...CARD); doc.roundedRect(sbX, y, sbW, 30, 3, 3, "F");
+  doc.setDrawColor(...scColor); doc.setLineWidth(0.5); doc.roundedRect(sbX, y, sbW, 30, 3, 3, "S");
+  doc.setFontSize(7.5); doc.setTextColor(...MUTED); doc.text("Score de santé financière", pw / 2, y + 7.5, { align: "center" });
+  doc.setFontSize(22); doc.setFont(undefined, "bold"); doc.setTextColor(...scColor);
+  doc.text(`${sc}`, pw / 2, y + 21, { align: "center" });
+  doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(...scColor);
+  doc.text(`/ 100  —  ${badge.level}`, pw / 2, y + 28, { align: "center" });
+  y += 38;
+
+  // Table of contents
+  doc.setFillColor(...PANEL); doc.roundedRect(ML, y, CW, 56, 2, 2, "F");
+  doc.setDrawColor(38, 48, 68); doc.setLineWidth(0.2); doc.roundedRect(ML, y, CW, 56, 2, 2, "S");
+  doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...BLUE);
+  doc.text("SOMMAIRE", ML + 8, y + 8);
+  doc.setFont(undefined, "normal");
+  [
+    ["1", "Synthèse Patrimoniale",      "p. 2"],
+    ["2", "Analyse Budgétaire",         "p. 3"],
+    ["3", "Projections Patrimoniales",  "p. 4"],
+    ["4", "Indépendance Financière",    "p. 5"],
+    ["5", "Score & Plan d'Action",      "p. 6"],
+  ].forEach(([n, lbl, pg], i) => {
+    const ty = y + 17 + i * 9;
+    doc.setFontSize(7.5); doc.setTextColor(...BLUE); doc.text(`${n}.`, ML + 8, ty);
+    doc.setTextColor(...DIM); doc.text(lbl, ML + 14, ty);
+    doc.setTextColor(...MUTED); doc.text(pg, MR - 8, ty, { align: "right" });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P2 — PATRIMOINE
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+  secTitle("1", "Synthèse Patrimoniale");
+
+  // Net worth headline row
+  doc.setFillColor(...CARD); doc.roundedRect(ML, y, CW, 13, 2, 2, "F");
+  doc.setFillColor(...nwColor); doc.rect(ML, y, 3, 13, "F");
+  doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...DIM);
+  doc.text("Patrimoine Net au " + today, ML + 7, y + 5);
+  doc.setFontSize(13); doc.setTextColor(...nwColor);
+  doc.text(fmtE(netWorth), MR - 3, y + 10.5, { align: "right" });
+  doc.setFont(undefined, "normal");
+  y += 17;
+
+  // Two-column layout
+  const cw2 = (CW - 5) / 2;
+  const colL = ML; const colR = ML + cw2 + 5;
+
+  // Column headers
+  doc.setFillColor(18, 34, 26); doc.roundedRect(colL, y, cw2, 9, 1.5, 1.5, "F");
+  doc.setFillColor(34, 18, 18); doc.roundedRect(colR, y, cw2, 9, 1.5, 1.5, "F");
+  doc.setFontSize(8); doc.setFont(undefined, "bold");
+  doc.setTextColor(...GREEN); doc.text("ACTIFS", colL + 4, y + 6.5);
+  doc.text(fmtE(totalActifs), colL + cw2 - 3, y + 6.5, { align: "right" });
+  doc.setTextColor(...RED);   doc.text("PASSIFS", colR + 4, y + 6.5);
+  doc.text(fmtE(totalPassifs), colR + cw2 - 3, y + 6.5, { align: "right" });
+  doc.setFont(undefined, "normal");
+  y += 12;
+
+  const catColor = { liquidites: [3, 105, 161], investissements: [34, 197, 94], immobilier: [47, 155, 255], autres: [168, 85, 247] };
+  let leftY = y, rightY = y;
+
+  (patrimoine?.actifs || []).forEach(cat => {
+    if (!cat.items?.length) return;
+    const catTot = cat.items.reduce((s, i) => s + i.value, 0); if (catTot === 0) return;
+    const cc = catColor[cat.id] || BLUE;
+    doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...cc);
+    doc.text(cat.label || cat.id, colL + 3, leftY + 4);
+    doc.text(fmtE(catTot), colL + cw2 - 3, leftY + 4, { align: "right" });
+    leftY += 6;
+    hbar(catTot, totalActifs, cc, colL + 3, cw2 - 6, leftY, 2);
+    doc.setFontSize(6); doc.setFont(undefined, "normal"); doc.setTextColor(...MUTED);
+    doc.text(pct(catTot, totalActifs), colL + 3, leftY + 5.5);
+    leftY += 8;
+    cat.items.forEach(item => {
+      doc.setFontSize(7.5); doc.setTextColor(...DIM);
+      const lbl = doc.splitTextToSize("  · " + item.label, cw2 - 20);
+      doc.text(lbl[0], colL + 3, leftY);
+      doc.setTextColor(...GREEN);
+      doc.text(fmtE(item.value), colL + cw2 - 3, leftY, { align: "right" });
+      leftY += 5.5;
+    });
+    leftY += 3;
+  });
+
+  (patrimoine?.passifs || []).forEach(cat => {
+    if (!cat.items?.length) return;
+    const catTot = cat.items.reduce((s, i) => s + i.value, 0); if (catTot === 0) return;
+    doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...RED);
+    doc.text(cat.label || cat.id, colR + 3, rightY + 4);
+    doc.text(fmtE(catTot), colR + cw2 - 3, rightY + 4, { align: "right" });
+    rightY += 7;
+    cat.items.forEach(item => {
+      doc.setFontSize(7.5); doc.setFont(undefined, "normal"); doc.setTextColor(...DIM);
+      const lbl = doc.splitTextToSize("  · " + item.label, cw2 - 20);
+      doc.text(lbl[0], colR + 3, rightY);
+      doc.setTextColor(240, 100, 100);
+      doc.text("-" + fmtE(item.value), colR + cw2 - 3, rightY, { align: "right" });
+      rightY += 5.5;
+    });
+    rightY += 3;
+  });
+
+  y = Math.max(leftY, rightY) + 6;
+
+  // Allocation segmented bar
+  subHead("Répartition de l'actif");
+  const allocCats = (patrimoine?.actifs || [])
+    .map(cat => ({ label: cat.label || cat.id, value: cat.items?.reduce((s, i) => s + i.value, 0) || 0, color: catColor[cat.id] || BLUE }))
+    .filter(c => c.value > 0);
+
+  if (allocCats.length && totalActifs > 0) {
+    const barH = 8; let cx = ML;
+    allocCats.forEach(c => {
+      const sw = (c.value / totalActifs) * CW;
+      doc.setFillColor(...c.color); doc.rect(cx, y, sw, barH, "F");
+      cx += sw;
+    });
+    doc.setDrawColor(38, 48, 68); doc.setLineWidth(0.2); doc.rect(ML, y, CW, barH, "S");
+    y += barH + 4;
+    let lx = ML;
+    allocCats.forEach(c => {
+      doc.setFillColor(...c.color); doc.rect(lx, y, 3.5, 3.5, "F");
+      doc.setFontSize(6.5); doc.setTextColor(...DIM);
+      const lbl = `${c.label} ${((c.value / totalActifs) * 100).toFixed(0)}%`;
+      doc.text(lbl, lx + 5, y + 3.5);
+      lx += doc.getTextWidth(lbl) + 11;
+    });
+    y += 10;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P3 — BUDGET
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+  secTitle("2", "Analyse Budgétaire Mensuelle");
+
+  const budgItems = [
+    { label: "Revenus nets",       val: revenus,  col: GREEN, sign: "+" },
+    { label: "Charges fixes",      val: charges,  col: RED,   sign: "−" },
+    { label: "Dépenses variables", val: depVar,   col: AMB,   sign: "−" },
+    { label: "Investissements",    val: invest,   col: BLUE,  sign: "−" },
+  ];
+
+  // Bar track width
+  const BTRACK_W = CW * 0.40;
+  const BTRACK_X = MR - BTRACK_W - 28;
+
+  budgItems.forEach(it => {
+    checkY(13);
+    const pp = revenus > 0 ? Math.abs(it.val) / revenus : 0;
+    doc.setFillColor(...CARD); doc.roundedRect(ML, y, CW, 11, 1.5, 1.5, "F");
+    doc.setFillColor(...it.col); doc.rect(ML, y, 2.5, 11, "F");
+    doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...TEXT);
+    doc.text(it.label, ML + 5, y + 7.5);
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text(`${(pp * 100).toFixed(0)}%`, BTRACK_X - 8, y + 7, { align: "right" });
+    hbar(Math.abs(it.val), revenus, it.col, BTRACK_X, BTRACK_W, y + 3.5, 3);
+    doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...it.col);
+    doc.text(`${it.sign} ${fmtE(Math.abs(it.val))}`, MR - 3, y + 7.5, { align: "right" });
+    doc.setFont(undefined, "normal");
+    y += 13;
+  });
+
+  // Restant
+  checkY(14);
+  const rCol = restant >= 0 ? GREEN : RED;
+  doc.setFillColor(22, 30, 44); doc.roundedRect(ML, y, CW, 12, 2, 2, "F");
+  doc.setDrawColor(...rCol); doc.setLineWidth(0.35); doc.roundedRect(ML, y, CW, 12, 2, 2, "S");
+  doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...DIM);
+  doc.text("Restant à vivre", ML + 5, y + 8.5);
+  doc.setTextColor(...rCol); doc.text(fmtE(restant), MR - 3, y + 8.5, { align: "right" });
+  doc.setFont(undefined, "normal");
+  y += 17;
+
+  // Règle 50/30/20
+  subHead("Règle 50 / 30 / 20  —  Comparatif");
+  const ratios = [
+    { label: "Charges obligatoires (50%)", ideal: "≤ 50%", real: pct(charges, revenus), good: revenus > 0 && charges / revenus <= 0.5 },
+    { label: "Dépenses variables / loisirs (30%)", ideal: "≤ 30%", real: pct(depVar, revenus), good: revenus > 0 && depVar / revenus <= 0.3 },
+    { label: "Épargne & investissements (20%)", ideal: "≥ 20%", real: `${tauxE.toFixed(1)}%`, good: tauxE >= 20 },
+    { label: "Endettement (passifs / actifs)", ideal: "< 40%", real: pct(totalPassifs, totalActifs), good: totalActifs <= 0 || totalPassifs / totalActifs < 0.4 },
+  ];
+
+  // Table header
+  doc.setFillColor(26, 34, 50); doc.roundedRect(ML, y, CW, 8, 1.5, 0, "F");
+  doc.setFontSize(7); doc.setFont(undefined, "bold"); doc.setTextColor(...MUTED);
+  doc.text("Indicateur", ML + 3, y + 5.5);
+  doc.text("Objectif", ML + CW * 0.60, y + 5.5, { align: "center" });
+  doc.text("Vous", ML + CW * 0.78, y + 5.5, { align: "center" });
+  doc.text("Statut", MR - 3, y + 5.5, { align: "right" });
+  doc.setFont(undefined, "normal");
+  y += 9;
+  ratios.forEach((r, i) => {
+    checkY(9);
+    doc.setFillColor(i % 2 === 0 ? 20 : 24, i % 2 === 0 ? 26 : 31, i % 2 === 0 ? 38 : 46);
+    doc.rect(ML, y, CW, 8, "F");
+    doc.setFontSize(7.5); doc.setTextColor(...DIM); doc.text(r.label, ML + 3, y + 5.5);
+    doc.setTextColor(...MUTED); doc.text(r.ideal, ML + CW * 0.60, y + 5.5, { align: "center" });
+    const vc = r.good ? GREEN : RED;
+    doc.setTextColor(...vc); doc.text(r.real, ML + CW * 0.78, y + 5.5, { align: "center" });
+    doc.text(r.good ? "✓" : "✗", MR - 3, y + 5.5, { align: "right" });
+    y += 8;
+  });
+  y += 6;
+
+  // Additional ratios
+  subHead("Indicateurs clés");
+  [
+    ["Épargne mensuelle", fmtE(monthly)],
+    ["Effort d'épargne / revenus", pct(monthly, revenus)],
+    ["Charges fixes / revenus", pct(charges, revenus)],
+    ["Ratio liquidités / patrimoine brut", pct(
+      (patrimoine?.actifs?.find(c => c.id === "liquidites")?.items || []).reduce((s, i) => s + i.value, 0),
+      totalActifs
+    )],
+  ].forEach(([l, v]) => trow(l, v, TEXT));
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P4 — PROJECTIONS
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+  secTitle("3", "Projections Patrimoniales");
+
+  const SCENARIOS = [
+    { label: "Pessimiste", rate: 0.03, col: AMB,   desc: "Livrets & fonds euros  ·  ~3%/an" },
+    { label: "Base",       rate: 0.07, col: BLUE,  desc: "Portefeuille équilibré  ·  ~7%/an" },
+    { label: "Optimiste",  rate: 0.10, col: GREEN, desc: "ETF World majoritaire  ·  ~10%/an" },
+  ];
+  const HORIZONS = [5, 10, 15, 20, 25, 30];
+
+  // Intro
+  doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+  const introW = doc.splitTextToSize(
+    `Projections basées sur un patrimoine net initial de ${fmtE(netWorth)} et une épargne mensuelle de ${fmtE(monthly)}. Hors fiscalité et inflation. Les rendements passés ne garantissent pas les performances futures.`,
+    CW
+  );
+  introW.forEach(l => { doc.text(l, ML, y); y += 5; }); y += 4;
+
+  // Scenario legend cards
+  const sw3 = (CW - 8) / 3; const sg = 4;
+  SCENARIOS.forEach((s, i) => {
+    const sx = ML + i * (sw3 + sg);
+    doc.setFillColor(...CARD); doc.roundedRect(sx, y, sw3, 16, 2, 2, "F");
+    doc.setDrawColor(...s.col); doc.setLineWidth(0.3); doc.roundedRect(sx, y, sw3, 16, 2, 2, "S");
+    doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...s.col);
+    doc.text(s.label, sx + sw3 / 2, y + 7, { align: "center" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text(s.desc, sx + sw3 / 2, y + 13, { align: "center" });
+  });
+  y += 21;
+
+  // Projection table
+  // TC[0]=horizon | TC[1]=age | TC[2..5]=left edges of 3 scenario cols + right edge
+  const TC_H = 18, TC_A = 16, TC_S = (CW - TC_H - TC_A) / 3;
+  const TC = [ML, ML + TC_H, ML + TC_H + TC_A, ML + TC_H + TC_A + TC_S, ML + TC_H + TC_A + TC_S * 2, MR];
+  doc.setFillColor(26, 34, 50); doc.roundedRect(ML, y, CW, 9, 1.5, 0, "F");
+  doc.setFontSize(7); doc.setFont(undefined, "bold"); doc.setTextColor(...MUTED);
+  doc.text("Horizon", TC[0] + 2, y + 6);
+  doc.text("Âge", (TC[1] + TC[2]) / 2, y + 6, { align: "center" });
+  SCENARIOS.forEach((s, i) => {
+    doc.setTextColor(...s.col);
+    doc.text(s.label, (TC[i + 2] + TC[i + 3]) / 2, y + 6, { align: "center" });
+  });
+  doc.setFont(undefined, "normal"); y += 10;
+
+  HORIZONS.forEach((h, i) => {
+    checkY(9);
+    const vals = SCENARIOS.map(s => fv(netWorth, monthly, s.rate, h));
+    doc.setFillColor(i % 2 === 0 ? 20 : 24, i % 2 === 0 ? 26 : 31, i % 2 === 0 ? 38 : 46);
+    doc.rect(ML, y, CW, 8, "F");
+    doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...TEXT);
+    doc.text(`+${h} ans`, TC[0] + 2, y + 5.5);
+    doc.setFont(undefined, "normal"); doc.setTextColor(...MUTED);
+    doc.text(`${userAge + h} ans`, (TC[1] + TC[2]) / 2, y + 5.5, { align: "center" });
+    SCENARIOS.forEach((s, si) => {
+      doc.setTextColor(...s.col);
+      doc.text(fmtEK(vals[si]), (TC[si + 2] + TC[si + 3]) / 2, y + 5.5, { align: "center" });
+    });
+    y += 8;
+  });
+  y += 10;
+
+  // Visual bars at 30 years
+  subHead("Comparaison visuelle à 30 ans");
+  const v30 = SCENARIOS.map(s => fv(netWorth, monthly, s.rate, 30));
+  const maxV = Math.max(...v30, 1);
+  SCENARIOS.forEach((s, i) => {
+    checkY(10);
+    doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...s.col);
+    doc.text(s.label, ML, y + 4.5);
+    const bx = ML + 28; const bw = CW - 28 - 30;
+    hbar(v30[i], maxV, s.col, bx, bw, y + 1, 5.5);
+    doc.setTextColor(...s.col); doc.text(fmtEK(v30[i]), MR, y + 5.5, { align: "right" });
+    doc.setFont(undefined, "normal"); y += 11;
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P5 — INDÉPENDANCE FINANCIÈRE
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+  secTitle("4", "Indépendance Financière");
+
+  doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+  const ifDesc = doc.splitTextToSize(
+    `L'IF est atteinte lorsque votre patrimoine génère suffisamment de revenus passifs pour couvrir vos dépenses sans travailler. Base de calcul : dépenses annuelles estimées à ${fmtE(EXPENSES * 12)} (${fmtE(EXPENSES)}/mois).`,
+    CW
+  );
+  ifDesc.forEach(l => { doc.text(l, ML, y); y += 5; }); y += 4;
+
+  // IF matrix: 3 multiples × 3 rates
+  const MULTIPLES = [
+    { m: 25, label: "×25 — Règle des 4%", desc: "Retraite anticipée (drawdown 4%/an)" },
+    { m: 30, label: "×30 — Règle des 3,3%", desc: "Profil prudent, drawdown 3.3%/an" },
+    { m: 33, label: "×33 — Règle des 3%", desc: "Profil très conservateur" },
+  ];
+  const IF_TARGETS = MULTIPLES.map(m => EXPENSES * 12 * m.m);
+
+  // IF matrix columns: label | cible | pess | base | opt
+  const IF_LW = 42, IF_TW = 26, IF_SW = (CW - IF_LW - IF_TW) / 3;
+  const IC = [ML, ML + IF_LW, ML + IF_LW + IF_TW, ML + IF_LW + IF_TW + IF_SW, ML + IF_LW + IF_TW + IF_SW * 2, MR];
+  doc.setFillColor(26, 34, 50); doc.roundedRect(ML, y, CW, 9, 1.5, 0, "F");
+  doc.setFontSize(7); doc.setFont(undefined, "bold"); doc.setTextColor(...MUTED);
+  doc.text("Regle", IC[0] + 2, y + 6);
+  doc.text("Cible", (IC[1] + IC[2]) / 2, y + 6, { align: "center" });
+  SCENARIOS.forEach((s, i) => {
+    doc.setTextColor(...s.col);
+    doc.text(s.label, (IC[i + 2] + IC[i + 3]) / 2, y + 6, { align: "center" });
+  });
+  doc.setFont(undefined, "normal"); y += 10;
+
+  MULTIPLES.forEach(({ m, label, desc }, mi) => {
+    checkY(18);
+    const target = EXPENSES * 12 * m;
+    doc.setFillColor(mi % 2 === 0 ? 20 : 24, mi % 2 === 0 ? 26 : 31, mi % 2 === 0 ? 38 : 46);
+    doc.rect(ML, y, CW, 15, "F");
+    doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...TEXT);
+    doc.text(label, IC[0] + 3, y + 5.5);
+    doc.setFont(undefined, "normal"); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text(desc, IC[0] + 3, y + 10.5);
+    doc.setTextColor(...DIM); doc.setFontSize(7); doc.setFont(undefined, "bold");
+    doc.text(fmtEK(target), (IC[1] + IC[2]) / 2, y + 8.5, { align: "center" });
+    doc.setFont(undefined, "normal");
+    SCENARIOS.forEach((s, si) => {
+      const yr = yearsToIF(netWorth, monthly, s.rate, target);
+      const txt = yr != null ? yr + " ans (" + (userAge + yr) + " ans)" : "> 80 ans";
+      doc.setTextColor(...s.col);
+      doc.text(txt, (IC[si + 2] + IC[si + 3]) / 2, y + 8.5, { align: "center" });
+    });
+    y += 15;
+  });
+  y += 8;
+
+  // Effort mensuel (20 ans, règle ×25)
+  subHead("Effort mensuel pour atteindre l'IF en 20 ans  (règle ×25)");
+  const target25 = EXPENSES * 12 * 25;
+  SCENARIOS.forEach(s => {
+    checkY(14);
+    const needed = pmtNeeded(netWorth, target25, s.rate, 20);
+    const diff = needed - monthly;
+    doc.setFillColor(...CARD); doc.roundedRect(ML, y, CW, 12, 1.5, 1.5, "F");
+    doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(...s.col);
+    doc.text(s.label, ML + 4, y + 8);
+    doc.text(fmtE(Math.round(needed)) + "/mois", MR - 3, y + 8, { align: "right" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(6.5);
+    const dc = diff <= 0 ? GREEN : diff < 300 ? AMB : RED;
+    const dt = diff <= 0
+      ? `✓ Objectif atteignable avec votre épargne actuelle (${fmtE(monthly)}/mois)`
+      : `+${fmtE(Math.round(diff))} supplémentaire par rapport à votre épargne actuelle (${fmtE(monthly)}/mois)`;
+    doc.setTextColor(...dc); doc.text(dt, ML + 4, y + 11);
+    y += 15;
+  });
+  y += 4;
+
+  // ETF World bonus
+  checkY(22);
+  doc.setFillColor(16, 30, 20); doc.roundedRect(ML, y, CW, 20, 2, 2, "F");
+  doc.setDrawColor(...GREEN); doc.setLineWidth(0.3); doc.roundedRect(ML, y, CW, 20, 2, 2, "S");
+  doc.setFontSize(7.5); doc.setFont(undefined, "bold"); doc.setTextColor(...GREEN);
+  doc.text("Simulation ETF World — si tout était investi à 10%/an (rendement historique moyen)", ML + 5, y + 7);
+  doc.setFont(undefined, "normal"); doc.setTextColor(...DIM);
+  doc.text(`Dans 20 ans : ${fmtEK(fv(netWorth, monthly, 0.10, 20))}   ·   Dans 30 ans : ${fmtEK(fv(netWorth, monthly, 0.10, 30))}`, ML + 5, y + 13.5);
+  doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+  doc.text("Les rendements passés ne garantissent pas les performances futures.", ML + 5, y + 18.5);
+  y += 26;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P6 — SCORE + PLAN D'ACTION
+  // ═══════════════════════════════════════════════════════════════════════
+  newPage();
+  secTitle("5", "Score de Santé Financière & Plan d'Action");
+
+  // Score gauge
+  const gaugeW = 82; const gaugeX = pw / 2 - gaugeW / 2;
+  doc.setFillColor(...CARD); doc.roundedRect(gaugeX, y, gaugeW, 28, 3, 3, "F");
+  doc.setDrawColor(...scColor); doc.setLineWidth(0.5); doc.roundedRect(gaugeX, y, gaugeW, 28, 3, 3, "S");
+  doc.setFontSize(7.5); doc.setTextColor(...MUTED); doc.text("Score de santé financière", pw / 2, y + 8, { align: "center" });
+  doc.setFontSize(22); doc.setFont(undefined, "bold"); doc.setTextColor(...scColor);
+  doc.text(`${sc}`, pw / 2, y + 21, { align: "center" });
+  doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(...scColor);
+  doc.text(`/ 100  —  ${badge.level}`, pw / 2, y + 27, { align: "center" });
+  y += 34;
+
+  subHead("Détail par dimension");
+  const dimCol = { savings: GREEN, diversification: BLUE, investment: PRP, health: AMB, cashflow: RED };
+  Object.entries(healthScore.breakdown).forEach(([k, b]) => {
+    scoreBarRow(b.label, b.score, b.max, dimCol[k] || BLUE);
+  });
+  y += 4;
+
+  secTitle("", "Plan d'Action Personnalisé");
+
+  // Build recommendations
+  const recs = [];
+  if (tauxE < SAVINGS_RATE_CRITICAL) recs.push({ p: "URGENT", col: RED, t: `Taux d'épargne critique (${tauxE.toFixed(1)}%). Visez au minimum ${SAVINGS_RATE_CRITICAL}% en réduisant les dépenses variables ou en augmentant vos revenus dès ce mois.` });
+  if (restant < 0) recs.push({ p: "URGENT", col: RED, t: `Budget en déficit de ${fmtE(Math.abs(restant))}/mois. Auditez vos abonnements et dépenses récurrentes immédiatement.` });
+  if (totalPassifs > totalActifs * 0.6 && totalActifs > 0) recs.push({ p: "URGENT", col: RED, t: `Endettement élevé (${pct(totalPassifs, totalActifs)} de vos actifs). Priorisez le remboursement des crédits à taux > 3% avant tout investissement.` });
+  if (tauxE >= SAVINGS_RATE_CRITICAL && tauxE < SAVINGS_RATE_TARGET) recs.push({ p: "IMPORTANT", col: AMB, t: `Taux d'épargne de ${tauxE.toFixed(1)}% — objectif : ${SAVINGS_RATE_TARGET}%. Chaque +1% sur 20 ans représente des dizaines de milliers d'euros supplémentaires.` });
+  if ((healthScore.breakdown?.diversification?.score ?? 25) < 20) recs.push({ p: "IMPORTANT", col: AMB, t: "Concentration patrimoniale trop élevée. Diversifiez : ETF World, SCPI, fonds euros. Visez ≤ 30% par classe d'actif." });
+  if (monthly > 0 && monthly < revenus * 0.10) recs.push({ p: "IMPORTANT", col: AMB, t: `Épargne mensuelle (${fmtE(monthly)}) insuffisante. Automatisez un virement programmé le jour du virement de salaire.` });
+  if (!(patrimoine?.actifs?.find(c => c.id === "investissements")?.items?.length)) recs.push({ p: "IMPORTANT", col: AMB, t: "Aucun investissement long terme détecté. Ouvrez un PEA pour exonération fiscale sur les plus-values après 5 ans." });
+  recs.push({ p: "BONNE PRATIQUE", col: GREEN, t: "Maintenez 3 à 6 mois de charges en épargne de précaution (Livret A / LDDS) avant d'investir davantage." });
+  recs.push({ p: "BONNE PRATIQUE", col: GREEN, t: "Rééquilibrez votre allocation une fois par an. Si un actif dépasse 35% du total, arbitragez vers les classes sous-pondérées." });
+  recs.push({ p: "BONNE PRATIQUE", col: GREEN, t: `À votre cadence actuelle (scénario base), votre patrimoine atteindra ${fmtEK(fv(netWorth, monthly, 0.07, 10))} dans 10 ans et ${fmtEK(fv(netWorth, monthly, 0.07, 20))} dans 20 ans.` });
+  const pOrd = ["URGENT", "IMPORTANT", "BONNE PRATIQUE"];
+  recs.sort((a, b) => pOrd.indexOf(a.p) - pOrd.indexOf(b.p));
+
+  recs.forEach((r, i) => {
+    const lines = doc.splitTextToSize(r.t, CW - 32);
+    const bh = Math.max(14, lines.length * 5 + 8);
+    checkY(bh + 5);
+    doc.setFillColor(20, 26, 38); doc.roundedRect(ML, y, CW, bh, 2, 2, "F");
+    doc.setFillColor(...r.col); doc.roundedRect(ML, y, 3, bh, 1, 1, "F");
+    doc.setFontSize(5.5); doc.setFont(undefined, "bold"); doc.setTextColor(...r.col);
+    doc.text(r.p, ML + 5, y + 5);
+    doc.setFont(undefined, "normal"); doc.setFontSize(8); doc.setTextColor(...TEXT);
+    lines.forEach((l, li) => doc.text(l, ML + 5, y + 10 + li * 5));
+    doc.setFontSize(7); doc.setTextColor(...MUTED); doc.text(`${i + 1}`, MR - 3, y + 5, { align: "right" });
+    y += bh + 5;
+  });
+
+  // Legal disclaimer
+  checkY(18);
+  y += 4;
+  doc.setFillColor(18, 22, 32); doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
+  doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+  const disc = doc.splitTextToSize(
+    "Ce bilan est généré automatiquement par WealthTrack à titre informatif uniquement. Il ne constitue pas un conseil en investissement au sens de la directive MIF II ni une recommandation personnalisée. Les projections reposent sur des hypothèses de rendement historiques et ne garantissent aucune performance future. Pour tout conseil personnalisé, consultez un conseiller en gestion de patrimoine agréé AMF.",
+    CW - 6
+  );
+  disc.forEach((l, li) => doc.text(l, ML + 3, y + 5 + li * 4.5));
+
+  doc.save(`WealthTrack-${userName.replace(/\s+/g, "-")}-${today.replace(/\//g, "-")}.pdf`);
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  SHARE MODAL                                                        */
+/* ------------------------------------------------------------------ */
+function ShareScoreModal({ score, badge, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const shareText = `Mon score de santé financière : ${score}/100 (${badge.level}) — Et toi, c'est combien ? #WealthTrack`;
+  const shareUrl = "https://wealthtrack.app";
+
+  const copy = () => {
+    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    alert("Copié ! Prêt à partager.");
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="wt-fade-in"
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="rounded-2xl p-6 wt-scale-in wt-glass"
+        style={{ maxWidth: 400, width: "90%" }}
+      >
+        <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Partager votre score</h2>
+        <div className="rounded-xl p-4 mb-4 text-center" style={{ background: C.bg }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
+              <div className="w-4 h-4 rounded-full" style={{ background: badge.color }} />
+            </div>
+          </div>
+          <div className="text-4xl font-black mb-1" style={{ color: badge.color }}>{score}/100</div>
+          <div className="text-sm" style={{ color: C.muted }}>Niveau {badge.level}</div>
+        </div>
+        <p className="text-sm mb-4" style={{ color: C.muted }}>"{shareText}"</p>
+        <div className="flex flex-col gap-3">
+          <button onClick={copy} className="rounded-xl py-3 font-bold"
+            style={{ background: badge.color, color: "#0a0f1e" }}>
+            Copier le texte
+          </button>
+          <button
+            onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`)}
+            className="rounded-xl py-3 font-semibold"
+            style={{ background: "rgba(255,255,255,0.05)", color: C.text, border: `1px solid ${C.border}` }}>
+            Partager sur Twitter
+          </button>
+          <button
+            onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`)}
+            className="rounded-xl py-3 font-semibold"
+            style={{ background: "rgba(255,255,255,0.05)", color: C.text, border: `1px solid ${C.border}` }}>
+            Partager sur LinkedIn
+          </button>
+          <button onClick={onClose} className="rounded-xl py-2 text-sm"
+            style={{ background: "transparent", color: C.muted, border: `1px solid ${C.border}` }}>
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrialPopup({ onDiscover, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="wt-fade-in"
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="rounded-2xl p-6 text-center wt-scale-in wt-glass"
+        style={{ maxWidth: 400, width: "90%" }}
+      >
+        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ background: "rgba(245,158,11,0.12)" }}>
+          <Gift size={26} style={{ color: "#f59e0b" }} />
+        </div>
+        <h2 className="text-xl font-bold mb-2" style={{ color: C.text }}>Essayez Pro gratuitement</h2>
+        <p className="text-sm mb-4" style={{ color: C.muted }}>
+          7 jours d'accès complet aux simulations avancées, à la fiscalité, au suivi crypto et à l'assistant IA. Carte bancaire requise (pré-autorisation), débit automatique à l'issue de l'essai sauf annulation.
+        </p>
+        <div className="flex flex-col gap-3">
+          <button onClick={onDiscover} className="rounded-xl py-3 font-bold flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff" }}>
+            <Crown size={16} /> Découvrir Pro
+          </button>
+          <button onClick={onClose} className="rounded-xl py-2 text-sm"
+            style={{ background: "transparent", color: C.muted, border: `1px solid ${C.border}` }}>
+            Plus tard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : FINANCES                                                   */
+/* ------------------------------------------------------------------ */
+const TYPE_META = {
+  revenu: { label: "Revenu", color: C.green },
+  charge_fixe: { label: "Charge fixe", color: C.red },
+  depense_variable: { label: "Dépense variable", color: C.amber },
+  investissement: { label: "Investissement", color: C.cyan },
+};
+
+function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, setBudgets, plan }) {
+  const [mainTab, setMainTab]  = useState("transactions");
+  const [filter, setFilter]    = useState("tout");
+  const [showAdd, setShowAdd]  = useState(false);
+  const [editId, setEditId]    = useState(null);
+  const [editBuf, setEditBuf]  = useState({});
+  const [newTx, setNewTx]      = useState({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
+
+  const list = filter === "tout" ? tx : filter === "recurring" ? tx.filter(t => t.recurring) : tx.filter((t) => t.type === filter);
+
+  const handleAdd = () => {
+    const amount = parseFloat(newTx.amount);
+    if (!newTx.label.trim() || !amount) return;
+    const signed = newTx.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
+    onAdd?.({ ...newTx, amount: signed, id: Date.now() });
+    setNewTx({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
+    setShowAdd(false);
+  };
+
+  const startEdit = (t) => { setEditId(t.id); setEditBuf({ ...t, amount: Math.abs(t.amount) }); };
+  const saveEdit = () => {
+    const amount = parseFloat(editBuf.amount);
+    if (!editBuf.label?.trim() || !amount) { setEditId(null); return; }
+    const signed = editBuf.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
+    onUpdate?.(editId, { ...editBuf, amount: signed });
+    setEditId(null);
+  };
+
+  // Pour Budgets tab : calcul du dépensé par catégorie
+  const spentByCat = useMemo(() => {
+    const map = {};
+    tx.filter(t => t.amount < 0).forEach(t => { map[t.cat] = (map[t.cat] || 0) + Math.abs(t.amount); });
+    return map;
+  }, [tx]);
+  const allCats = Object.keys({ ...CAT_COLORS, ...Object.fromEntries(tx.map(t => [t.cat, true])) });
+
+  // Détection indicative de crédits à la consommation / LOA à taux élevé dans les libellés
+  const highInterestDebts = useMemo(() => {
+    const re = /cofidis|cetelem|sofinco|oney|floa|younited|cofinoga|franfinance|sygma|cashper|crédit conso|credit conso|crédit renouvelable|credit renouvelable|revolving|\bloa\b/i;
+    return tx.filter(t => t.amount < 0 && re.test(t.label));
+  }, [tx]);
+
+  const inpSt = { ...inputStyle, padding: "6px 10px", fontSize: 13 };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Finances</h1>
+          <p style={{ color: C.muted }}>Transactions, budgets et récurrences</p>
+        </div>
+        <div className="flex gap-3 flex-wrap">
+          <button onClick={() => setView("importer")} className="flex items-center gap-2 px-4 py-3 rounded-xl"
+            style={{ border: `1px solid ${C.border}`, color: C.text }}>
+            <Upload size={18} /> Importer
+          </button>
+          <button className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
+            style={{ border: "1px solid rgba(139,92,246,0.5)", color: "#a78bfa", background: "rgba(139,92,246,0.08)" }}>
+            <Landmark size={18} /> Connexion Bancaire
+            {plan === "free" && <span className="text-xs font-bold px-1.5 py-0.5 rounded-md ml-1"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", fontSize: 9, letterSpacing: 0.5 }}>PREMIUM</span>}
+          </button>
+          <button onClick={() => setShowAdd((s) => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
+            style={{ background: C.blue, color: "#fff" }}>
+            <Plus size={18} /> Ajouter
+          </button>
+        </div>
+      </div>
+
+      {showAdd && (
+        <Card style={{ borderColor: `${C.blue}44` }}>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: C.muted }}>NOUVELLE TRANSACTION</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Field label="Libellé">
+              <input value={newTx.label} placeholder="Ex : Courses Lidl" style={inputStyle}
+                onChange={(e) => setNewTx((t) => ({ ...t, label: e.target.value }))} />
+            </Field>
+            <Field label="Catégorie">
+              <select value={newTx.cat} style={inputStyle} onChange={(e) => setNewTx((t) => ({ ...t, cat: e.target.value }))}>
+                {Object.keys(CAT_COLORS).map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field label="Type">
+              <select value={newTx.type} style={inputStyle} onChange={(e) => setNewTx((t) => ({ ...t, type: e.target.value }))}>
+                {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Montant (€)">
+              <input type="number" value={newTx.amount} placeholder="0" style={inputStyle}
+                onChange={(e) => setNewTx((t) => ({ ...t, amount: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="flex items-center gap-4 mt-3">
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: C.muted, fontSize: 13 }}>
+              <input type="checkbox" checked={!!newTx.recurring} onChange={e => setNewTx(t => ({ ...t, recurring: e.target.checked }))}
+                style={{ accentColor: C.blue, width: 15, height: 15 }} />
+              <Repeat size={13} /> Récurrente (mensuelle)
+            </label>
+            <button onClick={handleAdd} className="px-5 py-2.5 rounded-xl font-semibold text-sm"
+              style={{ background: C.blue, color: "#fff" }}>
+              <Check size={14} className="inline mr-1.5" />Confirmer
+            </button>
+            <button onClick={() => setShowAdd(false)} className="px-4 py-2.5 rounded-xl text-sm"
+              style={{ border: `1px solid ${C.border}`, color: C.muted }}>Annuler</button>
+          </div>
+        </Card>
+      )}
+
+      <div className="flex gap-4 flex-wrap">
+        <Stat label="Revenu" value={eur(totals.revenus)} color={C.green} icon={TrendingUp} />
+        <Stat label="Charge fixe" value={eur(totals.chargesFixes)} color={C.text} icon={Home} />
+        <Stat label="Dépense variable" value={eur(totals.depensesVar)} color={C.text} icon={ArrowDownRight} />
+        <Stat label="Investissement" value={eur(totals.invest)} color={C.text} icon={PiggyBank} />
+      </div>
+
+      {highInterestDebts.length > 0 && (
+        <Card style={{ borderColor: `${C.amber}44`, background: "rgba(240,168,72,0.06)" }}>
+          <div className="flex items-start gap-3">
+            <Lightbulb size={18} style={{ color: C.amber, flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                {highInterestDebts.length === 1 ? "Crédit à taux potentiellement élevé détecté" : `${highInterestDebts.length} crédits à taux potentiellement élevé détectés`}
+              </div>
+              <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
+                {highInterestDebts.map(t => t.label).join(", ")} — ce type de financement (LOA, crédit conso, crédit renouvelable...) dépasse souvent 15 à 20 % de TAEG.
+                Vérifiez le taux de votre contrat et envisagez un remboursement anticipé avant d'investir davantage.
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Onglets principaux */}
+      <div className="flex gap-2">
+        <Pill active={mainTab === "transactions"} onClick={() => setMainTab("transactions")}>Transactions</Pill>
+        <Pill active={mainTab === "budgets"} onClick={() => setMainTab("budgets")}>Budgets par catégorie</Pill>
+      </div>
+
+      {mainTab === "transactions" && (
+        <>
+          <div className="flex gap-3 flex-wrap">
+            <Pill active={filter === "tout"} onClick={() => setFilter("tout")}>Tout</Pill>
+            {Object.entries(TYPE_META).map(([k, v]) => (
+              <Pill key={k} active={filter === k} onClick={() => setFilter(k)}>{v.label}</Pill>
+            ))}
+            <Pill active={filter === "recurring"} onClick={() => setFilter("recurring")}>
+              <Repeat size={13} className="inline mr-1" />Récurrentes
+            </Pill>
+          </div>
+
+          <Card>
+            <h2 className="text-lg font-bold mb-4" style={{ color: C.text }}>
+              Transactions ({list.length})
+            </h2>
+            {list.length === 0 && <p style={{ color: C.muted, fontSize: 13 }}>Aucune transaction dans ce filtre.</p>}
+            {list.map((t) => {
+              const meta = TYPE_META[t.type] || { label: t.type, color: C.muted };
+              const isEditing = editId === t.id;
+              return (
+                <div key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  {isEditing ? (
+                    <div className="py-3 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                      <input value={editBuf.label} style={inpSt} onChange={e => setEditBuf(b => ({ ...b, label: e.target.value }))} />
+                      <select value={editBuf.cat} style={inpSt} onChange={e => setEditBuf(b => ({ ...b, cat: e.target.value }))}>
+                        {Object.keys(CAT_COLORS).map(c => <option key={c}>{c}</option>)}
+                      </select>
+                      <select value={editBuf.type} style={inpSt} onChange={e => setEditBuf(b => ({ ...b, type: e.target.value }))}>
+                        {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                      <div className="flex gap-2 items-center">
+                        <input type="number" value={editBuf.amount} style={{ ...inpSt, width: 90 }} onChange={e => setEditBuf(b => ({ ...b, amount: e.target.value }))} />
+                        <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.muted, fontSize: 12 }}>
+                          <input type="checkbox" checked={!!editBuf.recurring} onChange={e => setEditBuf(b => ({ ...b, recurring: e.target.checked }))} style={{ accentColor: C.blue }} />
+                          <Repeat size={11} />
+                        </label>
+                        <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>OK</button>
+                        <button onClick={() => setEditId(null)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: C.muted, fontSize: 12 }}>✕</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 py-3">
+                      <div className="rounded-xl w-10 h-10 flex items-center justify-center shrink-0"
+                        style={{ background: "rgba(139,92,246,0.08)" }}>
+                        {t.type === "revenu" ? <TrendingUp size={18} style={{ color: C.green }} />
+                          : t.type === "investissement" ? <PiggyBank size={18} style={{ color: C.cyan }} />
+                          : <Home size={18} style={{ color: C.muted }} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold truncate text-sm" style={{ color: C.text }}>
+                          {t.label}
+                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 10, color: C.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
+                        </div>
+                        <div className="text-xs" style={{ color: C.muted }}>{t.cat}</div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-medium shrink-0"
+                        style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>
+                      <span className="font-bold text-base shrink-0 w-24 text-right"
+                        style={{ color: t.amount >= 0 ? C.green : C.text }}>
+                        {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
+                      </span>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => startEdit(t)}
+                          style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: C.muted }}>
+                          <Pencil size={13} />
+                        </button>
+                        <button onClick={() => onDelete?.(t.id)}
+                          style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: C.red }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </Card>
+        </>
+      )}
+
+      {mainTab === "budgets" && (
+        <Card>
+          <h2 className="text-lg font-bold mb-1" style={{ color: C.text }}>Budgets par catégorie</h2>
+          <p className="text-sm mb-5" style={{ color: C.muted }}>Fixez un plafond mensuel par catégorie de dépense. Laissez vide = pas de limite.</p>
+          <div className="flex flex-col gap-4">
+            {allCats.map(cat => {
+              const spent   = spentByCat[cat] || 0;
+              const limit   = budgets?.[cat] || 0;
+              const pctUsed = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
+              const color   = pctUsed >= 100 ? C.red : pctUsed >= 80 ? C.amber : C.green;
+              const catCol  = CAT_COLORS[cat] || C.muted;
+              return (
+                <div key={cat}>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: catCol }} />
+                    <span className="text-sm font-semibold flex-1" style={{ color: C.text }}>{cat}</span>
+                    <span className="text-sm font-bold" style={{ color: spent > 0 ? C.text : C.muted }}>{eur(spent)}</span>
+                    <span style={{ color: C.muted, fontSize: 12 }}>/</span>
+                    <input
+                      type="number"
+                      placeholder="illimité"
+                      value={budgets?.[cat] || ""}
+                      onChange={e => setBudgets(b => ({ ...b, [cat]: +e.target.value || 0 }))}
+                      style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: "rgba(255,255,255,0.04)", color: C.text, fontSize: 13, outline: "none" }}
+                    />
+                    <span style={{ color: C.muted, fontSize: 12 }}>€ max</span>
+                  </div>
+                  {limit > 0 && (
+                    <div>
+                      <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-1.5 rounded-full transition-all" style={{ width: `${pctUsed}%`, background: color }} />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span style={{ fontSize: 11, color: C.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
+                        {pctUsed >= 100
+                          ? <span style={{ fontSize: 11, color: C.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
+                          : <span style={{ fontSize: 11, color: C.muted }}>Reste {eur(limit - spent)}</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : SIMULATIONS                                                */
+/* ------------------------------------------------------------------ */
+function Simulations({ totals, simParams, setSimParams, age, transactions }) {
+  const { monthly, initial, price, horizon } = simParams;
+  const setMonthly = (v) => setSimParams((p) => ({ ...p, monthly: v }));
+  const setInitial = (v) => setSimParams((p) => ({ ...p, initial: v }));
+  const setPrice = (v) => setSimParams((p) => ({ ...p, price: v }));
+  const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
+  const [fee, setFee] = useState(1.8);
+  const [activeTab, setActiveTab] = useState("etf");
+  const [inflationRate, setInflationRate] = useState(0.02);
+  const [cryptoTip, setCryptoTip] = useState(null);
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState(null);
+  const [liveTs, setLiveTs] = useState(null);
+  const [liveCountdown, setLiveCountdown] = useState(30);
+  const tipTimer = useRef(null);
+
+  const fetchLivePrices = async () => {
+    setLiveLoading(true);
+    setLiveError(null);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=eur,usd&include_24hr_change=true",
+        { signal: ctrl.signal }
+      );
+      const data = await res.json();
+      setLiveData(data);
+      setLiveTs(new Date().toLocaleTimeString("fr-FR"));
+      setLiveCountdown(30);
+    } catch (_) {
+      setLiveError("Service indisponible — vérifiez votre connexion ou réessayez.");
+    }
+    finally { clearTimeout(timeout); setLiveLoading(false); }
+  };
+  useEffect(() => {
+    if (!liveOpen) return;
+    fetchLivePrices();
+    const iv = setInterval(fetchLivePrices, 30000);
+    return () => clearInterval(iv);
+  }, [liveOpen]);
+  useEffect(() => {
+    if (!liveOpen) return;
+    const tick = setInterval(() => setLiveCountdown((c) => (c > 0 ? c - 1 : 30)), 1000);
+    return () => clearInterval(tick);
+  }, [liveOpen]);
+
+  const showCryptoTip = (e, coin) => {
+    clearTimeout(tipTimer.current);
+    const r = e.currentTarget.getBoundingClientRect();
+    setCryptoTip({ coin, x: Math.min(r.left, window.innerWidth - 520), y: r.bottom + 8 });
+  };
+  const hideCryptoTip = () => { tipTimer.current = setTimeout(() => setCryptoTip(null), 200); };
+  const keepCryptoTip = () => clearTimeout(tipTimer.current);
+
+  // Valeur d'un bien immobilier acheté avec 10 % d'apport : la valeur du
+  // bien s'apprécie à RATE_IMMO_APPRECIATION/an, et la part détenue par
+  // l'acheteur (equity) passe de 10 % (apport) à 100 % (prêt soldé) sur 25 ans.
+  // Formule unique réutilisée par le graphique (detailedB) et le comparatif
+  // (compare[]) pour éviter deux chiffres différents pour le même concept.
+  const immoEquityAt = (y) => {
+    const propValue  = price * Math.pow(1 + RATE_IMMO_APPRECIATION, y);
+    const equityFrac = 0.1 + 0.9 * Math.min(y / 25, 1);
+    return Math.round(propValue * equityFrac);
+  };
+
+  const sim = useMemo(() => {
+    const apports = initial + monthly * 12 * horizon;
+    const capA = fv(initial, monthly, RATE_A, horizon);
+    const capC = fv(initial, monthly, RATE_C, horizon);
+    const capB = immoEquityAt(horizon);
+    const apportB = price * 0.1 + monthly * 12 * horizon;
+    const detailedA = fvDetailedSeries(initial, monthly, RATE_A, horizon, SIM_START_YEAR);
+    const detailedC = fvDetailedSeries(initial, monthly, RATE_C, horizon, SIM_START_YEAR);
+    const detailedB = Array.from({ length: horizon + 1 }, (_, y) => {
+      const capital = immoEquityAt(y);
+      const ap = Math.round(price * 0.1 + monthly * 12 * y);
+      return { year: SIM_START_YEAR + y, capital, apports: ap, gains: Math.max(0, capital - ap) };
+    });
+    const capBTC = fv(initial, monthly, RATE_BTC, horizon);
+    const capETH = fv(initial, monthly, RATE_ETH, horizon);
+    const detailedBTC = fvDetailedSeries(initial, monthly, RATE_BTC, horizon, SIM_START_YEAR);
+    const detailedETH = fvDetailedSeries(initial, monthly, RATE_ETH, horizon, SIM_START_YEAR);
+    return {
+      apports,
+      A: { cap: capA, gain: capA - apports },
+      B: { cap: capB, apport: apportB, gain: capB - apportB, cashflow: -102 },
+      C: { cap: capC, gain: capC - apports, passif: (capC * RATE_C) / 12 },
+      BTC: { cap: capBTC, gain: capBTC - apports },
+      ETH: { cap: capETH, gain: capETH - apports },
+      detailedA, detailedB, detailedC, detailedBTC, detailedETH,
+    };
+  }, [monthly, initial, price, horizon]);
+
+  // Détecteur de frais cachés
+  const fees = useMemo(() => {
+    const wpea = initial * Math.pow(1 + RATE_A, horizon);
+    const bank = initial * Math.pow(1 + (RATE_A - fee / 100), horizon);
+    return { wpea, bank, manque: wpea - bank };
+  }, [initial, fee, horizon]);
+
+  // Capacité d'emprunt — détection profil + règles bancaires françaises
+  const profileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
+  const bCfg = PROFILE_CONFIG[profileType];
+  const revenueForBank = Math.round(totals.revenus * bCfg.revenueRatio);
+  const mensualiteMax = Math.max(0, Math.round(revenueForBank * 0.35 * bCfg.capacityMult));
+  const loan20 = Math.round(loanFromPayment(mensualiteMax, 0.035, 20));
+  const loan25 = Math.round(loanFromPayment(mensualiteMax, 0.037, 25));
+
+  // FIRE — taux réel = taux nominal − inflation (pouvoir d'achat constant)
+  const fireAge = useMemo(() => {
+    const annualNeeds = (totals.chargesFixes + totals.depensesVar) * 12;
+    const fireTarget  = annualNeeds * 25;
+    const realRate    = (1 + RATE_A) / (1 + inflationRate) - 1;
+    for (let y = 0; y <= 50; y++) {
+      if (fv(initial, monthly, realRate, y) >= fireTarget) return age + y;
+    }
+    return "—";
+  }, [totals.chargesFixes, totals.depensesVar, initial, monthly, age, inflationRate]);
+
+  const comboSeries = useMemo(() => sim.detailedA.map((p, idx) => {
+    const BTC = sim.detailedBTC[idx].capital;
+    const ETH = sim.detailedETH[idx].capital;
+    return {
+      year: p.year,
+      A: p.capital,
+      B: sim.detailedB[idx].capital,
+      C: sim.detailedC[idx].capital,
+      BTC, ETH,
+      // Échelle log pour l'axe crypto : à 25-30 %/an, BTC/ETH écrasent les
+      // 20 premières années à 0 sur un axe linéaire (cf. Math.log10 plus bas).
+      logBTC: BTC > 1 ? +Math.log10(BTC).toFixed(3) : 0,
+      logETH: ETH > 1 ? +Math.log10(ETH).toFixed(3) : 0,
+    };
+  }), [sim]);
+
+  const { nonCryptoTicks, nonCryptoDomMax } = useMemo(() => {
+    const mx    = Math.max(...comboSeries.map(p => Math.max(p.A, p.B, p.C)));
+    const ticks = generateSmartYTicks(mx);
+    return { nonCryptoTicks: ticks, nonCryptoDomMax: ticks[ticks.length - 1] };
+  }, [comboSeries]);
+
+  // Domaine log de l'axe crypto, basé sur le capital initial (point de départ
+  // commun) jusqu'au plus haut des deux capitaux finaux BTC/ETH.
+  const { logDomMin, logDomMax, logTicks } = useMemo(() => {
+    const domMin = Math.floor(Math.log10(Math.max(initial, 1)));
+    const domMax = Math.ceil(Math.log10(Math.max(sim.ETH.cap, sim.BTC.cap)));
+    const ticks  = Array.from({ length: domMax - domMin + 1 }, (_, i) => domMin + i);
+    return { logDomMin: domMin, logDomMax: domMax, logTicks: ticks };
+  }, [initial, sim]);
+
+  const compare = useMemo(() => [
+    { name: "ETF PEA",    tab: "etf",      rate: "10,5 %", color: "#22c55e", risk: "Faible",        vol: "15 %",  drawdown: "−35 %", y10: fv(initial, monthly, RATE_A, 10),   yN: sim.A.cap },
+    { name: "Immobilier", tab: "immo",     rate: "≈2 %/an", color: "#f59e0b", risk: "Faible",        vol: "20 %",  drawdown: "−40 %", y10: immoEquityAt(10), yN: sim.B.cap },
+    { name: "Livret A",   tab: "defensif", rate: "1,5 %",  color: "#94a3b8", risk: "Très faible",   vol: "5 %",   drawdown: "−5 %",  y10: fv(initial, monthly, RATE_C, 10),   yN: sim.C.cap },
+    { name: "Bitcoin",    tab: "btc",      rate: "30 %",   color: "#ef4444", risk: "Extrême",       vol: "65 %",  drawdown: "−80 %", y10: fv(initial, monthly, RATE_BTC, 10), yN: sim.BTC.cap },
+    { name: "Ethereum",   tab: "eth",      rate: "25 %",   color: "#a855f7", risk: "Extrême+",      vol: "75 %",  drawdown: "−85 %", y10: fv(initial, monthly, RATE_ETH, 10), yN: sim.ETH.cap },
+  ], [initial, monthly, price, sim]);
+
+  const TABS = [
+    { id: "etf",      label: "ETF World",  color: "#22c55e" },
+    { id: "immo",     label: "Immobilier", color: "#f59e0b" },
+    { id: "defensif", label: "Livret A",   color: "#94a3b8" },
+    { id: "btc",      label: "Bitcoin",    color: "#ef4444" },
+    { id: "eth",      label: "Ethereum",   color: "#a855f7" },
+    { id: "compare",  label: "Comparatif", color: C.blue },
+  ];
+  const activeColor = TABS.find((t) => t.id === activeTab)?.color || C.blue;
+
+  const allocs = useMemo(() => age >= 55
+    ? { label: "Conservateur · 55+ ans", pcts: [{ n: "ETF World", p: 60, c: C.cyan }, { n: "Immobilier", p: 25, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 5, c: "#f7931a" }, { n: "Ethereum", p: 0, c: "#627eea" }] }
+    : age >= 40
+    ? { label: "Équilibré · 40–54 ans", pcts: [{ n: "ETF World", p: 50, c: C.cyan }, { n: "Immobilier", p: 30, c: C.amber }, { n: "Livret A", p: 5, c: "#8a97b1" }, { n: "Bitcoin", p: 10, c: "#f7931a" }, { n: "Ethereum", p: 5, c: "#627eea" }] }
+    : age >= 30
+    ? { label: "Dynamique · 30–39 ans", pcts: [{ n: "ETF World", p: 40, c: C.cyan }, { n: "Immobilier", p: 25, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 15, c: "#f7931a" }, { n: "Ethereum", p: 10, c: "#627eea" }] }
+    : { label: "Agressif · −30 ans", pcts: [{ n: "ETF World", p: 30, c: C.cyan }, { n: "Immobilier", p: 15, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 20, c: "#f7931a" }, { n: "Ethereum", p: 25, c: "#627eea" }] }
+  , [age]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center flex-wrap gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Simulations</h1>
+          <p style={{ color: C.muted }}>Projetez la croissance de votre capital sur le long terme.</p>
+        </div>
+        <button
+          onClick={() => setLiveOpen(true)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shrink-0"
+          style={{
+            background: "linear-gradient(135deg, #f7931a 0%, #627eea 100%)",
+            color: "#fff", border: "none", cursor: "pointer",
+            boxShadow: "0 2px 12px rgba(247,147,26,0.3)",
+            transition: "transform 0.15s, box-shadow 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(247,147,26,0.45)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 2px 12px rgba(247,147,26,0.3)"; }}
+        >
+          {liveLoading
+            ? <RefreshCw size={14} className="animate-spin" />
+            : <TrendingUp size={14} />}
+          Cours en temps réel
+          <RefreshCw size={12} style={{ opacity: 0.7 }} />
+        </button>
+      </div>
+
+      {/* Paramètres communs */}
+      <Card>
+        <h2 className="text-lg font-bold mb-4" style={{ color: C.text }}>Paramètres</h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Investissement mensuel (€)">
+            <input type="number" value={monthly} style={inputStyle}
+              onChange={(e) => setMonthly(+e.target.value || 0)} />
+          </Field>
+          <Field label="Épargne / apport initial (€)">
+            <input type="number" value={initial} style={inputStyle}
+              onChange={(e) => setInitial(+e.target.value || 0)} />
+          </Field>
+          <Field label="Horizon">
+            <select value={horizon} style={inputStyle} onChange={(e) => setHorizon(+e.target.value)}>
+              <option value={1}>1 an</option>
+              <option value={2}>2 ans</option>
+              <option value={5}>5 ans</option>
+              <option value={10}>10 ans</option>
+              <option value={20}>20 ans</option>
+              <option value={30}>30 ans</option>
+            </select>
+          </Field>
+          <div>
+            <div className="flex justify-between mb-2">
+              <span className="text-sm" style={{ color: C.muted }}>Inflation</span>
+              <span className="font-bold text-sm" style={{ color: inflationRate > 0 ? C.amber : C.muted }}>
+                {(inflationRate * 100).toFixed(1).replace(".", ",")} % / an
+              </span>
+            </div>
+            <input type="range" min={0} max={0.05} step={0.001} value={inflationRate}
+              onChange={(e) => setInflationRate(+e.target.value)}
+              className="w-full" style={{ accentColor: C.amber }} />
+            <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+              <span>0 %</span><span>2,5 %</span><span>5 %</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Tab bar */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => {
+          const hasHoverChart = t.id === "btc" || t.id === "eth" || t.id === "etf";
+          return (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              onMouseEnter={hasHoverChart ? (e) => showCryptoTip(e, t.id) : undefined}
+              onMouseLeave={hasHoverChart ? hideCryptoTip : undefined}
+              title={hasHoverChart ? "Survol : voir l'historique des cours" : undefined}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)",
+                border: `1.5px solid ${activeTab === t.id ? t.color : C.border}`,
+                color: activeTab === t.id ? t.color : C.muted,
+                cursor: hasHoverChart ? "help" : "pointer",
+              }}>
+              {t.label}
+              {hasHoverChart && <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.5 }}>ℹ</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── TAB: ETF ── */}
+      {activeTab === "etf" && <>
+        <ScenarioCard
+          title="ETF PEA — MSCI World"
+          rate="10,5 % / an · intérêts composés mensuels" accent={C.cyan}
+          stats={[
+            { label: "Capital final", value: eur(sim.A.cap), color: C.cyan },
+            { label: "Apports totaux", value: eur(sim.apports), color: C.text },
+            { label: "Intérêts générés", value: eur(sim.A.gain), color: C.green },
+            { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: C.amber },
+          ]}
+          detailedData={sim.detailedA} lineColor={C.cyan} chartKey="A" inflationRate={inflationRate}
+          note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
+        />
+
+        {/* Détecteur de frais cachés */}
+        <Card style={{ borderColor: "rgba(255,90,95,0.3)" }}>
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold" style={{ color: C.text }}>Analyse des frais</h2>
+            </div>
+            <span className="text-sm" style={{ color: C.muted }}>vs WPEA sur {horizon} ans</span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <Field label="Capital investi (€)">
+                <input type="number" value={initial} style={inputStyle}
+                  onChange={(e) => setInitial(+e.target.value || 0)} />
+              </Field>
+              <div className="mt-5">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm" style={{ color: C.muted }}>Frais annuels de votre banque</span>
+                  <span className="font-bold" style={{ color: C.red }}>{fee.toFixed(1).replace(".", ",")} %</span>
+                </div>
+                <input type="range" min={0} max={3} step={0.1} value={fee}
+                  onChange={(e) => setFee(+e.target.value)}
+                  className="w-full" style={{ accentColor: C.blue }} />
+                <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+                  <span>0 %</span><span>1,5 %</span><span>3 %</span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl p-5"
+              style={{ background: "rgba(255,90,95,0.06)", border: "1px solid rgba(255,90,95,0.3)" }}>
+              <div className="text-sm font-semibold mb-1" style={{ color: C.red }}>
+                MANQUE À GAGNER SUR {horizon} ANS
+              </div>
+              <div className="text-4xl font-bold mb-4" style={{ color: C.red }}>− {eur(fees.manque)}</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div className="text-xs" style={{ color: C.muted }}>Avec votre banque</div>
+                  <div className="font-bold" style={{ color: C.text }}>{eur(fees.bank)}</div>
+                </div>
+                <div className="rounded-lg p-3" style={{ background: "rgba(34,199,154,0.08)" }}>
+                  <div className="text-xs" style={{ color: C.green }}>Avec le WPEA</div>
+                  <div className="font-bold" style={{ color: C.green }}>{eur(fees.wpea)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+      </>}
+
+      {/* ── TAB: IMMO ── */}
+      {activeTab === "immo" && <ImmoCard price={price} setPrice={setPrice} horizon={horizon} />}
+
+      {/* ── TAB: DÉFENSIF ── */}
+      {activeTab === "defensif" && (
+        <ScenarioCard
+          title="Livret A — Livret A & Épargne Sécurisée"
+          rate="1,5 % / an net · capital garanti" accent="#8a97b1"
+          stats={[
+            { label: "Capital final", value: eur(sim.C.cap), color: "#8a97b1" },
+            { label: "Apports totaux", value: eur(sim.apports), color: C.text },
+            { label: "Intérêts générés", value: eur(sim.C.gain), color: C.green },
+            { label: "Revenu passif/mois", value: eur(sim.C.passif), color: C.text },
+          ]}
+          detailedData={sim.detailedC} lineColor="#8a97b1" chartKey="C" inflationRate={inflationRate}
+          note="Intérêts composés sur Livret A, LDDS ou épargne de précaution — capital garanti et disponible à tout moment."
+        />
+      )}
+
+      {/* ── TAB: BITCOIN ── */}
+      {activeTab === "btc" && (
+        <ScenarioCard
+          title="Bitcoin"
+          rate="30 % / an · historique long terme · EXTRÊME" accent="#f7931a"
+          lineColor="#f7931a" chartKey="BTC" inflationRate={inflationRate} logScale
+          warning={{
+            title: "VOLATILITÉ EXTRÊME — LIRE AVANT D'INVESTIR",
+            points: [
+              "Chutes historiques : −80 % en 2018, −77 % en 2022 — récupération : 2 à 3 ans",
+              "Risque réglementaire : interdiction possible dans certains pays",
+              "Allocation max recommandée : 5 à 10 % du portefeuille UNIQUEMENT",
+            ],
+            disclaimer: "Cette simulation montre un rendement théorique. En réalité, la majorité des investisseurs panic-sell avant le gain. Ne pas investir l'argent dont vous avez besoin avant 5 ans.",
+          }}
+          riskBadges={[
+            { label: "Volatilité 65 %",      color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Drawdown −80 %",        color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Max 10 % portfolio",    color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Horizon 5 ans min",      color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+          ]}
+          stats={[
+            { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: "#f7931a" },
+            { label: "Apports totaux",     value: eur(sim.apports),                       color: C.text },
+            { label: "Gains potentiels",   value: eur(sim.BTC.gain),                      color: C.green },
+            { label: "Multiple",           value: (sim.BTC.cap / sim.apports).toFixed(1) + "×", color: "#f7931a" },
+          ]}
+          detailedData={sim.detailedBTC}
+          note="Rendement annualisé moyen de Bitcoin sur 10 ans. N'intègre pas les cycles de −80 %. Purement indicatif — les performances passées ne préjugent pas de l'avenir."
+        />
+      )}
+
+      {/* ── TAB: ETHEREUM ── */}
+      {activeTab === "eth" && (
+        <ScenarioCard
+          title="Ethereum"
+          rate="25 % / an · historique long terme · EXTRÊME+" accent="#627eea"
+          lineColor="#627eea" chartKey="ETH" inflationRate={inflationRate} logScale
+          warning={{
+            title: "RISQUE EXTRÊME — RÉSERVÉ AUX UTILISATEURS AVERTIS",
+            points: [
+              "Chutes historiques : −85 % en 2018, −81 % en 2022",
+              "Risque technologique : si le protocole Ethereum échoue ou est supplanté",
+              "Allocation max recommandée : 2 à 5 % du portefeuille UNIQUEMENT",
+            ],
+            disclaimer: "Ethereum est encore plus spéculatif que Bitcoin. Réservé aux investisseurs qui comprennent la blockchain et acceptent une perte totale de leur mise.",
+          }}
+          riskBadges={[
+            { label: "Volatilité 75 %",     color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Drawdown −85 %",       color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Max 5 % portfolio",    color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Risque technologique", color: "#eab308", bg: "rgba(234,179,8,0.08)" },
+          ]}
+          stats={[
+            { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: "#627eea" },
+            { label: "Apports totaux",   value: eur(sim.apports),                       color: C.text },
+            { label: "Gains potentiels", value: eur(sim.ETH.gain),                      color: C.green },
+            { label: "Multiple",         value: (sim.ETH.cap / sim.apports).toFixed(1) + "×", color: "#627eea" },
+          ]}
+          detailedData={sim.detailedETH}
+          note="Rendement annualisé moyen d'Ethereum sur 8 ans. Plus volatil que Bitcoin, moins de recul historique. Purement indicatif."
+        />
+      )}
+
+      {/* ── TAB: COMPARATIF ── */}
+      {activeTab === "compare" && (
+        <Card>
+          {/* En-tête */}
+          <div className="flex items-center flex-wrap gap-3 mb-2">
+            <TrendingUp size={20} style={{ color: C.blue }} />
+            <h2 className="text-xl font-bold" style={{ color: C.text }}>Comparatif — 5 scénarios</h2>
+          </div>
+          <p className="text-xs mb-4" style={{ color: C.muted }}>
+            Axe gauche · scénarios sûrs (échelle linéaire) &nbsp;|&nbsp; Axe droit · crypto (échelle logarithmique, ×10 par graduation) — même horizon, deux échelles pour tout lire d'un coup.
+          </p>
+
+          {/* Légende manuelle */}
+          <div className="flex flex-wrap gap-4 mb-4 text-xs">
+            {[
+              { label: "ETF World (10,5 %)",  color: "#22c55e", dash: false, axis: "←" },
+              { label: "Immobilier (≈2 %/an)", color: "#f59e0b", dash: false, axis: "←" },
+              { label: "Livret A (1,5 %)",     color: "#94a3b8", dash: false, axis: "←" },
+              { label: "Bitcoin (30 %)",       color: "#ef4444", dash: true,  axis: "→ log" },
+              { label: "Ethereum (25 %)",      color: "#a855f7", dash: true,  axis: "→ log" },
+            ].map((l) => (
+              <span key={l.label} className="flex items-center gap-1.5">
+                <span style={{
+                  display: "inline-block", width: 24, height: 2,
+                  background: l.dash
+                    ? `repeating-linear-gradient(to right,${l.color} 0,${l.color} 5px,transparent 5px,transparent 9px)`
+                    : l.color,
+                }} />
+                <span style={{ color: C.muted }}>{l.label}</span>
+                <span style={{ color: C.muted, opacity: 0.45, fontSize: 10 }}>{l.axis}</span>
+              </span>
+            ))}
+          </div>
+
+          {/* Graphique double axe */}
+          <ResponsiveContainer width="100%" height={340}>
+            <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+
+              {/* Axe gauche — scénarios sûrs */}
+              <YAxis
+                yAxisId="safe"
+                orientation="left"
+                domain={[0, nonCryptoDomMax]}
+                ticks={nonCryptoTicks}
+                stroke={C.muted}
+                tick={{ fontSize: 10 }}
+                tickFormatter={simsYFmt}
+                width={54}
+              />
+
+              {/* Axe droit — crypto, échelle log (chaque graduation = ×10) */}
+              <YAxis
+                yAxisId="crypto"
+                orientation="right"
+                domain={[logDomMin, logDomMax]}
+                ticks={logTicks}
+                stroke="#f7931a44"
+                tick={{ fontSize: 10, fill: "#f7931a99" }}
+                tickFormatter={logFmt}
+                width={58}
+              />
+
+              <Tooltip
+                {...chartTip}
+                formatter={(v, name, props) => {
+                  const key = props.dataKey;
+                  const raw = key === "logBTC" ? props.payload.BTC
+                    : key === "logETH" ? props.payload.ETH
+                    : v;
+                  return [eur(raw), name];
+                }}
+              />
+
+              {/* Courbes sûres — axe gauche, échelle linéaire */}
+              <Line yAxisId="safe" type="monotone" dataKey="A" name="ETF World"    stroke="#22c55e"   strokeWidth={2.5} dot={false} />
+              <Line yAxisId="safe" type="monotone" dataKey="B" name="Immobilier"   stroke="#f59e0b"   strokeWidth={2.5} dot={false} />
+              <Line yAxisId="safe" type="monotone" dataKey="C" name="Livret A"     stroke="#94a3b8"   strokeWidth={2}   dot={false} />
+
+              {/* Courbes crypto — axe droit, échelle log */}
+              <Line yAxisId="crypto" type="monotone" dataKey="logBTC" name="Bitcoin"  stroke="#ef4444"   strokeWidth={2.5} dot={false} strokeDasharray="7 4" />
+              <Line yAxisId="crypto" type="monotone" dataKey="logETH" name="Ethereum" stroke="#a855f7"   strokeWidth={2.5} dot={false} strokeDasharray="7 4" />
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* Tableau récapitulatif */}
+          <div className="overflow-x-auto mt-6">
+            <table className="w-full text-sm min-w-[560px]">
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                  {["Scénario", "Rendement", "À 10 ans", `À ${horizon} ans`, "Multiple", "Risque"].map((h) => (
+                    <th key={h} className="py-2 px-3 text-left text-xs font-semibold" style={{ color: C.muted }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {compare.map((c) => (
+                  <tr key={c.name} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td className="py-3 px-3">
+                      <button
+                        onClick={() => setActiveTab(c.tab)}
+                        className="px-2 py-0.5 rounded-lg text-xs font-semibold"
+                        style={{ color: c.color, border: `1px solid ${c.color}44` }}
+                      >{c.name}</button>
+                    </td>
+                    <td className="py-3 px-3 font-bold text-xs" style={{ color: c.color }}>{c.rate}</td>
+                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.y10)}</td>
+                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.yN)}</td>
+                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{(c.yN / sim.apports).toFixed(1)}×</td>
+                    <td className="py-3 px-3 text-xs" style={{ color: C.muted }}>{c.risk}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs mt-3" style={{ color: C.muted }}>
+            Rendements basés sur les performances historiques annualisées de chaque actif. Les performances passées ne garantissent pas les rendements futurs. Cliquez sur un scénario pour accéder à son analyse détaillée.
+          </p>
+        </Card>
+      )}
+
+      {/* ── MODAL: Prix Live ── */}
+      {liveOpen && (
+        <div
+          className="wt-fade-in"
+          style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setLiveOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="wt-scale-in"
+            style={{ background: "#0d1426", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={20} style={{ color: C.blue }} />
+                <span className="text-lg font-bold" style={{ color: C.text }}>Cours en temps réel</span>
+              </div>
+              <button onClick={() => setLiveOpen(false)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: C.muted, borderRadius: 8, padding: "6px 8px", cursor: "pointer", display: "flex" }}><X size={16} /></button>
+            </div>
+
+            {liveLoading && !liveData && (
+              <div className="flex items-center justify-center gap-3 py-8" style={{ color: C.muted }}>
+                <RefreshCw size={18} className="animate-spin" />
+                <span>Chargement des prix en direct…</span>
+              </div>
+            )}
+            {!liveLoading && !liveData && liveError && (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <AlertTriangle size={28} style={{ color: C.red }} />
+                <span className="text-sm text-center" style={{ color: C.red }}>{liveError}</span>
+                <button onClick={fetchLivePrices} className="px-4 py-2 rounded-xl text-sm"
+                  style={{ background: "rgba(255,255,255,0.05)", color: C.muted, border: `1px solid ${C.border}` }}>
+                  Réessayer
+                </button>
+              </div>
+            )}
+
+            {liveData && (() => {
+              const coins = [
+                { key: "bitcoin", label: "Bitcoin (BTC)", color: "#f7931a" },
+                { key: "ethereum", label: "Ethereum (ETH)", color: "#627eea" },
+              ];
+              return (
+                <div className="flex flex-col gap-4">
+                  {coins.map((coin) => {
+                    const d = liveData[coin.key];
+                    if (!d) return null;
+                    const chg = d.eur_24h_change;
+                    const up = chg >= 0;
+                    return (
+                      <div key={coin.key} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${coin.color}33` }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-bold" style={{ color: C.text }}>{coin.label}</span>
+                          <span className="text-sm font-bold px-2 py-0.5 rounded-lg"
+                            style={{ color: up ? "#22c55e" : "#ef4444", background: up ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)" }}>
+                            {up ? "↑" : "↓"} {Math.abs(chg).toFixed(2)} %
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg p-3" style={{ background: `${coin.color}0d` }}>
+                            <div className="text-xs mb-1" style={{ color: C.muted }}>EUR</div>
+                            <div className="text-2xl font-bold" style={{ color: coin.color }}>
+                              {d.eur >= 1000 ? "€" + d.eur.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) : "€" + d.eur.toFixed(2)}
+                            </div>
+                          </div>
+                          <div className="rounded-lg p-3" style={{ background: "rgba(139,92,246,0.08)" }}>
+                            <div className="text-xs mb-1" style={{ color: C.muted }}>USD</div>
+                            <div className="text-2xl font-bold" style={{ color: C.blue }}>
+                              {d.usd >= 1000 ? "$" + d.usd.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "$" + d.usd.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+                    <div className="text-xs" style={{ color: C.muted }}>
+                      Mis à jour : <span style={{ color: C.text }}>{liveTs}</span>
+                      <span className="ml-3" style={{ color: C.muted }}>· Prochain dans {liveCountdown}s</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: "#22c55e" }}>
+                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block" style={{ animation: "pulse 2s infinite" }} />
+                      En direct
+                    </div>
+                  </div>
+                  <button onClick={fetchLivePrices} disabled={liveLoading}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-sm font-medium"
+                    style={{ border: `1px solid ${C.border}`, color: C.muted, background: "rgba(255,255,255,0.02)", cursor: liveLoading ? "default" : "pointer" }}>
+                    <RefreshCw size={13} className={liveLoading ? "animate-spin" : ""} />
+                    Actualiser maintenant
+                  </button>
+                  <p className="text-xs text-center" style={{ color: C.muted }}>
+                    Source : CoinGecko (gratuit · aucune clé API)
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Floating crypto history tooltip */}
+      {cryptoTip && (
+        <div
+          onMouseEnter={keepCryptoTip}
+          onMouseLeave={hideCryptoTip}
+          style={{
+            position: "fixed",
+            top: cryptoTip.y,
+            left: cryptoTip.x,
+            width: 500,
+            zIndex: 1000,
+            background: "#111827",
+            border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : C.cyan}`,
+            borderRadius: 12,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+            padding: 20,
+            overflowY: "auto",
+            maxHeight: "80vh",
+          }}
+        >
+          {cryptoTip.coin === "etf"
+            ? <ETFHistoryTooltip />
+            : <CryptoHistoryTooltip coin={cryptoTip.coin} />}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  CRYPTO HISTORY TOOLTIP                                             */
+/* ------------------------------------------------------------------ */
+const MSCI_HISTORY = [
+  { label: "2000", price: 1420, event: "Peak dot-com",      type: "peak"    },
+  { label: "2003", price: 580,  event: "Creux −59 %",       type: "bottom"  },
+  { label: "2007", price: 1260, event: "Peak pré-crise",    type: "peak"    },
+  { label: "2009", price: 595,  event: "Creux GFC −53 %",   type: "bottom"  },
+  { label: "2015", price: 1850, event: "Reprise",            type: "neutral" },
+  { label: "2020", price: 1580, event: "Creux COVID −33 %", type: "bottom"  },
+  { label: "2021", price: 2780, event: "Pic post-COVID",    type: "peak"    },
+  { label: "2022", price: 2080, event: "Correction −25 %",  type: "bottom"  },
+  { label: "2024", price: 3290, event: "Bull market",       type: "peak"    },
+  { label: "2026", price: 3640, event: "Aujourd'hui",       type: "current" },
+];
+const BTC_HISTORY = [
+  { label: "2010", price: 0.30,  event: "Naissance",    type: "bottom"  },
+  { label: "2013", price: 1100,  event: "Peak 2",        type: "peak"    },
+  { label: "2017", price: 13800, event: "Peak 3",        type: "peak"    },
+  { label: "2018", price: 3600,  event: "Crash −80 %",  type: "bottom"  },
+  { label: "2021", price: 69000, event: "Peak 4",        type: "peak"    },
+  { label: "2022", price: 16500, event: "FTX − Creux",   type: "bottom"  },
+  { label: "2024", price: 62000, event: "Halving",       type: "neutral" },
+  { label: "2025", price: 75000, event: "Bull / Crash",  type: "peak"    },
+  { label: "2026", price: 73469, event: "Aujourd'hui",   type: "current" },
+];
+const ETH_HISTORY = [
+  { label: "2015", price: 1,    event: "Naissance",      type: "bottom"  },
+  { label: "2017", price: 730,  event: "Peak 1",          type: "peak"    },
+  { label: "2018", price: 130,  event: "Crash −85 %",    type: "bottom"  },
+  { label: "2021", price: 4800, event: "Peak ATH",        type: "peak"    },
+  { label: "2022", price: 1000, event: "The Merge",       type: "bottom"  },
+  { label: "2024", price: 3700, event: "ETF approbation", type: "peak"    },
+  { label: "2025", price: 2300, event: "Sous-perf.",      type: "neutral" },
+  { label: "2026", price: 1964, event: "Aujourd'hui",     type: "current" },
+];
+
+function ETFHistoryTooltip() {
+  const color = C.cyan;
+  const currentPrice = 3640;
+  const bottomPrice  = 580;
+  const gainPct = Math.round((currentPrice / bottomPrice - 1) * 100);
+
+  const CustomDot = (props) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy) return null;
+    if (payload.type === "peak")    return <circle cx={cx} cy={cy} r={5} fill="#ef4444" />;
+    if (payload.type === "bottom")  return <circle cx={cx} cy={cy} r={5} fill="#22c55e" />;
+    if (payload.type === "current") return <circle cx={cx} cy={cy} r={6} fill={color} stroke="#fff" strokeWidth={2} />;
+    return <circle cx={cx} cy={cy} r={3} fill={color} opacity={0.4} />;
+  };
+
+  const milestones = MSCI_HISTORY.filter((d) => d.type !== "neutral");
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-lg font-bold" style={{ color }}>MSCI World — Historique de l'indice</div>
+          <div className="text-xs" style={{ color: C.muted }}>WPEA (ETF PEA) · Depuis 2000 · En points d'indice (EUR)</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Indice actuel</div>
+          <div className="font-bold text-sm" style={{ color }}>{currentPrice.toLocaleString("fr-FR")} pts</div>
+        </div>
+        <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
+          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Depuis le creux 2003</div>
+          <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={MSCI_HISTORY} margin={{ top: 5, right: 10, bottom: 5, left: 52 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <XAxis dataKey="label" stroke={C.muted} tick={{ fontSize: 10 }} />
+          <YAxis
+            domain={[0, 4000]} stroke={C.muted} tick={{ fontSize: 10 }}
+            tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
+          />
+          <Tooltip
+            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 11 }}
+            formatter={(v, n, { payload }) => [`${v.toLocaleString("fr-FR")} pts`, payload.event]}
+            labelFormatter={(l) => l}
+          />
+          <Line type="monotone" dataKey="price" stroke={color} strokeWidth={2.5}
+            dot={<CustomDot />} activeDot={{ r: 6, fill: color }} />
+        </LineChart>
+      </ResponsiveContainer>
+
+      <div className="mt-3 mb-3">
+        <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
+        <div className="grid grid-cols-4 gap-1">
+          {milestones.map((d) => (
+            <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
+              style={{
+                background: d.type === "peak" ? "rgba(239,68,68,0.1)"
+                  : d.type === "bottom" ? "rgba(34,197,94,0.1)"
+                  : `${color}11`,
+              }}>
+              <div className="text-xs font-bold"
+                style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
+                {d.label}
+              </div>
+              <div className="font-semibold" style={{ color: C.text, fontSize: 10 }}>{d.price.toLocaleString("fr-FR")} pts</div>
+              <div style={{ color: C.muted, fontSize: 9 }}>{d.event}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: C.muted }}>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Peak</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Creux</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: color }} /> Aujourd'hui</span>
+      </div>
+
+      {/* Description */}
+      <div className="rounded-lg p-3 mb-3 text-xs" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}` }}>
+        <div className="font-bold mb-1.5" style={{ color }}>C'est quoi le MSCI World ?</div>
+        <p style={{ color: C.muted, lineHeight: 1.6 }}>
+          Le <span style={{ color: C.text, fontWeight: 600 }}>MSCI World</span> est un indice boursier qui regroupe{" "}
+          <span style={{ color: C.text, fontWeight: 600 }}>~1 500 grandes entreprises</span> dans 23 pays développés
+          (États-Unis, Europe, Japon…). Investi via un{" "}
+          <span style={{ color: C.text, fontWeight: 600 }}>ETF PEA</span>, il réplique passivement cet indice
+          à très faibles frais (TER ≈ 0,12–0,20 % / an) et bénéficie de la fiscalité avantageuse du PEA après 5 ans.
+          Les États-Unis représentent environ <span style={{ color: C.text, fontWeight: 600 }}>70 %</span> du portefeuille,
+          dominé par Apple, Microsoft, Nvidia, Amazon et Google.
+        </p>
+      </div>
+
+      <div className="rounded-lg p-2.5 text-xs italic"
+        style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.25)", color: "#6ee7b7" }}>
+        Rendement annualisé ~10,5 % / an sur 15 ans (2009–2026). Les performances passées ne garantissent pas les performances futures.
+      </div>
+    </div>
+  );
+}
+
+function CryptoHistoryTooltip({ coin }) {
+  const isBTC = coin === "btc";
+  const raw    = isBTC ? BTC_HISTORY : ETH_HISTORY;
+  const color  = isBTC ? "#f7931a" : "#627eea";
+  const name   = isBTC ? "Bitcoin" : "Ethereum";
+  const createdPrice  = isBTC ? 0.30 : 1;
+  const currentPrice  = isBTC ? 73469 : 1964;
+  const gainPct = Math.round((currentPrice / createdPrice - 1) * 100);
+
+  const logData = raw.map((d) => ({
+    ...d,
+    logPrice: parseFloat(Math.log10(d.price).toFixed(3)),
+  }));
+  const yMin = Math.floor(Math.log10(Math.min(...raw.map((d) => d.price))));
+  const yMax = Math.ceil(Math.log10(Math.max(...raw.map((d) => d.price))));
+  const yTicks = Array.from({ length: yMax - yMin + 1 }, (_, i) => yMin + i);
+
+  const CustomDot = (props) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy) return null;
+    if (payload.type === "peak")    return <circle cx={cx} cy={cy} r={5} fill="#ef4444" />;
+    if (payload.type === "bottom")  return <circle cx={cx} cy={cy} r={5} fill="#22c55e" />;
+    if (payload.type === "current") return <circle cx={cx} cy={cy} r={6} fill={color} stroke="#fff" strokeWidth={2} />;
+    return <circle cx={cx} cy={cy} r={3} fill={color} opacity={0.4} />;
+  };
+
+  const milestones = raw.filter((d) => d.type !== "neutral");
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-lg font-bold" style={{ color }}>{name} — Historique des cours</div>
+          <div className="text-xs" style={{ color: C.muted }}>Depuis la création jusqu'au 8 juin 2026 · Échelle log</div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Prix actuel</div>
+          <div className="font-bold text-sm" style={{ color }}>{eur(currentPrice)}</div>
+        </div>
+        <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
+          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Gain depuis création</div>
+          <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={logData} margin={{ top: 5, right: 10, bottom: 5, left: 48 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <XAxis dataKey="label" stroke={C.muted} tick={{ fontSize: 10 }} />
+          <YAxis
+            domain={[yMin, yMax]} ticks={yTicks}
+            stroke={C.muted} tick={{ fontSize: 10 }}
+            tickFormatter={(v) => {
+              const val = Math.pow(10, v);
+              if (val < 1)    return "€" + val.toFixed(1);
+              if (val < 1000) return "€" + Math.round(val);
+              return "€" + Math.round(val / 1000) + "k";
+            }}
+          />
+          <Tooltip
+            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 11 }}
+            formatter={(v, n, { payload }) => [eur(payload.price), payload.event]}
+            labelFormatter={(l) => l}
+          />
+          <Line type="monotone" dataKey="logPrice" stroke={color} strokeWidth={2.5}
+            dot={<CustomDot />} activeDot={{ r: 6, fill: color }} />
+        </LineChart>
+      </ResponsiveContainer>
+
+      {/* Milestones grid */}
+      <div className="mt-3 mb-3">
+        <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
+        <div className="grid grid-cols-4 gap-1">
+          {milestones.map((d) => (
+            <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
+              style={{
+                background: d.type === "peak" ? "rgba(239,68,68,0.1)"
+                  : d.type === "bottom" ? "rgba(34,197,94,0.1)"
+                  : `${color}11`,
+              }}>
+              <div className="text-xs font-bold"
+                style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
+                {d.label}
+              </div>
+              <div className="font-semibold" style={{ color: C.text, fontSize: 10 }}>{eur(d.price)}</div>
+              <div style={{ color: C.muted, fontSize: 9 }}>{d.event}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: C.muted }}>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Peak</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Creux</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: color }} /> Aujourd'hui</span>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="rounded-lg p-2.5 text-xs italic"
+        style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+        Ce graphique montre l'historique passé uniquement. Le futur ne sera pas forcément identique.{" "}
+        {isBTC ? "Bitcoin" : "Ethereum"} peut monter, descendre ou crasher à tout moment.
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm mb-2" style={{ color: C.muted }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+function MiniStat({ label, value, color }) {
+  return (
+    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+      <div className="text-sm" style={{ color: C.muted }}>{label}</div>
+      <div className="text-xl font-bold mt-1" style={{ color: color || C.text }}>{value}</div>
+    </div>
+  );
+}
+function ImmoCard({ price, setPrice, horizon }) {
+  const RATE_LOAN = 0.035;
+  const DURATION = 25;
+  const apport = Math.round(price * 0.10);
+  const loan   = price - apport;
+  const i      = RATE_LOAN / 12;
+  const n      = DURATION * 12;
+  const monthlyPayment = loan > 0 ? Math.round(loan * i / (1 - Math.pow(1 + i, -n))) : 0;
+
+  const years = Math.min(horizon, DURATION);
+  const data = Array.from({ length: years + 1 }, (_, y) => {
+    const propValue     = Math.round(price * Math.pow(1 + RATE_IMMO_APPRECIATION, y));
+    const monthsPaid    = y * 12;
+    const loanRemaining = monthsPaid >= n ? 0
+      : Math.round(loan * (Math.pow(1 + i, n) - Math.pow(1 + i, monthsPaid)) / (Math.pow(1 + i, n) - 1));
+    const equity = propValue - loanRemaining;
+    return { year: 2026 + y, propValue, loanRemaining, equity };
+  });
+
+  const last          = data[data.length - 1];
+  const totalReimb    = Math.round(monthlyPayment * years * 12);
+  const totalInvested = apport + Math.min(totalReimb, monthlyPayment * n);
+  const gain          = last.equity - apport;
+
+  const fmt = (v) => v >= 1000000 ? `${(v/1000000).toFixed(2)} M€` : `${Math.round(v/1000)}k€`;
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    if (!d) return null;
+    return (
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", fontSize: 12, minWidth: 220 }}>
+        <div style={{ color: C.muted, fontWeight: 700, marginBottom: 8 }}>En {d.year}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
+          <span style={{ color: C.amber }}>Valeur du bien</span>
+          <span style={{ color: C.text, fontWeight: 700 }}>{eur(d.propValue)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
+          <span style={{ color: "#ef4444" }}>Crédit restant</span>
+          <span style={{ color: C.text, fontWeight: 700 }}>{eur(d.loanRemaining)}</span>
+        </div>
+        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", gap: 20 }}>
+          <span style={{ color: C.green, fontWeight: 700 }}>Votre capital</span>
+          <span style={{ color: C.green, fontWeight: 800 }}>{eur(d.equity)}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Saisie */}
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Field label="Prix du bien immobilier (€)">
+              <input type="number" value={price} style={inputStyle}
+                onChange={(e) => setPrice(+e.target.value || 0)} />
+            </Field>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[150000, 200000, 300000, 400000].map(p => (
+              <button key={p} onClick={() => setPrice(p)}
+                style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: price === p ? C.amber + "22" : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${price === p ? C.amber : C.border}`,
+                  color: price === p ? C.amber : C.muted }}>
+                {p/1000}k€
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+        {[
+          { label: "Votre apport (10 %)",       value: eur(apport),         sub: "à sortir de poche",          color: C.text  },
+          { label: "Mensualité crédit",           value: eur(monthlyPayment), sub: `sur ${DURATION} ans à 3,5 %`, color: C.amber },
+          { label: `Bien vaut dans ${years} ans`, value: eur(last.propValue), sub: "+2 % / an de valorisation",   color: C.amber },
+          { label: "Votre capital final",         value: eur(last.equity),    sub: `gain net : +${eur(gain)}`,   color: C.green },
+        ].map(k => (
+          <div key={k.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ color: C.muted, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
+            <div style={{ color: k.color, fontSize: 22, fontWeight: 800 }}>{k.value}</div>
+            <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Graphique */}
+      <Card style={{ borderColor: C.amber + "33" }}>
+        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Comment votre capital se constitue</h2>
+        <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
+          Le bien prend de la valeur chaque année (+2 %), pendant que votre crédit fond. La différence entre les deux, c'est <strong style={{ color: C.green }}>votre capital</strong>.
+        </p>
+
+        {/* Légende */}
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 16, fontSize: 12 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 28, height: 3, background: C.amber, borderRadius: 2, display: "inline-block" }} />
+            <span style={{ color: C.muted }}>Valeur du bien</span>
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 28, height: 3, background: "#ef4444", borderRadius: 2, display: "inline-block" }} />
+            <span style={{ color: C.muted }}>Crédit restant à rembourser</span>
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 28, height: 3, background: C.green, borderRadius: 2, display: "inline-block" }} />
+            <span style={{ color: C.muted }}>Votre capital (ce que vous possédez vraiment)</span>
+          </span>
+        </div>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={fmt} width={58} />
+            <Tooltip content={<CustomTooltip />} />
+            <Line type="monotone" dataKey="propValue"     name="Valeur du bien"    stroke={C.amber}   strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="loanRemaining" name="Crédit restant"    stroke="#ef4444"   strokeWidth={2}   dot={false} strokeDasharray="5 3" />
+            <Line type="monotone" dataKey="equity"        name="Votre capital"     stroke={C.green}   strokeWidth={3}   dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+
+        {/* Explication simple */}
+        <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
+          {[
+            { icon: "🏠", title: "Vous achetez", text: `Un bien à ${eur(price)} avec ${eur(apport)} d'apport. La banque prête le reste.` },
+            { icon: "📉", title: "Le crédit fond", text: `Chaque mois vous remboursez ${eur(monthlyPayment)}. Le capital dû diminue progressivement.` },
+            { icon: "📈", title: "Le bien prend de la valeur", text: `+2 % par an en moyenne. Dans ${years} ans il vaut ${eur(last.propValue)}.` },
+            { icon: "💰", title: "Votre capital croît", text: `Valeur − crédit = ${eur(last.equity)} dans ${years} ans. C'est votre enrichissement réel.` },
+          ].map(b => (
+            <div key={b.title} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{b.icon}</div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{b.title}</div>
+              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>{b.text}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+        Modèle simplifié · Taux fixe 3,5 % · Valorisation +2 %/an · Apport 10 % · Hors frais de notaire (~8 %), taxe foncière, charges de copropriété et fiscalité des loyers.
+        À affiner avec un courtier pour votre situation réelle.
+      </div>
+    </>
+  );
+}
+
+function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, inflationRate = 0, warning = null, riskBadges = null, logScale = false }) {
+  const [showTable, setShowTable] = useState(true);
+  const startYear = detailedData[0]?.year || 2026;
+  const augmentedData = detailedData.map((row) => ({
+    ...row,
+    realCapital: inflationRate > 0
+      ? Math.round(row.capital / Math.pow(1 + inflationRate, row.year - startYear))
+      : undefined,
+  }));
+
+  // Échelle logarithmique : sur 20-30 ans, un rendement à 25-30 %/an multiplie le
+  // capital par ×100 ou plus — en linéaire, les 20 premières années sont écrasées
+  // à 0. En log, chaque graduation = capital ×10, et la courbe reste lisible
+  // sur toute la période (cf. Math.log10, déjà utilisé pour l'historique BTC/ETH).
+  let logData, logYMin, logYMax, logYTicks;
+  if (logScale) {
+    logData = augmentedData.map((row) => ({
+      ...row,
+      logCapital: row.capital > 1 ? +Math.log10(row.capital).toFixed(3) : 0,
+      logApports: row.apports > 1 ? +Math.log10(row.apports).toFixed(3) : 0,
+      logReal: row.realCapital > 1 ? +Math.log10(row.realCapital).toFixed(3) : undefined,
+    }));
+    const allPositive = augmentedData.flatMap((r) => [r.capital, r.apports]).filter((v) => v > 1);
+    logYMin = Math.floor(Math.log10(Math.min(...allPositive)));
+    logYMax = Math.ceil(Math.log10(Math.max(...allPositive)));
+    logYTicks = Array.from({ length: logYMax - logYMin + 1 }, (_, i) => logYMin + i);
+  }
+
+  return (
+    <Card style={{ borderColor: accent + "33" }}>
+      {warning && (
+        <div className="rounded-xl p-4 mb-5 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.45)" }}>
+          <div className="font-bold mb-2" style={{ color: "#ef4444" }}>{warning.title}</div>
+          <ul className="space-y-1 mb-3" style={{ color: "#fca5a5" }}>
+            {warning.points.map((p) => <li key={p}>· {p}</li>)}
+          </ul>
+          <p className="text-xs italic" style={{ color: "#f87171" }}>{warning.disclaimer}</p>
+        </div>
+      )}
+      {riskBadges && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {riskBadges.map((b) => (
+            <span key={b.label} className="px-3 py-1 rounded-full text-xs font-semibold"
+              style={{ background: b.bg, color: b.color, border: `1px solid ${b.color}55` }}>
+              {b.label}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-baseline gap-3 mb-5">
+        <h2 className="text-xl font-bold" style={{ color: C.text }}>{title}</h2>
+        <span className="text-sm" style={{ color: C.muted }}>{rate}</span>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl p-4"
+            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm" style={{ color: C.muted }}>{s.label}</div>
+            <div className="text-2xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-5 mb-3 flex-wrap">
+        {logScale ? (
+          <>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+              <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
+              Capital total
+            </span>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: lineColor, opacity: 0.55 }} />
+              Apports cumulés
+            </span>
+            {inflationRate > 0 && (
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #cbd5e1", opacity: 0.6 }} />
+                Valeur réelle
+              </span>
+            )}
+            <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
+          </>
+        ) : (
+          <>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: lineColor, opacity: 0.55 }} />
+              Apports cumulés
+            </span>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+              <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
+              Gains composés
+            </span>
+            {inflationRate > 0 && (
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #cbd5e1", opacity: 0.6 }} />
+                Valeur réelle
+              </span>
+            )}
+            <span className="text-xs" style={{ color: C.muted }}>— Hauteur totale = Capital</span>
+          </>
+        )}
+      </div>
+
+      <ResponsiveContainer width="100%" height={280}>
+        {logScale ? (
+          <ComposedChart data={logData}>
+            <defs>
+              <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={C.muted} tick={{ fontSize: 11 }}
+              tickFormatter={logFmt} width={64} />
+            <Tooltip {...chartTip}
+              formatter={(v, name, props) => {
+                const key = props.dataKey;
+                const raw = key === "logCapital" ? props.payload.capital
+                  : key === "logApports" ? props.payload.apports
+                  : props.payload.realCapital;
+                return [eur(raw), name];
+              }}
+              labelFormatter={(y) => `Année ${y}`} />
+            <Area type="monotone" dataKey="logCapital" name="Capital total"
+              stroke={lineColor} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
+            <Line type="monotone" dataKey="logApports" name="Apports cumulés"
+              stroke={lineColor} strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+            {inflationRate > 0 && (
+              <Line type="monotone" dataKey="logReal"
+                name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
+                stroke="#cbd5e1" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+            )}
+          </ComposedChart>
+        ) : (
+          <ComposedChart data={augmentedData}>
+            <defs>
+              <linearGradient id={`gA${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.12} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0.04} />
+              </linearGradient>
+              <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.52} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0.12} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={C.muted} tick={{ fontSize: 11 }}
+              tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
+            <Tooltip {...chartTip} formatter={(v) => eur(v)} labelFormatter={(y) => `Année ${y}`} />
+            <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
+              stroke={lineColor} strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 3"
+              fill={`url(#gA${chartKey})`} />
+            <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
+              stroke={lineColor} strokeWidth={2.5}
+              fill={`url(#gG${chartKey})`} />
+            {inflationRate > 0 && (
+              <Line type="monotone" dataKey="realCapital"
+                name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
+                stroke="#cbd5e1" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+            )}
+          </ComposedChart>
+        )}
+      </ResponsiveContainer>
+
+      <button
+        onClick={() => setShowTable((s) => !s)}
+        className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
+        style={{ border: `1px solid ${C.border}`, color: C.muted, background: "rgba(255,255,255,0.02)" }}>
+        <Activity size={14} />
+        {showTable ? "Masquer" : "Voir"} la timeline année par année
+      </button>
+
+      {showTable && (
+        <div className="mt-3 overflow-y-auto rounded-xl" style={{ maxHeight: 320, border: `1px solid ${C.border}` }}>
+          <table className="w-full text-xs">
+            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: C.panel }}>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                {["Année", "Apports cumulés", "Capital total", "Gains générés", "Variation ann."].map((h) => (
+                  <th key={h} className="py-2 px-3 text-left font-semibold" style={{ color: C.muted }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {detailedData.map((row, idx) => {
+                const prevCap = idx > 0 ? detailedData[idx - 1].capital : row.capital;
+                const varPct = idx > 0 && prevCap > 0 ? ((row.capital - prevCap) / prevCap) * 100 : 0;
+                const yearOffset = row.year - detailedData[0].year;
+                const isMilestone = [0, 5, 10, 15, 20, 25, 30].includes(yearOffset);
+                return (
+                  <tr key={row.year}
+                    style={{
+                      borderBottom: `1px solid ${C.border}`,
+                      background: isMilestone ? `${lineColor}14` : "transparent",
+                    }}>
+                    <td className="py-2 px-3 font-semibold" style={{ color: isMilestone ? lineColor : C.text }}>
+                      {row.year}{isMilestone && idx > 0 ? " ★" : ""}
+                    </td>
+                    <td className="py-2 px-3" style={{ color: C.muted }}>{eur(row.apports)}</td>
+                    <td className="py-2 px-3 font-bold" style={{ color: lineColor }}>{eur(row.capital)}</td>
+                    <td className="py-2 px-3" style={{ color: row.gains >= 0 ? C.green : C.red }}>
+                      {row.gains >= 0 ? "+" : ""}{eur(row.gains)}
+                    </td>
+                    <td className="py-2 px-3" style={{ color: idx === 0 ? C.muted : varPct >= 0 ? C.green : C.red }}>
+                      {idx === 0 ? "—" : (varPct > 0 ? "+" : "") + varPct.toFixed(1).replace(".", ",") + " %"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Summary at horizon */}
+      {(() => {
+        const last = detailedData[detailedData.length - 1];
+        if (!last) return null;
+        const years = last.year - startYear;
+        const realCap = inflationRate > 0
+          ? Math.round(last.capital / Math.pow(1 + inflationRate, years))
+          : null;
+        const realGains = realCap !== null ? realCap - last.apports : null;
+        return (
+          <div className="mt-4">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
+                { label: "Vos apports", value: eur(last.apports), color: C.muted },
+                { label: "Gains générés", value: "+" + eur(last.gains), color: C.green },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl p-3 text-center"
+                  style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                  <div className="text-xs mb-1" style={{ color: C.muted }}>{s.label}</div>
+                  <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            {realCap !== null && (
+              <div className="mt-3 rounded-xl p-4"
+                style={{ background: "rgba(203,213,225,0.04)", border: "1px solid rgba(203,213,225,0.15)" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-semibold tracking-wide" style={{ color: "#94a3b8" }}>
+                    VALEUR RÉELLE · inflation {(inflationRate * 100).toFixed(1).replace(".", ",")} % / an
+                  </span>
+                  <span
+                    title="Ces montants sont exprimés en euros d'aujourd'hui : ils tiennent compte de l'érosion monétaire liée à l'inflation. Un euro dans 20 ans aura moins de pouvoir d'achat qu'un euro aujourd'hui."
+                    className="cursor-help text-xs" style={{ color: "#64748b" }}>ⓘ</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs mb-1" style={{ color: "#94a3b8" }}>Capital réel</div>
+                    <div className="text-lg font-bold" style={{ color: "#cbd5e1" }}>{eur(realCap)}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>en € constants d'aujourd'hui</div>
+                  </div>
+                  <div>
+                    <div className="text-xs mb-1" style={{ color: "#94a3b8" }}>Gains réels</div>
+                    <div className="text-lg font-bold"
+                      style={{ color: realGains >= 0 ? "#cbd5e1" : "#ff5a5f" }}>
+                      {realGains >= 0 ? "+" : ""}{eur(realGains)}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>vs apports en valeur constante</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(139,92,246,0.04)", color: C.muted }}>
+        {note}
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FEATURE 1: MODE COUPLE / FAMILLE                                   */
+/* ------------------------------------------------------------------ */
+function Couple({ transactions, simParams, patrimoine, profile }) {
+  const [partnerId, setPartnerId] = useState(null);
+  const [goalTarget, setGoalTarget] = useState(500000);
+  const [sharedMonthly, setSharedMonthly] = useState(1000);
+
+  const myNetWorth = useMemo(() => {
+    const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    const p = patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    return a - p;
+  }, [patrimoine]);
+
+  const partner = TEST_PROFILES.find((p) => p.id === partnerId);
+
+  const partnerNetWorth = useMemo(() => {
+    if (!partner) return 0;
+    const a = partner.patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    const p = partner.patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    return a - p;
+  }, [partner]);
+
+  const combinedNW = myNetWorth + partnerNetWorth;
+  const myMonthly = simParams.monthly;
+  const partnerMonthly = partner ? partner.simParams.monthly : 0;
+  const totalMonthly = myMonthly + partnerMonthly + sharedMonthly;
+  const RATE = RATE_A;
+
+  const yearsToGoal = useMemo(() => {
+    for (let y = 1; y <= 50; y++) {
+      if (fv(combinedNW, totalMonthly, RATE, y) >= goalTarget) return y;
+    }
+    return null;
+  }, [combinedNW, totalMonthly, goalTarget]);
+
+  const progressPct = Math.min(100, Math.round((combinedNW / goalTarget) * 100));
+  const horizonY = Math.min(yearsToGoal || 20, 20);
+
+  const projSeries = useMemo(() => Array.from({ length: horizonY + 1 }, (_, y) => ({
+    year: 2026 + y,
+    Ensemble: Math.round(fv(combinedNW, totalMonthly, RATE, y)),
+    Séparément: partner
+      ? Math.round(fv(myNetWorth, myMonthly, RATE, y) + fv(partnerNetWorth, partnerMonthly, RATE, y))
+      : null,
+  })), [combinedNW, totalMonthly, myNetWorth, partnerNetWorth, myMonthly, partnerMonthly, horizonY, partner]);
+
+  const last = projSeries[projSeries.length - 1] || {};
+  const synergyBonus = partner ? (last.Ensemble || 0) - (last.Séparément || 0) : 0;
+
+  const milestones = [100000, 250000, 500000, 750000, 1000000].map((target) => {
+    if (combinedNW >= target) return { target, status: "done" };
+    let yr = null;
+    for (let y = 1; y <= 50; y++) {
+      if (fv(combinedNW, totalMonthly, RATE, y) >= target) { yr = y; break; }
+    }
+    return { target, status: "pending", years: yr };
+  }).filter((m) => m.target >= combinedNW * 0.4 || m.status === "done");
+
+  const myName = profile.firstName || "Moi";
+
+  return (
+    <div className="flex flex-col gap-6 max-w-4xl">
+      <div>
+        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Mode Couple / Famille</h1>
+        <p style={{ color: C.muted }}>Fusionnez vos patrimoines et planifiez ensemble.</p>
+      </div>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={18} style={{ color: C.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Choisir un partenaire</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {TEST_PROFILES.map((p) => (
+            <button key={p.id} onClick={() => setPartnerId(partnerId === p.id ? null : p.id)}
+              className="flex items-center gap-3 p-4 rounded-xl text-left transition"
+              style={{ border: `1px solid ${partnerId === p.id ? C.blue : C.border}`, background: partnerId === p.id ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.02)" }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                style={{ background: "rgba(91,141,239,0.15)", color: C.blue }}>
+                {p.profile.firstName[0]}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate" style={{ color: C.text }}>{p.profile.firstName}</div>
+                <div className="text-xs truncate" style={{ color: C.muted }}>{p.label}</div>
+              </div>
+              {partnerId === p.id && <Check size={14} className="ml-auto shrink-0" style={{ color: C.blue }} />}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>PATRIMOINES COMBINÉS</div>
+        <div className="space-y-2 mb-5">
+          <div className="flex justify-between"><span className="text-sm" style={{ color: C.muted }}>{myName}</span><span className="font-bold" style={{ color: C.cyan }}>{eur(myNetWorth)}</span></div>
+          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: C.muted }}>{partner.profile.firstName}</span><span className="font-bold" style={{ color: C.green }}>{eur(partnerNetWorth)}</span></div>}
+          <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+            <span className="font-semibold" style={{ color: C.text }}>Total combiné</span>
+            <span className="text-2xl font-bold" style={{ color: C.blue }}>{eur(combinedNW)}</span>
+          </div>
+        </div>
+
+        <div className="text-xs font-semibold mb-3 mt-5" style={{ color: C.muted, letterSpacing: 1 }}>OBJECTIF COMMUN</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <Field label="Capital cible (€)">
+            <input type="number" value={goalTarget} style={inputStyle} onChange={(e) => setGoalTarget(+e.target.value || 0)} />
+          </Field>
+          <Field label="Épargne commune supplémentaire (€/mois)">
+            <input type="number" value={sharedMonthly} style={inputStyle} onChange={(e) => setSharedMonthly(+e.target.value || 0)} />
+          </Field>
+        </div>
+
+        <div className="flex justify-between items-center mb-1 text-sm">
+          <span style={{ color: C.muted }}>Progression</span>
+          <span className="font-bold" style={{ color: C.blue }}>{progressPct} %</span>
+        </div>
+        <div className="rounded-full h-3 mb-1" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <div className="rounded-full h-3 transition-all" style={{ width: progressPct + "%", background: `linear-gradient(90deg,${C.blue},${C.cyan})` }} />
+        </div>
+        <div className="flex justify-between text-xs mb-4" style={{ color: C.muted }}><span>{eur(combinedNW)}</span><span>{eur(goalTarget)}</span></div>
+
+        {yearsToGoal !== null && (
+          <div className="rounded-xl p-4 text-center" style={{ background: "rgba(139,92,246,0.08)", border: `1px solid ${C.blue}44` }}>
+            <div className="text-sm mb-1" style={{ color: C.muted }}>Objectif atteint en</div>
+            <div className="text-4xl font-bold" style={{ color: C.blue }}>{yearsToGoal} ans</div>
+            <div className="text-xs mt-1" style={{ color: C.muted }}>À l'horizon {2026 + yearsToGoal} · {eur(goalTarget)}</div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>MILESTONES</div>
+        <div className="space-y-2">
+          {milestones.map((m) => (
+            <div key={m.target} className="flex items-center gap-3 p-3 rounded-xl"
+              style={{ background: m.status === "done" ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+              <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: m.status === "done" ? "rgba(39,163,122,0.2)" : "rgba(255,255,255,0.05)", border: `1.5px solid ${m.status === "done" ? C.green : C.muted}` }}>
+                {m.status === "done" && <Check size={10} style={{ color: C.green }} />}
+              </div>
+              <span className="font-bold text-sm" style={{ color: C.text }}>{eur(m.target)}</span>
+              <span className="ml-auto text-sm" style={{ color: m.status === "done" ? C.green : C.muted }}>
+                {m.status === "done" ? "Déjà atteint" : m.years ? `dans ${m.years} ans · ${2026 + m.years}` : "50+ ans"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {partner && (
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={18} style={{ color: C.blue }} />
+            <h2 className="text-lg font-bold" style={{ color: C.text }}>Simulation à {horizonY} ans</h2>
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={projSeries}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+              <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+              <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+              <Line type="monotone" dataKey="Ensemble" stroke={C.blue} strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="Séparément" stroke={C.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            {[
+              { label: "Ensemble", value: eur(last.Ensemble || 0), color: C.blue },
+              { label: "Séparément", value: eur(last.Séparément || 0), color: C.muted },
+              { label: "Bonus synergie", value: "+" + eur(synergyBonus), color: C.green },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                <div className="text-xs mb-1" style={{ color: C.muted }}>{s.label}</div>
+                <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card style={{ background: "transparent" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Shield size={15} style={{ color: C.muted }} />
+          <span className="text-sm font-semibold" style={{ color: C.muted }}>Planification successorale (bientôt disponible)</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {["Testament digital", "Donation au conjoint survivant", "Contrat de mariage"].map((l) => (
+            <span key={l} className="px-3 py-1.5 rounded-lg text-xs cursor-default" style={{ border: `1px solid ${C.border}`, color: C.muted }}>{l} →</span>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FEATURE 2: COMPARATEUR ETF / PORTEFEUILLE                          */
+/* ------------------------------------------------------------------ */
+const ETF_DB = [
+  { name: "Vanguard FTSE All-World (VWRL)", ter: 0.22, class: "Actions Monde" },
+  { name: "iShares Core MSCI World (IWDA)", ter: 0.20, class: "Actions Monde" },
+  { name: "Amundi MSCI World PEA (CW8)", ter: 0.38, class: "Actions Monde" },
+  { name: "Lyxor MSCI World PEA (WPEA)", ter: 0.38, class: "Actions Monde" },
+  { name: "iShares Core S&P 500 (CSPX)", ter: 0.07, class: "Actions USA" },
+  { name: "iShares MSCI World SRI", ter: 0.20, class: "Actions Monde ESG" },
+  { name: "iShares Euro Aggregate Bond", ter: 0.10, class: "Obligations €" },
+  { name: "Amundi Obligations Euro", ter: 0.45, class: "Obligations €" },
+  { name: "iShares MSCI Emerging Markets", ter: 0.18, class: "Marchés émergents" },
+  { name: "Lyxor S&P 500 PEA", ter: 0.15, class: "Actions USA" },
+];
+
+const DEFAULT_PORTFOLIO = [
+  { id: 1, name: "Lyxor MSCI World PEA (WPEA)", amount: 40000, ter: 0.38 },
+  { id: 2, name: "iShares Core S&P 500 (CSPX)", amount: 12000, ter: 0.07 },
+  { id: 3, name: "Amundi Obligations Euro", amount: 8000, ter: 0.45 },
+];
+
+function Portefeuille() {
+  const [positions, setPositions] = useLocalStorage("wt_portfolio", DEFAULT_PORTFOLIO);
+  const [nextId, setNextId] = useLocalStorage("wt_portfolio_next_id", 4);
+
+  const totalAmount = positions.reduce((s, p) => s + (p.amount || 0), 0);
+  const weightedTER = totalAmount > 0 ? positions.reduce((s, p) => s + (p.amount || 0) * (p.ter || 0), 0) / totalAmount : 0;
+  const annualFees = Math.round(positions.reduce((s, p) => s + (p.amount || 0) * (p.ter || 0) / 100, 0));
+  const BENCHMARK = 0.22;
+  const surCostEur = Math.max(0, Math.round(totalAmount * (weightedTER - BENCHMARK) / 100));
+
+  const feeImpact20y = (savingsAnnual) => {
+    let total = 0;
+    for (let y = 1; y <= 20; y++) total += savingsAnnual * Math.pow(1 + RATE_A, 20 - y);
+    return Math.round(total);
+  };
+
+  const recommendations = positions
+    .filter((p) => p.ter > 0.30)
+    .map((p) => {
+      const isOblig = p.name.toLowerCase().includes("obligation");
+      const alt = ETF_DB.find((e) => (isOblig ? e.class === "Obligations €" : e.class === "Actions Monde") && e.ter < p.ter);
+      if (!alt) return null;
+      const savingsAnnual = Math.round((p.amount || 0) * (p.ter - alt.ter) / 100);
+      return { position: p, alt, savingsAnnual, savings20y: feeImpact20y(savingsAnnual) };
+    }).filter(Boolean);
+
+  const totalSavings20y = recommendations.reduce((s, r) => s + r.savings20y, 0);
+  const terColor = (t) => t > 0.40 ? C.red : t > 0.25 ? C.amber : C.green;
+
+  const addPosition = () => {
+    setPositions((ps) => [...ps, { id: nextId, name: ETF_DB[0].name, amount: 5000, ter: ETF_DB[0].ter }]);
+    setNextId((n) => n + 1);
+  };
+  const updatePos = (id, field, value) => setPositions((ps) => ps.map((p) => {
+    if (p.id !== id) return p;
+    if (field === "name") { const e = ETF_DB.find((e) => e.name === value); return { ...p, name: value, ter: e ? e.ter : p.ter }; }
+    return { ...p, [field]: value };
+  }));
+  const removePos = (id) => setPositions((ps) => ps.filter((p) => p.id !== id));
+
+  return (
+    <div className="flex flex-col gap-6 max-w-4xl">
+      <div>
+        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Comparateur ETF & Frais</h1>
+        <p style={{ color: C.muted }}>Analysez vos TER, comparez au marché et optimisez vos frais sur 20 ans.</p>
+      </div>
+
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Mes positions</h2>
+          <button onClick={addPosition} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
+            style={{ background: "rgba(139,92,246,0.15)", color: C.blue, border: `1px solid ${C.blue}44` }}>
+            <Plus size={14} /> Ajouter
+          </button>
+        </div>
+        <div className="space-y-3">
+          {positions.length === 0 && (
+            <div className="rounded-xl p-8 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px dashed ${C.border}` }}>
+              <p className="text-sm mb-3" style={{ color: C.muted }}>Aucune position. Ajoutez votre premier ETF.</p>
+              <button onClick={addPosition} className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: "rgba(139,92,246,0.15)", color: C.blue, border: `1px solid ${C.blue}44` }}>
+                <Plus size={13} style={{ display: "inline", marginRight: 4 }} />Ajouter une position
+              </button>
+            </div>
+          )}
+          {positions.map((pos) => (
+            <div key={pos.id} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: C.muted }}>ETF</label>
+                  <select value={pos.name} style={inputStyle} onChange={(e) => updatePos(pos.id, "name", e.target.value)}>
+                    {ETF_DB.map((e) => <option key={e.name} value={e.name}>{e.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: C.muted }}>Montant (€)</label>
+                  <input type="number" value={pos.amount} style={inputStyle} onChange={(e) => updatePos(pos.id, "amount", +e.target.value || 0)} />
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 rounded-xl px-3 py-2.5 font-bold text-sm"
+                    style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${terColor(pos.ter)}44`, color: terColor(pos.ter) }}>
+                    TER {pos.ter.toFixed(2)} %
+                  </div>
+                  <button onClick={() => removePos(pos.id)} className="rounded-lg p-2.5"
+                    style={{ color: C.red, border: `1px solid ${C.border}` }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-2 text-xs" style={{ color: C.muted }}>
+                <span>Frais/an : <b style={{ color: C.text }}>{eur(Math.round((pos.amount || 0) * pos.ter / 100))}</b></span>
+                <span>Poids : <b style={{ color: C.text }}>{totalAmount > 0 ? Math.round((pos.amount || 0) / totalAmount * 100) : 0} %</b></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>SYNTHÈSE PORTEFEUILLE</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <MiniStat label="Actifs totaux" value={eur(totalAmount)} />
+          <MiniStat label={<>TER moyen pondéré<InfoTooltip text="TER (Total Expense Ratio) : frais annuels totaux prélevés par le fonds (gestion, dépositaire…), exprimés en % de l'encours. Un TER de 0,20 % = 2 € de frais par an pour 1 000 € investis — ces frais réduisent directement votre rendement net, chaque année, par capitalisation." /></>} value={weightedTER.toFixed(2) + " %"} color={terColor(weightedTER)} />
+          <MiniStat label="Frais annuels" value={eur(annualFees)} color={C.amber} />
+          <MiniStat label="Surcoût vs VWRL" value={surCostEur > 0 ? "+" + eur(surCostEur) + "/an" : "Optimal"} color={surCostEur > 0 ? C.red : C.green} />
+        </div>
+        <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(139,92,246,0.04)", border: `1px solid ${C.border}` }}>
+          <span style={{ color: C.muted }}>Benchmark Vanguard FTSE All-World (0,22 %) · votre TER pondéré est </span>
+          <span style={{ color: weightedTER > BENCHMARK ? C.amber : C.green }}>
+            {weightedTER > BENCHMARK ? `+${(weightedTER - BENCHMARK).toFixed(2)} %` : "sous le benchmark"} de plus
+          </span>
+        </div>
+      </Card>
+
+      {recommendations.length > 0 && (
+        <Card style={{ borderColor: "rgba(245,166,35,0.3)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={16} style={{ color: C.amber }} />
+            <h2 className="text-lg font-bold" style={{ color: C.text }}>Optimisations recommandées</h2>
+          </div>
+          <div className="space-y-3 mb-4">
+            {recommendations.map((r, i) => (
+              <div key={i} className="rounded-xl p-4" style={{ background: "rgba(245,166,35,0.05)", border: "1px solid rgba(245,166,35,0.25)" }}>
+                <div className="flex items-start justify-between flex-wrap gap-2 mb-1">
+                  <div>
+                    <span className="text-xs font-bold tracking-wide" style={{ color: C.amber }}>REMPLACER</span>
+                    <div className="font-semibold text-sm mt-0.5" style={{ color: C.text }}>
+                      {r.position.name} ({r.position.ter} %) → {r.alt.name} ({r.alt.ter} %)
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs" style={{ color: C.muted }}>Gain sur 20 ans</div>
+                    <div className="font-bold" style={{ color: C.green }}>+{eur(r.savings20y)}</div>
+                  </div>
+                </div>
+                <div className="text-xs" style={{ color: C.muted }}>
+                  Montant : {eur(r.position.amount)} · Économies/an : {eur(r.savingsAnnual)}
+                </div>
+              </div>
+            ))}
+          </div>
+          {totalSavings20y > 0 && (
+            <div className="rounded-xl p-4 text-center" style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.3)" }}>
+              <div className="text-sm mb-1" style={{ color: C.muted }}>Impact total des optimisations (20 ans)</div>
+              <div className="text-3xl font-bold" style={{ color: C.green }}>+{eur(totalSavings20y)}</div>
+              <div className="text-xs mt-1" style={{ color: C.muted }}>en capital supplémentaire grâce aux frais réduits</div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {recommendations.length === 0 && (
+        <Card style={{ borderColor: "rgba(34,199,154,0.3)" }}>
+          <div className="flex items-center gap-2">
+            <Check size={18} style={{ color: C.green }} />
+            <span className="font-semibold" style={{ color: C.green }}>Portefeuille optimisé !</span>
+            <span className="text-sm" style={{ color: C.muted }}>Tous vos TER sont en dessous de 0,30 %.</span>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Taux moyens indicatifs de taxe foncière (commune + intercommunalité)
+    par département — ordres de grandeur 2023-2024 pour estimation
+    rapide, à vérifier sur l'avis de taxe foncière du bien. */
+const TAUX_TF_PAR_DEPT = {
+  "75": 13.5,                                   // Paris — taux historiquement très bas
+  "92": 22, "93": 28, "94": 24,                 // Petite couronne
+  "77": 30, "78": 26, "91": 32, "95": 33,       // Grande couronne
+  "69": 38, "13": 44, "31": 42, "33": 41,       // Lyon, Marseille, Toulouse, Bordeaux
+  "44": 40, "59": 46, "67": 36, "34": 43,       // Nantes, Lille, Strasbourg, Montpellier
+  "35": 40, "06": 30, "38": 41, "76": 45,       // Rennes, Nice, Grenoble, Rouen
+};
+const TAUX_TF_DEFAUT = 46; // moyenne nationale indicative pour les départements non listés
+
+/* ------------------------------------------------------------------ */
+/*  FEATURE 5: SIMULATEUR IMMOBILIER AVANCÉ                            */
+/* ------------------------------------------------------------------ */
+function Immobilier({ totals, simParams, patrimoine, transactions }) {
+  const netWorth = useMemo(() => {
+    const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    const p = patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    return a - p;
+  }, [patrimoine]);
+
+  const profileType    = useMemo(() => detectProfileType(transactions || []), [transactions]);
+  const bCfg           = PROFILE_CONFIG[profileType];
+  const revenueForBank = Math.round(totals.revenus * bCfg.revenueRatio);
+
+  // Auto-détection des crédits existants depuis les transactions (prêt auto, conso, étudiant…)
+  const autoCredits = useMemo(() =>
+    Math.abs((transactions || [])
+      .filter(t => t.type === "charge_fixe" && (t.cat === "Remboursements" || /pr[eê]t|cr[eé]dit|emprunt/i.test(t.label || "")))
+      .reduce((s, t) => s + (t.amount || 0), 0)),
+    [transactions]
+  );
+  // null = utiliser la valeur auto-détectée
+  const [creditsManual, setCreditsManual] = useState(null);
+  const creditsExistants = creditsManual !== null ? creditsManual : autoCredits;
+
+  // Formule HCSF correcte : revenus × 35% − crédits existants hors immo
+  const mensualiteMax  = Math.max(0, Math.round(revenueForBank * 0.35 * bCfg.capacityMult - creditsExistants));
+  const loan20         = Math.round(loanFromPayment(mensualiteMax, 0.035, 20));
+  const loan25         = Math.round(loanFromPayment(mensualiteMax, 0.037, 25));
+
+  const [mode, setMode] = useState("residence"); // "residence" | "locatif"
+
+  const [price, setPrice] = useState(300000);
+  const [apportPct, setApportPct] = useState(20);
+  const [rate, setRate] = useState(3.8);
+  const [duration, setDuration] = useState(20);
+  const [appreciation, setAppreciation] = useState(2.5);
+  const [rentMonthly, setRentMonthly] = useState(1200);
+  const [resChargesProprio, setResChargesProprio] = useState(() => Math.round(price * 0.012 / 12));
+  const [showRentVsBuy, setShowRentVsBuy] = useState(false);
+
+  // --- Investissement locatif ---
+  const [locPrice, setLocPrice] = useState(120000);
+  const [locApportPct, setLocApportPct] = useState(20);
+  const [locRate, setLocRate] = useState(3.8);
+  const [locDuration, setLocDuration] = useState(20);
+  const [locLoyer, setLocLoyer] = useState(700);
+  const [locCharges, setLocCharges] = useState(60);
+  const [locTaxeFonciere, setLocTaxeFonciere] = useState(800);
+  const [locVacance, setLocVacance] = useState(1);
+  const [locAssurancePNO, setLocAssurancePNO] = useState(100);
+  const [locAssuranceEmprunteurPct, setLocAssuranceEmprunteurPct] = useState(0.30);
+
+  // --- Mise en location d'un bien déjà détenu ---
+  const [melLoyerBrut, setMelLoyerBrut] = useState(900);
+  const [melMensualite, setMelMensualite] = useState(700);
+  const [melChargesCopro, setMelChargesCopro] = useState(50);
+  const [melTaxeFonciere, setMelTaxeFonciere] = useState(900);
+  const [melVacance, setMelVacance] = useState(1);
+  const [melGLIPct, setMelGLIPct] = useState(2.5);
+  const [melPNO, setMelPNO] = useState(120);
+  const [melGestionPct, setMelGestionPct] = useState(0);
+  const [melEntretienPct, setMelEntretienPct] = useState(5);
+  const [melMeuble, setMelMeuble] = useState(false); // false = location nue, true = meublée (LMNP)
+  const [melRegimeFiscal, setMelRegimeFiscal] = useState("micro"); // "micro" | "microBic" | "reel"
+  const [melTMI, setMelTMI] = useState(30);
+  const [melCodePostal, setMelCodePostal] = useState("");
+  const [melSurface, setMelSurface] = useState(50);
+  const [melLoyerMeubleMajorationPct, setMelLoyerMeubleMajorationPct] = useState(15);
+
+  // Garde le régime fiscal cohérent avec la case "loué meublé" : bascule
+  // automatiquement entre micro-foncier (nu) et micro-BIC (meublé), sans
+  // toucher au régime réel (applicable dans les deux cas).
+  useEffect(() => {
+    setMelRegimeFiscal((prev) => {
+      if (melMeuble && prev === "micro") return "microBic";
+      if (!melMeuble && prev === "microBic") return "micro";
+      return prev;
+    });
+  }, [melMeuble]);
+
+  // Géolocalisation du bien (code postal → commune/département) pour estimer
+  // la taxe foncière et l'assurance PNO de façon cohérente avec la zone.
+  const [melGeoInfo, setMelGeoInfo] = useState(null); // { commune, codeDept, departement, population }
+  const [melGeoLoading, setMelGeoLoading] = useState(false);
+  const [melGeoError, setMelGeoError] = useState(null);
+
+  useEffect(() => {
+    const cp = melCodePostal.trim();
+    if (!/^\d{5}$/.test(cp)) { setMelGeoInfo(null); setMelGeoError(null); setMelGeoLoading(false); return; }
+    let cancelled = false;
+    setMelGeoLoading(true);
+    setMelGeoError(null);
+    const t = setTimeout(() => {
+      fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}&fields=nom,departement,population&format=json`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("network"))))
+        .then((data) => {
+          if (cancelled) return;
+          if (!data || data.length === 0) { setMelGeoError("Code postal introuvable."); setMelGeoInfo(null); return; }
+          const c = data[0];
+          setMelGeoInfo({ commune: c.nom, codeDept: c.departement?.code, departement: c.departement?.nom, population: c.population || 0 });
+        })
+        .catch(() => { if (!cancelled) { setMelGeoError("Impossible de récupérer la commune."); setMelGeoInfo(null); } })
+        .finally(() => { if (!cancelled) setMelGeoLoading(false); });
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [melCodePostal]);
+
+  const totalApport   = Math.round(price * apportPct / 100);
+  const notaire       = Math.round(price * 0.08);
+  const apportSurBien = Math.max(0, totalApport - notaire);
+  const credit        = price - apportSurBien;
+  const monthlyRate = rate / 100 / 12;
+  const n = duration * 12;
+  const mensualite = monthlyRate > 0
+    ? Math.round(credit * monthlyRate / (1 - Math.pow(1 + monthlyRate, -n)))
+    : Math.round(credit / n);
+
+  const liquidNetWorth = netWorth * 0.8;
+  const canAfford = liquidNetWorth >= totalApport;
+  const affordGap = totalApport - liquidNetWorth;
+
+  // Comparaison à effort mensuel égal : ce que paie réellement le propriétaire
+  // chaque mois (crédit + charges récurrentes) vs le loyer du locataire — la
+  // différence est le montant que le locataire peut investir en ETF.
+  const effortProprietaire = mensualite + resChargesProprio;
+  const investMonthly = Math.max(0, effortProprietaire - rentMonthly);
+  const ecartAchatMoinsCher = Math.max(0, rentMonthly - effortProprietaire);
+
+  const ownershipSeries = useMemo(() => Array.from({ length: duration + 1 }, (_, y) => {
+    const propValue = Math.round(price * Math.pow(1 + appreciation / 100, y));
+    const paid = mensualite * y * 12;
+    const principalPaid = Math.max(0, paid - (credit * monthlyRate * n * y / n));
+    const remaining = Math.max(0, credit - principalPaid);
+    const equity = propValue - remaining;
+    const renterFV = Math.round(fv(0, investMonthly, RATE_A, y));
+    return { year: 2026 + y, propValue, "Propriété nette": Math.max(0, equity), "Patrimoine locataire": renterFV };
+  }), [price, appreciation, mensualite, credit, monthlyRate, n, duration, investMonthly]);
+
+  const finalEquity = ownershipSeries[ownershipSeries.length - 1]["Propriété nette"] || 0;
+  const finalPropValue = ownershipSeries[ownershipSeries.length - 1].propValue || 0;
+  const finalRenterFV = ownershipSeries[ownershipSeries.length - 1]["Patrimoine locataire"] || 0;
+  const totalInterest = Math.max(0, mensualite * n - credit);
+  const rentTotal = rentMonthly * 12 * duration;
+
+  // --- Investissement locatif : structure du financement ---
+  const locTotalApport   = Math.round(locPrice * locApportPct / 100);
+  const locNotaire       = Math.round(locPrice * 0.08);
+  const locApportSurBien = Math.max(0, locTotalApport - locNotaire);
+  const locCredit        = locPrice - locApportSurBien;
+  const locMonthlyRate   = locRate / 100 / 12;
+  const locN             = locDuration * 12;
+  const locMensualite = locMonthlyRate > 0
+    ? Math.round(locCredit * locMonthlyRate / (1 - Math.pow(1 + locMonthlyRate, -locN)))
+    : Math.round(locCredit / locN);
+  const locAssuranceEmprunteurMensuelle = Math.round(locCredit * (locAssuranceEmprunteurPct / 100) / 12);
+
+  // --- Investissement locatif : rendement brut/net ---
+  const loyerAnnuelBrut      = locLoyer * 12;
+  const moisOccupes          = Math.max(0, 12 - locVacance);
+  const loyerAnnuelEffectif  = locLoyer * moisOccupes;
+  const loyerMensuelEffectif = loyerAnnuelEffectif / 12;
+  const locInvestissementTotal = locPrice + locNotaire;
+  const locChargesAnnuelles  = locCharges * 12 + locTaxeFonciere + locAssurancePNO;
+  const rendementBrut = locInvestissementTotal > 0 ? (loyerAnnuelBrut / locInvestissementTotal) * 100 : 0;
+  const rendementNet  = locInvestissementTotal > 0 ? ((loyerAnnuelEffectif - locChargesAnnuelles) / locInvestissementTotal) * 100 : 0;
+
+  // --- Investissement locatif : cash-flow mensuel avant impôt ---
+  const cashflowMensuel = loyerMensuelEffectif - locMensualite - locAssuranceEmprunteurMensuelle - locCharges - (locTaxeFonciere / 12) - (locAssurancePNO / 12);
+
+  // Les banques comptent généralement ~70 % des loyers prévisionnels dans le calcul du taux d'endettement
+  const mensualiteMaxAvecLoyer = mensualiteMax + Math.round(locLoyer * 0.7);
+  const locBudgetSearch = Math.round(loanFromPayment(mensualiteMaxAvecLoyer, 0.037, 25));
+
+  const rendementColor = (r) => r >= 6 ? C.green : r >= 3.5 ? C.amber : C.red;
+
+  // --- Mise en location d'un bien déjà détenu : charges & cash-flow ---
+  const melMoisOccupes         = Math.max(0, 12 - melVacance);
+  const melLoyerAnnuelEffectif = melLoyerBrut * melMoisOccupes;
+  const melLoyerMensuelEffectif = melLoyerAnnuelEffectif / 12;
+
+  const melGLIMensuel       = Math.round(melLoyerBrut * melGLIPct / 100);
+  const melGestionMensuel   = Math.round(melLoyerBrut * melGestionPct / 100);
+  const melEntretienMensuel = Math.round(melLoyerBrut * melEntretienPct / 100);
+  const melTaxeFonciereMensuelle = melTaxeFonciere / 12;
+  const melPNOMensuelle          = melPNO / 12;
+
+  const melChargesMensuelles = melMensualite + melChargesCopro + melTaxeFonciereMensuelle
+    + melPNOMensuelle + melGLIMensuel + melGestionMensuel + melEntretienMensuel;
+  const melCashflowAvantImpot = melLoyerMensuelEffectif - melChargesMensuelles;
+
+  // --- Imposition des revenus locatifs ---
+  // Abattement forfaitaire : 30 % en micro-foncier (location nue), 50 % en micro-BIC (location meublée)
+  const melAbattementPct = melRegimeFiscal === "microBic" ? 50 : 30;
+  const melChargesDeductiblesAnnuelles = melTaxeFonciere + melPNO
+    + (melChargesCopro + melGLIMensuel + melGestionMensuel + melEntretienMensuel) * 12;
+  const melResultatFoncier = melLoyerAnnuelEffectif - melChargesDeductiblesAnnuelles;
+  const melBaseImposable = melRegimeFiscal === "reel"
+    ? Math.max(0, melResultatFoncier)
+    : Math.max(0, melLoyerAnnuelEffectif * (1 - melAbattementPct / 100));
+  const melDeficitFoncier = melRegimeFiscal === "reel" ? Math.max(0, -melResultatFoncier) : 0;
+  const melImpotAnnuel  = melBaseImposable * (melTMI / 100 + 0.172);
+  const melImpotMensuel = melImpotAnnuel / 12;
+  const melCashflowApresImpot = melCashflowAvantImpot - melImpotMensuel;
+
+  // --- Estimation taxe foncière & PNO à partir du code postal ---
+  // Heuristique : valeur locative cadastrale ≈ loyer annuel / 2 (ordre de grandeur usuel).
+  const melTauxTFDept = melGeoInfo ? (TAUX_TF_PAR_DEPT[melGeoInfo.codeDept] ?? TAUX_TF_DEFAUT) : null;
+  const melValeurLocativeEstimee = (melLoyerBrut * 12) / 2;
+  const melTaxeFonciereEstimee = melTauxTFDept != null ? Math.round(melValeurLocativeEstimee * melTauxTFDept / 100) : null;
+  // PNO ≈ base + prime au m², majorée dans les grandes villes (risque/valeur du bien plus élevés)
+  const melPNOEstimee = Math.round((70 + melSurface * 1.1) * (melGeoInfo && melGeoInfo.population > 100000 ? 1.15 : 1));
+
+  // --- Comparatif location nue vs meublée (LMNP, micro-BIC : abattement 50 %) ---
+  function computeMelScenario(loyerBrut, abattementPct, regime) {
+    const loyerAnnuelEffectif = loyerBrut * melMoisOccupes;
+    const loyerMensuelEffectif = loyerAnnuelEffectif / 12;
+    const gli = Math.round(loyerBrut * melGLIPct / 100);
+    const gestion = Math.round(loyerBrut * melGestionPct / 100);
+    const entretien = Math.round(loyerBrut * melEntretienPct / 100);
+    const chargesMensuelles = melMensualite + melChargesCopro + melTaxeFonciereMensuelle + melPNOMensuelle + gli + gestion + entretien;
+    const cashflowAvantImpot = loyerMensuelEffectif - chargesMensuelles;
+
+    let baseImposable;
+    if (regime === "reel") {
+      const chargesDeductiblesAnnuelles = melTaxeFonciere + melPNO + (melChargesCopro + gli + gestion + entretien) * 12;
+      baseImposable = Math.max(0, loyerAnnuelEffectif - chargesDeductiblesAnnuelles);
+    } else {
+      baseImposable = Math.max(0, loyerAnnuelEffectif * (1 - abattementPct / 100));
+    }
+    const impotAnnuel = baseImposable * (melTMI / 100 + 0.172);
+    const impotMensuel = impotAnnuel / 12;
+    return { loyerMensuelEffectif, chargesMensuelles, cashflowAvantImpot, baseImposable, impotMensuel, cashflowApresImpot: cashflowAvantImpot - impotMensuel };
+  }
+
+  // Comparatif "nu" toujours basé sur le régime foncier (micro 30 % ou réel) — le micro-BIC
+  // ne s'applique qu'au meublé, même si c'est le régime sélectionné pour la simulation principale.
+  const melRegimeNuComparaison = melRegimeFiscal === "reel" ? "reel" : "micro";
+  const melScenarioNu = computeMelScenario(melLoyerBrut, 30, melRegimeNuComparaison);
+
+  const melLoyerMeuble = Math.round(melLoyerBrut * (1 + melLoyerMeubleMajorationPct / 100));
+  const melScenarioMeuble = computeMelScenario(melLoyerMeuble, 50, "micro");
+  const melDeltaMeuble = melScenarioMeuble.cashflowApresImpot - melScenarioNu.cashflowApresImpot;
+
+  return (
+    <div className="flex flex-col gap-6 max-w-4xl">
+      <div>
+        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Simulateur Immobilier</h1>
+        <p style={{ color: C.muted }}>Analysez un projet d'achat, calculez votre apport et comparez achat vs location.</p>
+      </div>
+
+      {/* Mode : résidence principale vs investissement locatif vs mise en location */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          ["residence", "Résidence principale", "Le bien que vous habiterez"],
+          ["locatif", "Investissement locatif", "Un bien que vous achetez pour le louer"],
+          ["location", "Mettre un bien en location", "Un bien que vous possédez déjà"],
+        ].map(([val, lbl]) => (
+          <button key={val} onClick={() => setMode(val)} style={{
+            padding: "9px 18px", borderRadius: 10, border: `1px solid ${mode === val ? C.blue : C.border}`,
+            background: mode === val ? "rgba(91,141,239,0.15)" : "transparent",
+            color: mode === val ? C.blue : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>{lbl}</button>
+        ))}
+      </div>
+      <p className="text-sm -mt-4" style={{ color: C.muted }}>
+        {mode === "residence" && "Résidence principale : le logement que vous occuperez vous-même."}
+        {mode === "locatif" && "Investissement locatif : un bien acheté pour être loué — rendement, charges et cash-flow sont calculés séparément."}
+        {mode === "location" && "Mise en location d'un bien déjà détenu : simulez le cash-flow si vous le louez, charges et imposition incluses."}
+      </p>
+
+      {/* Capacité d'emprunt */}
+      {mode !== "location" && (
+      <Card style={{ borderColor: profileType === "salarie_stable" ? "rgba(34,199,154,0.25)" : "rgba(245,166,35,0.25)" }}>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Home size={20} style={{ color: C.green }} />
+          <h2 className="text-xl font-bold" style={{ color: C.text }}>Capacité d'Emprunt Maximale</h2>
+          <span className="text-sm ml-auto" style={{ color: C.muted }}>Règle des 35 % d'endettement</span>
+        </div>
+        <div className="flex items-center flex-wrap gap-3 rounded-xl px-4 py-3 mb-4"
+          style={{
+            background: profileType === "salarie_stable" ? "rgba(34,199,154,0.06)" : "rgba(245,166,35,0.06)",
+            border: `1px solid ${profileType === "salarie_stable" ? "rgba(34,199,154,0.3)" : "rgba(245,166,35,0.3)"}`,
+          }}>
+          <span className="text-sm font-semibold" style={{ color: bCfg.color }}>
+            Profil détecté : {bCfg.label}
+          </span>
+          <span className="ml-auto text-xs" style={{ color: C.muted }}>
+            Revenu retenu :&nbsp;<b style={{ color: C.text }}>{eur(revenueForBank)}</b>
+            {bCfg.revenueRatio < 1 && <span> · {Math.round(bCfg.revenueRatio * 100)} % du brut</span>}
+          </span>
+        </div>
+        {bCfg.note && (
+          <div className="rounded-xl px-4 py-3 mb-4 text-sm"
+            style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)", color: C.amber }}>
+            {bCfg.note}
+          </div>
+        )}
+
+        {/* Formule & inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <MiniStat label="Revenus nets mensuels" value={eur(revenueForBank)} />
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}` }}>
+            <div className="text-xs mb-1.5" style={{ color: C.muted }}>
+              Crédits existants hors immo (auto-détectés)
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                value={creditsExistants}
+                onChange={e => setCreditsManual(+e.target.value || 0)}
+                style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: C.amber, width: "100%" }}
+              />
+              <span className="text-xs shrink-0" style={{ color: C.muted }}>€/mois</span>
+            </div>
+            {creditsManual === null && autoCredits > 0 && (
+              <div className="text-xs mt-1" style={{ color: C.muted }}>Détectés depuis vos transactions</div>
+            )}
+            {creditsManual !== null && (
+              <button className="text-xs mt-1 underline" style={{ color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                onClick={() => setCreditsManual(null)}>
+                Remettre auto ({eur(autoCredits)})
+              </button>
+            )}
+          </div>
+          <MiniStat label="Mensualité disponible" value={eur(mensualiteMax)} color={mensualiteMax > 0 ? C.green : C.red} />
+        </div>
+
+        {/* Formule affichée */}
+        <div className="rounded-xl px-4 py-3 mb-4 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
+          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
+          <span style={{ color: C.text }}>Mensualité max</span>
+          <span>=</span>
+          <span style={{ color: C.green }}>{eur(revenueForBank)} × 35%{bCfg.capacityMult < 1 ? ` × ${Math.round(bCfg.capacityMult * 100)}%` : ""}</span>
+          {creditsExistants > 0 && <><span>−</span><span style={{ color: C.amber }}>{eur(creditsExistants)} crédits existants</span></>}
+          <span>=</span>
+          <span style={{ color: mensualiteMax > 0 ? C.cyan : C.red, fontWeight: 700 }}>{eur(mensualiteMax)}</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Card style={{ background: "rgba(139,92,246,0.05)" }}>
+            <div className="text-sm" style={{ color: C.muted }}>Sur <b>20 ans</b> à 3,5 %</div>
+            <div className="text-3xl font-bold my-1" style={{ color: loan20 > 0 ? C.cyan : C.muted }}>{eur(loan20)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
+          </Card>
+          <Card style={{ background: "rgba(34,199,154,0.05)" }}>
+            <div className="text-sm" style={{ color: C.muted }}>Sur <b>25 ans</b> à 3,7 %</div>
+            <div className="text-3xl font-bold my-1" style={{ color: loan25 > 0 ? C.green : C.muted }}>{eur(loan25)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
+          </Card>
+        </div>
+
+        {mode === "locatif" && (
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}33` }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span style={{ color: C.blue, fontWeight: 700 }}>
+                Capacité d'emprunt avec ce loyer
+                <InfoTooltip text="Les banques intègrent généralement ~70 % du loyer prévisionnel dans le calcul de votre taux d'endettement (35 %), ce qui augmente votre capacité d'emprunt pour un investissement locatif." align="left" />
+              </span>
+              <span style={{ color: C.text, fontWeight: 800 }}>{eur(mensualiteMaxAvecLoyer)} / mois</span>
+            </div>
+            <div className="text-xs mt-1" style={{ color: C.muted }}>
+              Soit jusqu'à {eur(locBudgetSearch)} empruntables sur 25 ans (au lieu de {eur(loan25)} sans loyer pris en compte).
+            </div>
+          </div>
+        )}
+      </Card>
+      )}
+
+      {/* Paramètres */}
+      {mode === "residence" && (
+      <>
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Home size={18} style={{ color: C.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres du projet</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Field label="Prix du bien (€)">
+            <input type="number" value={price} style={inputStyle} onChange={(e) => setPrice(+e.target.value || 0)} />
+          </Field>
+          <Field label={`Apport total, notaire inclus (${apportPct} % = ${eur(totalApport)})`}>
+            <input type="range" min={5} max={50} step={1} value={apportPct} onChange={(e) => setApportPct(+e.target.value)}
+              className="w-full" style={{ accentColor: C.blue }} />
+          </Field>
+          <Field label="Taux crédit (% / an)">
+            <input type="number" value={rate} step={0.1} style={inputStyle} onChange={(e) => setRate(+e.target.value || 0)} />
+          </Field>
+          <Field label="Durée du crédit">
+            <select value={duration} style={inputStyle} onChange={(e) => setDuration(+e.target.value)}>
+              {[10, 15, 20, 25, 30].map((d) => <option key={d} value={d}>{d} ans</option>)}
+            </select>
+          </Field>
+          <Field label="Appréciation annuelle (%)">
+            <input type="number" value={appreciation} step={0.5} style={inputStyle} onChange={(e) => setAppreciation(+e.target.value || 0)} />
+          </Field>
+        </div>
+      </Card>
+
+      {/* Synthèse financement */}
+      <Card>
+        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <MiniStat label="Votre apport" value={eur(totalApport)} color={C.cyan} />
+          <MiniStat label="Dont frais de notaire" value={eur(notaire)} color={C.muted} />
+          <MiniStat label="Dont sur le bien" value={eur(apportSurBien)} color={C.blue} />
+          <MiniStat label="Montant emprunté" value={eur(credit)} color={C.amber} />
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm" style={{ color: C.muted }}>Mensualité crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(mensualite)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>sur {duration} ans à {rate} %</div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm" style={{ color: C.muted }}>Coût total du crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: C.amber }}>{eur(credit + totalInterest)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>dont intérêts : {eur(Math.round(totalInterest))}</div>
+          </div>
+        </div>
+
+        {/* Affordabilité */}
+        <div className="rounded-xl p-4" style={{ background: canAfford ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${canAfford ? C.green + "44" : C.red + "44"}` }}>
+          <div className="flex items-start justify-between flex-wrap gap-2 mb-2">
+            <span className="font-semibold text-sm" style={{ color: canAfford ? C.green : C.red }}>
+              {canAfford ? "Apport finançable" : "Apport insuffisant"}
+            </span>
+            <span className="text-sm font-bold" style={{ color: C.text }}>
+              {canAfford ? `Marge : ${eur(Math.round(-affordGap))}` : `Manque : ${eur(Math.round(affordGap))}`}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs" style={{ color: C.muted }}>
+            <span>Votre patrimoine liquide estimé : <b style={{ color: C.text }}>{eur(Math.round(liquidNetWorth))}</b></span>
+            <span>Apport requis : <b style={{ color: C.text }}>{eur(totalApport)}</b></span>
+          </div>
+          {!canAfford && (
+            <div className="mt-3 space-y-1 text-xs" style={{ color: C.muted }}>
+              <div>• Attendre {Math.ceil(affordGap / simParams.monthly)} mois d'épargne (à {eur(simParams.monthly)}/mois)</div>
+              <div>• Réduire l'apport à {Math.max(10, Math.floor((liquidNetWorth / price) * 100))} % (notaire inclus)</div>
+              <div>• Rechercher un bien à {eur(Math.round(liquidNetWorth / (apportPct / 100)))} max avec votre apport actuel</div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Simulation 20 ans */}
+      <Card>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={18} style={{ color: C.amber }} />
+            <h2 className="text-lg font-bold" style={{ color: C.text }}>Projection sur {duration} ans</h2>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+            <input type="checkbox" checked={showRentVsBuy} onChange={(e) => setShowRentVsBuy(e.target.checked)}
+              style={{ accentColor: C.green, width: 14, height: 14 }} />
+            <span style={{ color: showRentVsBuy ? C.green : C.muted }}>Comparer avec la location</span>
+          </label>
+        </div>
+
+        {showRentVsBuy && (
+          <>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <Field label="Loyer mensuel (si vous louiez)">
+              <input type="number" value={rentMonthly} style={inputStyle} onChange={(e) => setRentMonthly(+e.target.value || 0)} />
+            </Field>
+            <Field label={<>Charges propriétaire (€/mois)<InfoTooltip text="Taxe foncière, assurance habitation, entretien et charges de copropriété — coûts récurrents du propriétaire qui n'existent pas (ou sont bien moindres) pour un locataire." align="left" /></>}>
+              <input type="number" value={resChargesProprio} style={inputStyle} onChange={(e) => setResChargesProprio(+e.target.value || 0)} />
+            </Field>
+          </div>
+          <div className="rounded-xl px-4 py-2.5 mb-4 text-xs flex flex-wrap gap-x-2 gap-y-1 items-center"
+            style={{ background: "rgba(34,211,238,0.05)", border: `1px solid ${C.cyan}33`, color: C.muted }}>
+            {investMonthly > 0 ? (
+              <>
+                <span>Effort propriétaire</span><span style={{ color: C.text }}>{eur(effortProprietaire)}/mois</span>
+                <span>− loyer</span><span style={{ color: C.text }}>{eur(rentMonthly)}/mois</span>
+                <span>=</span>
+                <span style={{ color: C.cyan, fontWeight: 700 }}>{eur(investMonthly)}/mois investis en ETF par le locataire</span>
+                <span>(comparaison à effort mensuel égal)</span>
+              </>
+            ) : (
+              <span>Acheter coûte ici {eur(ecartAchatMoinsCher)}/mois de moins que louer — cet écart n'est pas réinvesti dans la comparaison, ce qui sous-estime l'avantage de l'achat.</span>
+            )}
+          </div>
+          </>
+        )}
+
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={ownershipSeries}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+            <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+            <Line type="monotone" dataKey="Propriété nette" stroke={C.amber} strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="propValue" name="Valeur du bien" stroke={C.muted} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+            {showRentVsBuy && <Line type="monotone" dataKey="Patrimoine locataire" stroke={C.cyan} strokeWidth={2} strokeDasharray="5 3" dot={false} />}
+          </LineChart>
+        </ResponsiveContainer>
+
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-xs mb-1" style={{ color: C.muted }}>Valeur du bien à {duration} ans</div>
+            <div className="font-bold text-sm" style={{ color: C.amber }}>{eur(finalPropValue)}</div>
+          </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-xs mb-1" style={{ color: C.muted }}>Patrimoine net immobilier</div>
+            <div className="font-bold text-sm" style={{ color: C.text }}>{eur(finalEquity)}</div>
+          </div>
+          {showRentVsBuy && (
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.3)" }}>
+              <div className="text-xs mb-1" style={{ color: C.muted }}>Patrimoine locataire</div>
+              <div className="font-bold text-sm" style={{ color: C.cyan }}>{eur(finalRenterFV)}</div>
+            </div>
+          )}
+          {!showRentVsBuy && (
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+              <div className="text-xs mb-1" style={{ color: C.muted }}>Intérêts payés</div>
+              <div className="font-bold text-sm" style={{ color: C.red }}>{eur(Math.round(totalInterest))}</div>
+            </div>
+          )}
+        </div>
+
+        {showRentVsBuy && (
+          <div className="mt-3 rounded-xl p-3 text-sm"
+            style={{ background: finalEquity > finalRenterFV ? "rgba(34,199,154,0.06)" : "rgba(56,189,248,0.06)", border: `1px solid ${finalEquity > finalRenterFV ? C.green + "44" : C.cyan + "44"}` }}>
+            <span style={{ color: finalEquity > finalRenterFV ? C.green : C.cyan }}>
+              {finalEquity > finalRenterFV
+                ? `L'achat génère ${eur(finalEquity - finalRenterFV)} de plus qu'investir en ETF en tant que locataire.`
+                : `La location + investissement ETF génère ${eur(finalRenterFV - finalEquity)} de plus. Les deux stratégies sont proches — choix de mode de vie.`}
+            </span>
+          </div>
+        )}
+
+        {showRentVsBuy && (
+          <p className="mt-2 text-xs" style={{ color: C.muted }}>
+            Note fiscale : le capital ETF du locataire est affiché brut (avant flat tax de 30 % en cas de retrait), alors que la plus-value sur une résidence principale est exonérée d'impôt — l'avantage réel de l'achat est donc légèrement sous-estimé ci-dessus.
+          </p>
+        )}
+      </Card>
+      </>
+      )}
+
+      {mode === "locatif" && (
+      <>
+      {/* Paramètres du bien locatif */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Building2 size={18} style={{ color: C.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres du bien locatif</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Field label="Prix du bien (€)">
+            <input type="number" value={locPrice} style={inputStyle} onChange={(e) => setLocPrice(+e.target.value || 0)} />
+          </Field>
+          <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
+            <input type="range" min={5} max={50} step={1} value={locApportPct} onChange={(e) => setLocApportPct(+e.target.value)}
+              className="w-full" style={{ accentColor: C.blue }} />
+          </Field>
+          <Field label="Taux crédit (% / an)">
+            <input type="number" value={locRate} step={0.1} style={inputStyle} onChange={(e) => setLocRate(+e.target.value || 0)} />
+          </Field>
+          <Field label="Durée du crédit">
+            <select value={locDuration} style={inputStyle} onChange={(e) => setLocDuration(+e.target.value)}>
+              {[10, 15, 20, 25, 30].map((d) => <option key={d} value={d}>{d} ans</option>)}
+            </select>
+          </Field>
+          <Field label="Loyer mensuel attendu, hors charges (€)">
+            <input type="number" value={locLoyer} style={inputStyle} onChange={(e) => setLocLoyer(+e.target.value || 0)} />
+          </Field>
+          <Field label={`Vacance locative (${locVacance} mois/an)`}>
+            <input type="range" min={0} max={3} step={1} value={locVacance} onChange={(e) => setLocVacance(+e.target.value)}
+              className="w-full" style={{ accentColor: C.amber }} />
+          </Field>
+          <Field label="Charges de copropriété non récupérables (€/mois)">
+            <input type="number" value={locCharges} style={inputStyle} onChange={(e) => setLocCharges(+e.target.value || 0)} />
+          </Field>
+          <Field label="Taxe foncière (€/an)">
+            <input type="number" value={locTaxeFonciere} style={inputStyle} onChange={(e) => setLocTaxeFonciere(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." /></>}>
+            <input type="number" value={locAssurancePNO} style={inputStyle} onChange={(e) => setLocAssurancePNO(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Assurance emprunteur (% / an du capital)<InfoTooltip text="Assurance décès-invalidité exigée par la banque, ici appliquée au capital emprunté. Coût indicatif : de 0,10 % à 0,60 %/an selon l'âge et le profil de santé." /></>}>
+            <input type="number" value={locAssuranceEmprunteurPct} step={0.05} style={inputStyle} onChange={(e) => setLocAssuranceEmprunteurPct(+e.target.value || 0)} />
+          </Field>
+        </div>
+      </Card>
+
+      {/* Structure du financement locatif */}
+      <Card>
+        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <MiniStat label="Votre apport" value={eur(locTotalApport)} color={C.cyan} />
+          <MiniStat label="Dont frais de notaire" value={eur(locNotaire)} color={C.muted} />
+          <MiniStat label="Dont sur le bien" value={eur(locApportSurBien)} color={C.blue} />
+          <MiniStat label="Montant emprunté" value={eur(locCredit)} color={C.amber} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm" style={{ color: C.muted }}>Mensualité crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(locMensualite)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>sur {locDuration} ans à {locRate} %</div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm" style={{ color: C.muted }}>Assurance emprunteur</div>
+            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(locAssuranceEmprunteurMensuelle)}</div>
+            <div className="text-xs" style={{ color: C.muted }}>par mois, sur {eur(locCredit)} emprunté</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Rendement locatif */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={18} style={{ color: C.amber }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Rendement locatif</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm flex items-center" style={{ color: C.muted }}>
+              Rendement brut
+              <InfoTooltip text="Rendement brut = loyers annuels (hors vacance) ÷ (prix d'achat + frais de notaire). Ne tient compte d'aucune charge — utile pour comparer rapidement des biens entre eux." />
+            </div>
+            <div className="text-3xl font-bold my-1" style={{ color: rendementColor(rendementBrut) }}>{rendementBrut.toFixed(2)} %</div>
+            <div className="text-xs" style={{ color: C.muted }}>{eur(loyerAnnuelBrut)} / an ÷ {eur(locInvestissementTotal)}</div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="text-sm flex items-center" style={{ color: C.muted }}>
+              Rendement net
+              <InfoTooltip text="Rendement net = (loyers réels après vacance locative − charges de copropriété − taxe foncière − assurance PNO) ÷ (prix d'achat + frais de notaire). Hors crédit et hors fiscalité — c'est le chiffre le plus comparable entre projets." />
+            </div>
+            <div className="text-3xl font-bold my-1" style={{ color: rendementColor(rendementNet) }}>{rendementNet.toFixed(2)} %</div>
+            <div className="text-xs" style={{ color: C.muted }}>après charges, hors crédit et fiscalité</div>
+          </div>
+        </div>
+
+        {/* Formule affichée */}
+        <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
+          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
+          <span style={{ color: C.text }}>Rendement net</span>
+          <span>=</span>
+          <span style={{ color: C.green }}>({eur(loyerAnnuelEffectif)} loyers</span>
+          <span>−</span>
+          <span style={{ color: C.amber }}>{eur(locChargesAnnuelles)} charges)</span>
+          <span>÷</span>
+          <span style={{ color: C.cyan }}>{eur(locInvestissementTotal)}</span>
+          <span>=</span>
+          <span style={{ color: rendementColor(rendementNet), fontWeight: 700 }}>{rendementNet.toFixed(2)} %</span>
+        </div>
+      </Card>
+
+      {/* Cash-flow mensuel */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet size={18} style={{ color: C.cyan }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Cash-flow mensuel</h2>
+        </div>
+        <div className="flex flex-col gap-2 text-sm">
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Loyer perçu (vacance déduite)</span>
+            <span style={{ color: C.green, fontWeight: 700 }}>+ {eur(Math.round(loyerMensuelEffectif))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Mensualité crédit</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locMensualite)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Assurance emprunteur</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locAssuranceEmprunteurMensuelle)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Charges de copropriété</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locCharges)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Taxe foncière (mensualisée)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(locTaxeFonciere / 12))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Assurance PNO (mensualisée)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(locAssurancePNO / 12))}</span>
+          </div>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
+            <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
+            <span style={{ color: cashflowMensuel >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 16 }}>
+              {cashflowMensuel >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(cashflowMensuel)))}
+            </span>
+          </div>
+        </div>
+        <div className="text-xs mt-4 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}`, lineHeight: 1.6 }}>
+          ⚠ Ce cash-flow est calculé <b>avant impôt sur les revenus fonciers</b>. Selon votre régime (micro-foncier :
+          abattement forfaitaire de 30 % si revenus &lt; 15 000 €/an, ou régime réel avec déduction des charges et
+          intérêts d'emprunt — voire déficit foncier si le résultat est négatif), l'impact réel peut différer.
+          Consultez l'onglet <b>Fiscalité → Revenus locatifs</b> pour le détail de l'imposition.
+        </div>
+      </Card>
+      </>
+      )}
+
+      {mode === "location" && (
+      <>
+      {/* Paramètres de la mise en location */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Key size={18} style={{ color: C.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres de la mise en location</h2>
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer text-sm select-none mb-4 rounded-xl px-4 py-3"
+          style={{ background: melMeuble ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${melMeuble ? C.green + "44" : C.border}` }}>
+          <input type="checkbox" checked={melMeuble} onChange={(e) => setMelMeuble(e.target.checked)}
+            style={{ accentColor: C.green, width: 16, height: 16 }} />
+          <span style={{ color: melMeuble ? C.green : C.text, fontWeight: 600 }}>Bien loué meublé (LMNP)</span>
+          <InfoTooltip text="Cochez si le bien est (ou sera) loué avec mobilier. Cela définit le régime fiscal par défaut : micro-BIC (abattement de 50 %) pour le meublé, micro-foncier (abattement de 30 %) pour la location nue." align="left" />
+        </label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Field label={<>Code postal du bien<InfoTooltip text="Utilisé pour estimer la taxe foncière et l'assurance PNO via la commune et sa population (API officielle geo.api.gouv.fr). Estimations indicatives, à ajuster." align="left" /></>}>
+            <input type="text" inputMode="numeric" maxLength={5} value={melCodePostal} placeholder="ex : 69003"
+              style={inputStyle} onChange={(e) => setMelCodePostal(e.target.value.replace(/\D/g, "").slice(0, 5))} />
+          </Field>
+          <Field label="Surface du bien (m²)">
+            <input type="number" value={melSurface} style={inputStyle} onChange={(e) => setMelSurface(+e.target.value || 0)} />
+          </Field>
+          <Field label="Loyer mensuel brut estimé (€)">
+            <input type="number" value={melLoyerBrut} style={inputStyle} onChange={(e) => setMelLoyerBrut(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Mensualité de crédit, assurances comprises (€)<InfoTooltip text="Le montant total que vous remboursez chaque mois sur le crédit de ce bien (capital + intérêts + assurance emprunteur). Indiquez 0 si le bien est déjà entièrement remboursé." align="left" /></>}>
+            <input type="number" value={melMensualite} style={inputStyle} onChange={(e) => setMelMensualite(+e.target.value || 0)} />
+          </Field>
+          <Field label={`Vacance locative (${melVacance} mois/an)`}>
+            <input type="range" min={0} max={3} step={1} value={melVacance} onChange={(e) => setMelVacance(+e.target.value)}
+              className="w-full" style={{ accentColor: C.amber }} />
+          </Field>
+          <Field label="Charges de copropriété non récupérables (€/mois)">
+            <input type="number" value={melChargesCopro} style={inputStyle} onChange={(e) => setMelChargesCopro(+e.target.value || 0)} />
+          </Field>
+          <Field label="Taxe foncière (€/an)">
+            <input type="number" value={melTaxeFonciere} style={inputStyle} onChange={(e) => setMelTaxeFonciere(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." align="left" /></>}>
+            <input type="number" value={melPNO} style={inputStyle} onChange={(e) => setMelPNO(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>GLI — Garantie Loyers Impayés (% du loyer)<InfoTooltip text="Assurance qui couvre les loyers impayés et certaines dégradations locatives. Facultative mais recommandée — coût indicatif : 2 % à 3,5 % du loyer mensuel charges comprises." align="left" /></>}>
+            <input type="number" value={melGLIPct} step={0.1} style={inputStyle} onChange={(e) => setMelGLIPct(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Frais de gestion locative (% du loyer)<InfoTooltip text="Si vous confiez la gestion à une agence : comptez 5 % à 8 % du loyer charges comprises. Laissez à 0 si vous gérez vous-même." align="left" /></>}>
+            <input type="number" value={melGestionPct} step={0.5} style={inputStyle} onChange={(e) => setMelGestionPct(+e.target.value || 0)} />
+          </Field>
+          <Field label={<>Provision entretien / travaux (% du loyer)<InfoTooltip text="Mise de côté mensuelle pour l'entretien courant et les imprévus (chaudière, peinture, électroménager…). Recommandé : 5 % à 10 % du loyer." align="left" /></>}>
+            <input type="number" value={melEntretienPct} step={0.5} style={inputStyle} onChange={(e) => setMelEntretienPct(+e.target.value || 0)} />
+          </Field>
+        </div>
+
+        {/* Estimations à partir du code postal */}
+        {melCodePostal.length === 5 && (
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}33` }}>
+            {melGeoLoading && <span style={{ color: C.muted }}>Recherche de la commune…</span>}
+            {melGeoError && <span style={{ color: C.red }}>{melGeoError}</span>}
+            {melGeoInfo && !melGeoLoading && (
+              <div className="flex flex-col gap-2">
+                <div style={{ color: C.blue, fontWeight: 700 }}>
+                  {melGeoInfo.commune} ({melGeoInfo.codeDept}) · {melGeoInfo.departement}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: C.muted }}>
+                  <span>Taxe foncière estimée : <b style={{ color: C.text }}>{eur(melTaxeFonciereEstimee)}/an</b> (taux moyen ~{melTauxTFDept} %)</span>
+                  <button onClick={() => setMelTaxeFonciere(melTaxeFonciereEstimee)}
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${C.blue}55`, background: "rgba(91,141,239,0.12)", color: C.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    Utiliser
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: C.muted }}>
+                  <span>Assurance PNO estimée : <b style={{ color: C.text }}>{eur(melPNOEstimee)}/an</b> (selon surface{melGeoInfo.population > 100000 ? " et taille de la ville" : ""})</span>
+                  <button onClick={() => setMelPNO(melPNOEstimee)}
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${C.blue}55`, background: "rgba(91,141,239,0.12)", color: C.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    Utiliser
+                  </button>
+                </div>
+                <div className="text-xs" style={{ color: C.muted, fontStyle: "italic" }}>
+                  Estimations indicatives basées sur des taux moyens — vérifiez votre avis de taxe foncière et vos devis d'assurance.
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Imposition des revenus locatifs */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Landmark size={18} style={{ color: C.violet }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Imposition des revenus locatifs</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <Field label={<>Régime fiscal<InfoTooltip text="Déterminé par la case « Bien loué meublé » ci-dessus : micro-foncier (nu, abattement de 30 %) ou micro-BIC (meublé, abattement de 50 %). Le régime réel — déduction des charges réelles (et intérêts d'emprunt) — s'applique quel que soit le mode de location." align="left" /></>}>
+            <select value={melRegimeFiscal} style={inputStyle} onChange={(e) => setMelRegimeFiscal(e.target.value)}>
+              {melMeuble ? (
+                <>
+                  <option value="microBic">Micro-BIC — meublé (abattement 50 %)</option>
+                  <option value="reel">Régime réel LMNP (déduction des charges)</option>
+                </>
+              ) : (
+                <>
+                  <option value="micro">Micro-foncier — nu (abattement 30 %)</option>
+                  <option value="reel">Régime réel (déduction des charges)</option>
+                </>
+              )}
+            </select>
+          </Field>
+          <Field label={<>Votre tranche marginale d'imposition (TMI)<InfoTooltip text="Taux d'imposition sur la dernière tranche de vos revenus (barème de l'impôt sur le revenu). Les revenus fonciers s'y ajoutent et sont taxés à ce taux, plus 17,2 % de prélèvements sociaux." align="left" /></>}>
+            <select value={melTMI} style={inputStyle} onChange={(e) => setMelTMI(+e.target.value)}>
+              {[0, 11, 30, 41, 45].map(t => <option key={t} value={t}>{t} %</option>)}
+            </select>
+          </Field>
+        </div>
+
+        {melRegimeFiscal !== "reel" ? (
+          <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
+            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
+            <span style={{ color: C.text }}>Base imposable</span>
+            <span>=</span>
+            <span style={{ color: C.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers perçus</span>
+            <span>×</span>
+            <span style={{ color: C.amber }}>(1 − {melAbattementPct} % abattement)</span>
+            <span>=</span>
+            <span style={{ color: C.violet, fontWeight: 700 }}>{eur(Math.round(melBaseImposable))}</span>
+          </div>
+        ) : (
+          <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
+            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
+            <span style={{ color: C.text }}>Résultat foncier</span>
+            <span>=</span>
+            <span style={{ color: C.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers</span>
+            <span>−</span>
+            <span style={{ color: C.amber }}>{eur(Math.round(melChargesDeductiblesAnnuelles))} charges déductibles</span>
+            <span>=</span>
+            <span style={{ color: melResultatFoncier >= 0 ? C.violet : C.red, fontWeight: 700 }}>{eur(Math.round(melResultatFoncier))}</span>
+          </div>
+        )}
+
+        {melDeficitFoncier > 0 && (
+          <div className="text-xs mt-3" style={{ color: C.cyan, lineHeight: 1.6 }}>
+            Déficit foncier de {eur(Math.round(melDeficitFoncier))} : imputable sur votre revenu global dans la limite de 10 700 €/an, le surplus est reportable sur vos revenus fonciers des 10 années suivantes.
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <MiniStat label="Impôt + prélèvements sociaux (annuel)" value={eur(Math.round(melImpotAnnuel))} color={C.red} />
+          <MiniStat label="Soit par mois" value={eur(Math.round(melImpotMensuel))} color={C.red} />
+        </div>
+      </Card>
+
+      {/* Cash-flow mensuel */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet size={18} style={{ color: C.cyan }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Cash-flow mensuel de la location</h2>
+        </div>
+        <div className="flex flex-col gap-2 text-sm">
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Loyer perçu (vacance déduite)</span>
+            <span style={{ color: C.green, fontWeight: 700 }}>+ {eur(Math.round(melLoyerMensuelEffectif))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Mensualité crédit (assurances comprises)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melMensualite)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Charges de copropriété</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melChargesCopro)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Taxe foncière (mensualisée)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melTaxeFonciereMensuelle))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Assurance PNO (mensualisée)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melPNOMensuelle))}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>GLI (Garantie Loyers Impayés)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melGLIMensuel)}</span>
+          </div>
+          {melGestionMensuel > 0 && (
+            <div className="flex justify-between">
+              <span style={{ color: C.muted }}>Frais de gestion locative</span>
+              <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melGestionMensuel)}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Provision entretien / travaux</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melEntretienMensuel)}</span>
+          </div>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
+            <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
+            <span style={{ color: melCashflowAvantImpot >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 16 }}>
+              {melCashflowAvantImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melCashflowAvantImpot)))}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: C.muted }}>Impôt + prélèvements sociaux (mensualisé)</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melImpotMensuel))}</span>
+          </div>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
+            <span style={{ color: C.text, fontWeight: 800 }}>Cash-flow net mensuel (après impôt)</span>
+            <span style={{ color: melCashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 18 }}>
+              {melCashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melCashflowApresImpot)))}
+            </span>
+          </div>
+        </div>
+        <div className="text-xs mt-4 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}`, lineHeight: 1.6 }}>
+          Estimation simplifiée — le régime réel ne déduit ici que les charges courantes (hors intérêts d'emprunt et amortissement LMNP), ce qui peut sous-estimer son avantage. Consultez l'onglet <b>Fiscalité → Revenus locatifs</b> ou un expert-comptable pour affiner.
+        </div>
+      </Card>
+
+      {/* Location nue vs meublée */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <FileText size={18} style={{ color: C.green }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Location nue vs meublée (LMNP)</h2>
+        </div>
+        <Field label={<>Majoration du loyer en meublé ({melLoyerMeubleMajorationPct} % = {eur(melLoyerMeuble)}/mois)<InfoTooltip text="Un bien loué meublé se loue généralement 10 à 20 % plus cher qu'un bien loué nu, en contrepartie de l'achat et de l'entretien du mobilier." align="left" /></>}>
+          <input type="range" min={0} max={30} step={1} value={melLoyerMeubleMajorationPct} onChange={(e) => setMelLoyerMeubleMajorationPct(+e.target.value)}
+            className="w-full" style={{ accentColor: C.green }} />
+        </Field>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="text-sm font-semibold" style={{ color: C.text }}>Location nue</div>
+              {!melMeuble && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: C.muted + "22", color: C.muted }}>
+                  Configuration actuelle
+                </span>
+              )}
+            </div>
+            <div className="text-xs mb-3" style={{ color: C.muted }}>{melRegimeNuComparaison === "micro" ? "Micro-foncier — abattement 30 %" : "Régime réel — déduction des charges"}</div>
+            <div className="flex justify-between text-xs mb-1">
+              <span style={{ color: C.muted }}>Loyer (vacance déduite)</span>
+              <span style={{ color: C.text }}>{eur(Math.round(melScenarioNu.loyerMensuelEffectif))}/mois</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1">
+              <span style={{ color: C.muted }}>Impôt + prélèvements sociaux</span>
+              <span style={{ color: C.red }}>− {eur(Math.round(melScenarioNu.impotMensuel))}/mois</span>
+            </div>
+            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+              <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net</span>
+              <span style={{ color: melScenarioNu.cashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800 }}>
+                {melScenarioNu.cashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melScenarioNu.cashflowApresImpot)))}
+              </span>
+            </div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(34,199,154,0.04)", border: `1px solid ${C.green}33` }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="text-sm font-semibold" style={{ color: C.text }}>Location meublée</div>
+              {melMeuble && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: C.green + "22", color: C.green }}>
+                  Configuration actuelle
+                </span>
+              )}
+            </div>
+            <div className="text-xs mb-3" style={{ color: C.muted }}>Micro-BIC — abattement 50 %</div>
+            <div className="flex justify-between text-xs mb-1">
+              <span style={{ color: C.muted }}>Loyer (vacance déduite)</span>
+              <span style={{ color: C.text }}>{eur(Math.round(melScenarioMeuble.loyerMensuelEffectif))}/mois</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1">
+              <span style={{ color: C.muted }}>Impôt + prélèvements sociaux</span>
+              <span style={{ color: C.red }}>− {eur(Math.round(melScenarioMeuble.impotMensuel))}/mois</span>
+            </div>
+            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+              <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net</span>
+              <span style={{ color: melScenarioMeuble.cashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800 }}>
+                {melScenarioMeuble.cashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melScenarioMeuble.cashflowApresImpot)))}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: melDeltaMeuble >= 0 ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${melDeltaMeuble >= 0 ? C.green + "44" : C.red + "44"}` }}>
+          <span style={{ color: melDeltaMeuble >= 0 ? C.green : C.red }}>
+            {melDeltaMeuble >= 0
+              ? `La location meublée améliore le cash-flow net de ${eur(Math.round(melDeltaMeuble))}/mois grâce à l'abattement de 50 % (vs 30 % en nu).`
+              : `Avec cette majoration de loyer, la location nue reste plus avantageuse de ${eur(Math.round(-melDeltaMeuble))}/mois.`}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.text }}>Meublé</div>
+            <ul className="text-xs flex flex-col gap-1" style={{ color: C.muted }}>
+              <li><span style={{ color: C.green }}>+</span> Loyer plus élevé (+10 à 20 %)</li>
+              <li><span style={{ color: C.green }}>+</span> Fiscalité plus douce (micro-BIC 50 %, amortissement en réel LMNP)</li>
+              <li><span style={{ color: C.green }}>+</span> Bail court (1 an, 9 mois étudiant) → récupération du bien plus rapide</li>
+              <li><span style={{ color: C.red }}>−</span> Achat puis renouvellement du mobilier</li>
+              <li><span style={{ color: C.red }}>−</span> Turnover locataire plus fréquent (vacance, états des lieux)</li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.text }}>Nu</div>
+            <ul className="text-xs flex flex-col gap-1" style={{ color: C.muted }}>
+              <li><span style={{ color: C.green }}>+</span> Locataire plus stable (bail 3 ans)</li>
+              <li><span style={{ color: C.green }}>+</span> Aucun investissement ni renouvellement de mobilier</li>
+              <li><span style={{ color: C.green }}>+</span> Gestion plus légère au quotidien</li>
+              <li><span style={{ color: C.red }}>−</span> Loyer généralement plus faible</li>
+              <li><span style={{ color: C.red }}>−</span> Fiscalité moins favorable (abattement 30 % seulement)</li>
+              <li><span style={{ color: C.red }}>−</span> Préavis et bail long (3 ans) → récupération du bien plus lente</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="text-xs mt-3" style={{ color: C.muted, lineHeight: 1.6 }}>
+          Le statut LMNP au régime réel permet en plus d'amortir le bien et le mobilier, ce qui réduit encore l'impôt — non modélisé ici par souci de simplicité. Le micro-BIC (abattement 50 %) suppose des recettes locatives annuelles inférieures à 77 700 €.
+        </div>
+      </Card>
+      </>
+      )}
+
+      {/* ---- Recherche d'annonces ---- */}
+      {mode !== "location" && <ImmobilierSearch budget={mode === "locatif" ? locBudgetSearch : loan25} />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  RECHERCHE D'ANNONCES IMMOBILIÈRES — deep links multi-plateformes  */
+/* ------------------------------------------------------------------ */
+const faviconUrl = (domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+const IMMO_PLATFORMS = [
+  {
+    id: "leboncoin",
+    name: "Leboncoin",
+    color: "#f97316",
+    favicon: faviconUrl("leboncoin.fr"),
+    buildUrl: ({ budget, city, type, surface, rooms }) => {
+      const typeMap = { appartement: "2", maison: "1", tous: "1,2" };
+      let u = `https://www.leboncoin.fr/recherche?category=9&price=0-${budget}`;
+      if (city)              u += `&locations=${encodeURIComponent(city)}`;
+      if (type !== "tous")   u += `&real_estate_type=${typeMap[type]}`;
+      if (rooms > 1)         u += `&rooms=${rooms}-99`;
+      if (surface > 0)       u += `&square=${surface}-700`;
+      return u;
+    },
+  },
+  {
+    id: "seloger",
+    name: "SeLoger",
+    color: "#0070f3",
+    favicon: faviconUrl("seloger.com"),
+    buildUrl: ({ budget, type, surface, rooms }) => {
+      const typeMap = { appartement: "2", maison: "1", tous: "1,2" };
+      let u = `https://www.seloger.com/list.htm?projects=2&types=${typeMap[type]}&price=0/${budget}`;
+      if (surface > 0) u += `&surface=${surface}/700`;
+      if (rooms > 1)   u += `&nb_pieces=${rooms}`;
+      return u;
+    },
+  },
+  {
+    id: "bienici",
+    name: "Bien'ici",
+    color: "#06b6d4",
+    favicon: faviconUrl("bienici.com"),
+    buildUrl: ({ budget, city, type, surface, rooms }) => {
+      const typeMap = { appartement: "appartement", maison: "maison", tous: "appartement,maison" };
+      const citySlug = city ? city.toLowerCase().replace(/\s+/g, "-") : "france";
+      let u = `https://www.bienici.com/recherche/achat/${citySlug}/prix-max-${budget}`;
+      if (type !== "tous")   u += `/typedebien-${typeMap[type]}`;
+      if (surface > 0)       u += `/surface-min-${surface}`;
+      if (rooms > 1)         u += `/nb-pieces-min-${rooms}`;
+      return u;
+    },
+  },
+  {
+    id: "pap",
+    name: "PAP",
+    color: "#6366f1",
+    favicon: faviconUrl("pap.fr"),
+    buildUrl: ({ budget, city, type, surface }) => {
+      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
+      let u = `https://www.pap.fr/annonce/ventes-immobilieres-france`;
+      const params = [`prix_max=${budget}`];
+      if (typeMap[type])   params.push(`typebien=${typeMap[type]}`);
+      if (surface > 0)     params.push(`surface_min=${surface}`);
+      if (city)            params.push(`localisation=${encodeURIComponent(city)}`);
+      return u + "?" + params.join("&");
+    },
+  },
+  {
+    id: "century21",
+    name: "Century 21",
+    color: "#c8a04a",
+    favicon: faviconUrl("century21.fr"),
+    buildUrl: ({ budget, city, type }) => {
+      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
+      let u = `https://www.century21.fr/annonces/achat/?prix_max=${budget}`;
+      if (city)            u += `&localisation=${encodeURIComponent(city)}`;
+      if (typeMap[type])   u += `&typebien=${typeMap[type]}`;
+      return u;
+    },
+  },
+  {
+    id: "orpi",
+    name: "Orpi",
+    color: "#e63946",
+    favicon: faviconUrl("orpi.com"),
+    buildUrl: ({ budget, city, type, surface, rooms }) => {
+      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
+      let u = `https://www.orpi.com/recherche/buy/?budget_max=${budget}`;
+      if (city)            u += `&location=${encodeURIComponent(city)}`;
+      if (typeMap[type])   u += `&type=${typeMap[type]}`;
+      if (surface > 0)     u += `&area_min=${surface}`;
+      if (rooms > 1)       u += `&rooms_min=${rooms}`;
+      return u;
+    },
+  },
+];
+
+function ImmobilierSearch({ budget: defaultBudget }) {
+  const [searchBudget, setSearchBudget] = useState(defaultBudget || 250000);
+  const [city, setCity]         = useState("");
+  const [type, setType]         = useState("tous");
+  const [surface, setSurface]   = useState(0);
+  const [rooms, setRooms]       = useState(1);
+
+  // Estimation indicative m² moyen France (prix médian ~3 200 €/m² en province, ~10 000 à Paris)
+  const moy = city.toLowerCase().includes("paris") ? 10000
+            : city.toLowerCase().includes("lyon") || city.toLowerCase().includes("bordeaux") || city.toLowerCase().includes("marseille") ? 5000
+            : 3200;
+  const m2Est = Math.round(searchBudget / moy);
+
+  const inputSt = { width: "100%", padding: "8px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: "#181e2c", color: C.text, fontSize: 13, outline: "none" };
+  const labelSt = { fontSize: 11, color: C.muted, fontWeight: 600, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" };
+
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <Search size={18} style={{ color: C.blue }} />
+        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>Rechercher des annonces</h2>
+        <span style={{ fontSize: 11, borderRadius: 20, padding: "3px 10px", background: "rgba(91,141,239,0.1)", color: C.blue, fontWeight: 600 }}>
+          Budget auto depuis votre capacite
+        </span>
+      </div>
+
+      {/* Filtres */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
+        <div>
+          <label style={labelSt}>Budget max</label>
+          <input
+            type="number"
+            style={inputSt}
+            value={searchBudget}
+            onChange={e => setSearchBudget(Math.max(0, +e.target.value))}
+          />
+        </div>
+        <div>
+          <label style={labelSt}>Ville / Code postal</label>
+          <input
+            type="text"
+            style={inputSt}
+            placeholder="Paris, Lyon, 69001..."
+            value={city}
+            onChange={e => setCity(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={labelSt}>Type de bien</label>
+          <select style={inputSt} value={type} onChange={e => setType(e.target.value)}>
+            <option value="tous">Tous les biens</option>
+            <option value="appartement">Appartement</option>
+            <option value="maison">Maison</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelSt}>Surface min (m2)</label>
+          <input
+            type="number"
+            style={inputSt}
+            placeholder="0 = pas de min"
+            value={surface || ""}
+            onChange={e => setSurface(Math.max(0, +e.target.value || 0))}
+          />
+        </div>
+        <div>
+          <label style={labelSt}>Pieces min</label>
+          <select style={inputSt} value={rooms} onChange={e => setRooms(+e.target.value)}>
+            <option value={1}>1+</option>
+            <option value={2}>2+</option>
+            <option value={3}>3+</option>
+            <option value={4}>4+</option>
+            <option value={5}>5+</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Indicateur budgetaire */}
+      <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}22`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <Home size={16} style={{ color: C.blue, flexShrink: 0 }} />
+        <span style={{ color: C.muted, fontSize: 13 }}>
+          Avec <strong style={{ color: C.text }}>{eur(searchBudget)}</strong>,
+          vous visez environ{" "}
+          <strong style={{ color: C.blue }}>{m2Est} m2</strong>{" "}
+          {city ? `a ${city}` : "en province"}
+          {city.toLowerCase().includes("paris") ? " (marche tres tendu)" : city.toLowerCase().includes("lyon") || city.toLowerCase().includes("bordeaux") ? " (marche dynamique)" : " (prix median ~3 200 EUR/m2)"}.
+          {surface > 0 && m2Est < surface && (
+            <span style={{ color: C.amber }}>{" "}Attention : votre budget semble insuffisant pour {surface} m2 dans cette zone.</span>
+          )}
+        </span>
+      </div>
+
+      {/* Boutons plateformes */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+        {IMMO_PLATFORMS.map(p => {
+          const url = p.buildUrl({ budget: searchBudget, city, type, surface, rooms });
+          return (
+            <a
+              key={p.id}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "11px 14px", borderRadius: 12, border: `1px solid ${p.color}44`, background: `${p.color}0d`, textDecoration: "none", transition: "opacity 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.75"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.06)", border: `1px solid ${p.color}33`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+                  <img
+                    src={p.favicon}
+                    alt={p.name}
+                    width={20}
+                    height={20}
+                    style={{ objectFit: "contain", borderRadius: 4 }}
+                    onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                  />
+                  <span style={{ display: "none", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 800, color: p.color, width: "100%", height: "100%" }}>
+                    {p.name.slice(0, 2).toUpperCase()}
+                  </span>
+                </span>
+                <span style={{ color: C.text, fontWeight: 600, fontSize: 13 }}>{p.name}</span>
+              </span>
+              <ExternalLink size={13} style={{ color: C.muted, flexShrink: 0 }} />
+            </a>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+        <span style={{ fontSize: 11, color: C.muted }}>
+          Les liens ouvrent les plateformes avec vos filtres pre-remplis. Les annonces sont en temps reel sur chaque site.
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : PROFIL                                                     */
+/* ------------------------------------------------------------------ */
+
+function Profil({ profile, setProfile, onInject, setTransactions }) {
+  const [profileSaved, setProfileSaved] = useState(false);
+  const initials = ((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "?";
+
+  return (
+    <div className="flex flex-col gap-6 max-w-3xl">
+      <h1 className="text-3xl font-bold" style={{ color: C.text }}>Profil</h1>
+
+      <Card>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold"
+            style={{ background: "rgba(139,92,246,0.15)", color: C.blue }}>{initials}</div>
+          <div>
+            <div className="text-lg font-bold" style={{ color: C.text }}>{profile.email || "—"}</div>
+            <div className="flex gap-2 mt-2">
+              <span className="px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                style={{ background: "rgba(139,92,246,0.15)", color: C.violet }}>
+                <Shield size={12} /> Admin</span>
+              <span className="px-3 py-1 rounded-lg text-xs font-semibold"
+                style={{ background: "rgba(245,166,35,0.15)", color: C.amber }}>Premium</span>
+              <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+                {profile.age} ans</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <Field label="Prénom">
+            <input value={profile.firstName} placeholder="Votre prénom" style={inputStyle}
+              onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))} />
+          </Field>
+          <Field label="Nom">
+            <input value={profile.lastName} placeholder="Votre nom" style={inputStyle}
+              onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))} />
+          </Field>
+        </div>
+        <Field label="Âge actuel">
+          <input type="number" value={profile.age}
+            onChange={(e) => setProfile((p) => ({ ...p, age: +e.target.value || 0 }))} style={inputStyle} />
+        </Field>
+        <p className="text-sm mt-2" style={{ color: C.muted }}>
+          Utilisé pour calculer votre âge FIRE estimé dans les simulations.
+        </p>
+        <button
+          className="mt-4 px-5 py-3 rounded-xl font-semibold"
+          style={{ background: profileSaved ? C.green : C.blue, color: "#fff", transition: "background 0.3s" }}
+          onClick={() => { setProfileSaved(true); setTimeout(() => setProfileSaved(false), 2000); }}
+        >
+          {profileSaved ? "✓ Sauvegardé" : "Enregistrer les modifications"}
+        </button>
+      </Card>
+
+      {/* Préférences de l'app */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={18} style={{ color: C.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Préférences de l'app</h2>
+        </div>
+        <div className="flex items-center justify-between py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div>
+            <div className="font-medium text-sm" style={{ color: C.text }}>Mode Couple / Famille</div>
+            <div className="text-xs mt-1" style={{ color: C.muted }}>
+              Affiche l'onglet de gestion patrimoniale commune dans la navigation
+            </div>
+          </div>
+          <button
+            onClick={() => setProfile((p) => ({ ...p, coupleMode: !p.coupleMode }))}
+            style={{
+              position: "relative", flexShrink: 0,
+              width: 44, height: 24, borderRadius: 12,
+              background: profile.coupleMode ? C.blue : "rgba(255,255,255,0.12)",
+              border: "none", cursor: "pointer", transition: "background 0.25s",
+            }}
+          >
+            <span style={{
+              position: "absolute", top: 3,
+              left: profile.coupleMode ? 23 : 3,
+              width: 18, height: 18, borderRadius: "50%",
+              background: "#fff", transition: "left 0.25s",
+              display: "block",
+            }} />
+          </button>
+        </div>
+      </Card>
+
+      <Card style={{ borderColor: "rgba(139,92,246,0.3)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-lg font-bold" style={{ color: C.text }}>Données de test</h2>
+          <span className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold"
+            style={{ background: "rgba(139,92,246,0.15)", color: C.violet }}>Admin Only</span>
+        </div>
+        <p className="text-sm mb-5" style={{ color: C.muted }}>
+          Charge un profil fictif complet — remplace le profil, les transactions et les paramètres de simulation,
+          puis redirige vers le tableau de bord.
+          <span style={{ color: C.amber }}> Écrase les données actuelles.</span>
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {TEST_PROFILES.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onInject(p)}
+              className="text-left rounded-xl p-4 flex flex-col gap-2 transition"
+              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.violet; e.currentTarget.style.background = "rgba(139,92,246,0.06)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+            >
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                style={{ background: "rgba(91,141,239,0.15)", color: C.blue }}>
+                {p.profile.firstName[0]}
+              </div>
+              <span className="font-semibold text-sm" style={{ color: C.text }}>{p.label}</span>
+              <span className="text-xs leading-relaxed" style={{ color: C.muted }}>{p.description}</span>
+              <span className="text-xs mt-1 font-medium" style={{ color: C.violet }}>
+                {p.profile.firstName} {p.profile.lastName}, {p.profile.age} ans →
+              </span>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : PATRIMOINE                                                 */
+/* ------------------------------------------------------------------ */
+function Patrimoine({ patrimoine, setPatrimoine }) {
+  const [editMode, setEditMode] = useState(false);
+  const [openCats, setOpenCats] = useState({});
+  const [histRange, setHistRange] = useState(12);
+  const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, outline: "none" };
+  const netWorthFlashRef = useRef(null);
+
+  const totalActifs = patrimoine.actifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
+  const totalPassifs = patrimoine.passifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
+  const netWorth = totalActifs - totalPassifs;
+  const hist = useMemo(() => ensureHistoriqueDepth(patrimoine.historique, 36), [patrimoine.historique]);
+  const prevNW = hist.length >= 2 ? hist[hist.length - 2].v : netWorth;
+  const monthlyChange = netWorth - prevNW;
+  const chartHist = hist.slice(-histRange);
+
+  // Endettement = passifs / actifs
+  const debtRatio = totalActifs > 0 ? (totalPassifs / totalActifs) * 100 : 0;
+  const debtColor = debtRatio > 50 ? C.red : debtRatio > 30 ? C.amber : C.green;
+
+  // Catégorie d'actif dominante
+  const actifCatTotals = patrimoine.actifs.map((c) => ({ ...c, total: c.items.reduce((s, i) => s + i.value, 0) }));
+  const topActifCat = actifCatTotals.reduce((a, b) => (b.total > (a?.total || 0) ? b : a), null);
+  const topActifShare = topActifCat && totalActifs > 0 ? (topActifCat.total / totalActifs) * 100 : 0;
+
+  // Croissance sur la période sélectionnée
+  const firstNW = chartHist[0]?.v ?? netWorth;
+  const growthTotalAbs = netWorth - firstNW;
+  const growthTotalPct = firstNW !== 0 ? (growthTotalAbs / firstNW) * 100 : 0;
+
+  // "Investissements" toujours en cyan (cohérent avec le reste de l'app),
+  // même si une ancienne couleur est restée enregistrée en local.
+  const catColor = (cat) => cat.id === "investissements" ? C.cyan : cat.color;
+
+  const allSlices = [
+    ...patrimoine.actifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
+    ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: c.color })),
+  ].filter((s) => s.value > 0);
+  const totalSlices = allSlices.reduce((s, x) => s + x.value, 0);
+
+  const tableRows = chartHist.map((row, idx) => {
+    const prev = idx > 0 ? chartHist[idx - 1].v : row.v;
+    const variation = idx > 0 ? row.v - prev : 0;
+    const pctVal = prev > 0 && idx > 0 ? (variation / prev) * 100 : 0;
+    return { m: row.m, v: row.v, variation, pct: pctVal };
+  });
+
+  const updateItem = (side, catId, idx, changes) =>
+    setPatrimoine((p) => ({
+      ...p,
+      [side]: p[side].map((cat) =>
+        cat.id === catId
+          ? { ...cat, items: cat.items.map((it, i) => i === idx ? { ...it, ...changes } : it) }
+          : cat
+      ),
+    }));
+
+  const deleteItem = (side, catId, idx) =>
+    setPatrimoine((p) => ({
+      ...p,
+      [side]: p[side].map((cat) =>
+        cat.id === catId ? { ...cat, items: cat.items.filter((_, i) => i !== idx) } : cat
+      ),
+    }));
+
+  const addItem = (side, catId) =>
+    setPatrimoine((p) => ({
+      ...p,
+      [side]: p[side].map((cat) =>
+        cat.id === catId
+          ? { ...cat, items: [...cat.items, { label: "Nouvel actif", value: 0, currency: "EUR", valueNative: 0 }] }
+          : cat
+      ),
+    }));
+
+  const toggle = (id) => setOpenCats((s) => ({ ...s, [id]: !s[id] }));
+
+  const renderCategory = (cat, side) => {
+    const isPassif = side === "passifs";
+    const total = cat.items.reduce((s, i) => s + (i.value || 0), 0);
+    const isOpen = !!openCats[cat.id];
+    return (
+      <div key={cat.id} className="mb-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+        <button className="w-full flex items-center justify-between px-4 py-3"
+          style={{ background: "rgba(255,255,255,0.02)" }} onClick={() => toggle(cat.id)}>
+          <span className="flex items-center gap-2 font-semibold text-sm" style={{ color: C.text }}>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: catColor(cat) }} />
+            {cat.label}
+          </span>
+          <span className="flex items-center gap-3">
+            <span className="font-bold text-sm" style={{ color: isPassif ? C.red : catColor(cat) }}>
+              {isPassif ? "−" : ""}{eur(total)}
+            </span>
+            <span style={{ color: C.muted, fontSize: 11 }}>{isOpen ? "▲" : "▼"}</span>
+          </span>
+        </button>
+        {isOpen && (
+          <div className="px-4 pb-3 pt-1" style={{ background: "rgba(255,255,255,0.01)" }}>
+            {cat.items.length === 0 && (
+              <p className="text-sm py-2" style={{ color: C.muted }}>Aucun élément</p>
+            )}
+            {cat.items.map((item, idx) => (
+              <div key={idx} className="py-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+                {editMode ? (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <input
+                      value={item.label}
+                      onChange={e => updateItem(side, cat.id, idx, { label: e.target.value })}
+                      style={{ ...inp, width: 160, padding: "4px 10px", fontSize: 13 }}
+                    />
+                    <select
+                      value={item.currency || "EUR"}
+                      onChange={e => {
+                        const cur = e.target.value;
+                        const native = item.valueNative ?? item.value;
+                        updateItem(side, cat.id, idx, { currency: cur, valueNative: native, value: Math.round(toEUR(native, cur)) });
+                      }}
+                      style={{ ...inp, width: 75, padding: "4px 8px", fontSize: 12 }}
+                    >
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      value={item.valueNative ?? item.value}
+                      onChange={e => {
+                        const native = +e.target.value || 0;
+                        const cur = item.currency || "EUR";
+                        updateItem(side, cat.id, idx, { valueNative: native, value: Math.round(toEUR(native, cur)) });
+                      }}
+                      style={{ ...inp, width: 120, padding: "4px 10px", fontSize: 13 }}
+                    />
+                    {(item.currency && item.currency !== "EUR") && (
+                      <span style={{ fontSize: 11, color: C.muted }}>= {eur(item.value)}</span>
+                    )}
+                    <button onClick={() => deleteItem(side, cat.id, idx)}
+                      style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: C.red, marginLeft: "auto" }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm" style={{ color: C.muted }}>{item.label}</span>
+                    <div className="text-right">
+                      <span className="font-bold text-sm" style={{ color: C.text }}>
+                        {isPassif ? "−" : ""}{eur(item.value)}
+                      </span>
+                      {item.currency && item.currency !== "EUR" && (
+                        <div style={{ fontSize: 10, color: C.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {editMode && (
+              <button onClick={() => addItem(side, cat.id)}
+                className="flex items-center gap-2 mt-2 text-sm"
+                style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", padding: "4px 0" }}>
+                <Plus size={14} /> Ajouter un élément
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Patrimoine</h1>
+          <p style={{ color: C.muted }}>Suivi de votre richesse nette — net worth</p>
+        </div>
+        <button onClick={() => setEditMode((e) => !e)}
+          className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium"
+          style={{
+            border: `1px solid ${editMode ? C.green : C.border}`,
+            color: editMode ? C.green : C.muted,
+            background: editMode ? "rgba(34,199,154,0.08)" : "rgba(255,255,255,0.03)",
+          }}>
+          {editMode ? <Lock size={16} /> : <Sun size={16} />}
+          {editMode ? "Verrouiller" : "Mode édition"}
+        </button>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Patrimoine net"
+          value={<GrowthValue value={netWorth} formatter={eur} flashRef={netWorthFlashRef} />}
+          valueColor={netWorth >= 0 ? C.green : C.red}
+          flashRef={netWorthFlashRef}
+          sub={<>
+            {monthlyChange >= 0
+              ? <ArrowUpRight size={14} style={{ color: C.green }} />
+              : <ArrowDownRight size={14} style={{ color: C.red }} />}
+            <span className="font-semibold" style={{ color: monthlyChange >= 0 ? C.green : C.red }}>
+              {monthlyChange >= 0 ? "+" : ""}{eur(monthlyChange)}
+            </span>
+            <span style={{ color: C.muted }}>vs mois précédent</span>
+          </>}
+        />
+        <KpiCard
+          label="Total actifs"
+          value={eur(totalActifs)}
+          valueColor={C.green}
+          sub={topActifCat ? <>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: topActifCat.color }} />
+            <span style={{ color: C.text }}>{topActifCat.label}</span>
+            <span style={{ color: C.muted }}>· {pct(topActifShare)} du total</span>
+          </> : <span style={{ color: C.muted }}>Aucun actif</span>}
+        />
+        <KpiCard
+          label="Total passifs"
+          value={"−" + eur(totalPassifs)}
+          valueColor={C.red}
+          sub={<>
+            <span className="font-semibold" style={{ color: debtColor }}>{pct(debtRatio)}</span>
+            <span style={{ color: C.muted }}>des actifs (endettement)</span>
+          </>}
+        />
+        <KpiCard
+          label={`Croissance depuis ${chartHist[0]?.m || ""}`}
+          value={(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+          valueColor={growthTotalPct >= 0 ? C.green : C.red}
+          sub={<>
+            {growthTotalAbs >= 0
+              ? <ArrowUpRight size={14} style={{ color: C.green }} />
+              : <ArrowDownRight size={14} style={{ color: C.red }} />}
+            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? C.green : C.red }}>
+              {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
+            </span>
+            <span style={{ color: C.muted }}>net worth</span>
+          </>}
+        />
+      </div>
+
+      {/* Évolution + Répartition */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold" style={{ color: C.text }}>Évolution du patrimoine</h2>
+                <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
+                  icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
+                  label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
+              </div>
+              <p className="text-sm" style={{ color: C.muted }}>Net worth sur la période sélectionnée</p>
+            </div>
+            <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
+              style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
+              <option value={3}>3 derniers mois</option>
+              <option value={6}>6 derniers mois</option>
+              <option value={12}>12 derniers mois</option>
+              <option value={24}>2 ans</option>
+              <option value={36}>3 ans</option>
+            </select>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={chartHist}>
+              <defs>
+                <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.violet} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={C.violet} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="m" stroke={C.muted} tick={{ fontSize: 11 }} interval={histRange > 12 ? 2 : 0} />
+              <YAxis stroke={C.muted} tick={{ fontSize: 11 }}
+                tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
+              <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+              <Area type="monotone" dataKey="v" name="Net Worth" stroke={C.violet} strokeWidth={2.5}
+                fill="url(#gradNW)" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <div className="mb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-xl font-bold" style={{ color: C.text }}>Répartition</h2>
+              <Badge tone="neutral" label={`${allSlices.length} catégories`} />
+            </div>
+            <p className="text-sm" style={{ color: C.muted }}>Actifs vs passifs par catégorie</p>
+          </div>
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={allSlices} dataKey="value" nameKey="name"
+                  innerRadius={62} outerRadius={92} paddingAngle={2}
+                  label={renderDonutPctLabel} labelLine={false}>
+                  {allSlices.map((s, i) => <Cell key={i} fill={s.color} />)}
+                </Pie>
+                <Tooltip {...chartTip} itemStyle={{ color: C.text }} formatter={(v) => eur(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
+              <span className="text-xs" style={{ color: C.muted }}>Net Worth</span>
+              <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? C.green : C.red }}>{eur(netWorth)}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-2 mt-3 justify-center">
+            {allSlices.map((s, i) => (
+              <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+                {s.name}
+                <span style={{ color: C.text, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Détail par catégorie */}
+      <Card>
+        <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Détail par catégorie</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.green, letterSpacing: 1 }}>ACTIFS</div>
+            {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
+          </div>
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: C.red, letterSpacing: 1 }}>PASSIFS</div>
+            {patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Comparison table */}
+      <Card>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold" style={{ color: C.text }}>Comparaison mois par mois</h2>
+          <p className="text-sm" style={{ color: C.muted }}>Sur la période sélectionnée ci-dessus</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                {["Mois", "Net Worth", "Variation", "% Croissance"].map((h) => (
+                  <th key={h} className="py-3 px-3 text-left font-semibold" style={{ color: C.muted }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row, idx) => (
+                <tr key={row.m} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td className="py-3 px-3" style={{ color: C.text }}>{row.m}</td>
+                  <td className="py-3 px-3 font-bold" style={{ color: C.text }}>{eur(row.v)}</td>
+                  <td className="py-3 px-3 font-semibold"
+                    style={{ color: idx === 0 ? C.muted : row.variation >= 0 ? C.green : C.red }}>
+                    {idx === 0 ? "—" : (row.variation > 0 ? "+" : "") + eur(row.variation)}
+                  </td>
+                  <td className="py-3 px-3 font-semibold"
+                    style={{ color: idx === 0 ? C.muted : row.pct >= 0 ? C.green : C.red }}>
+                    {idx === 0 ? "—" : (row.pct > 0 ? "+" : "") + pct(row.pct)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ALERTES IN-APP — bannières dismissibles basées sur les données    */
+/* ------------------------------------------------------------------ */
+function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
+  const totalActifs  = (patrimoine?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+  const totalPassifs = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+
+  const alerts = useMemo(() => {
+    const out = [];
+    if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL)
+      out.push({ id: "critical_savings", level: "red",   icon: "🔴", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL}%. Réduisez une charge fixe ce mois.` });
+    else if (totals.tauxEpargne < SAVINGS_RATE_TARGET)
+      out.push({ id: "low_savings",      level: "amber", icon: "🟡", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — objectif : ${SAVINGS_RATE_TARGET}%. Chaque % gagné compte sur 20 ans.` });
+    if (totals.restant < 0)
+      out.push({ id: "deficit",          level: "red",   icon: "🔴", msg: `Déficit mensuel de ${eur(Math.abs(totals.restant))} — vous dépensez plus que vous ne gagnez ce mois.` });
+    if (totalPassifs > totalActifs * 0.5 && totalActifs > 0)
+      out.push({ id: "high_debt",        level: "amber", icon: "⚠️", msg: `Endettement élevé (${Math.round((totalPassifs / totalActifs) * 100)}% de vos actifs) — priorisez le remboursement des crédits.` });
+    if (totals.chargesFixes > totals.revenus * 0.6)
+      out.push({ id: "heavy_charges",    level: "amber", icon: "🟡", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — peu de marge de manœuvre.` });
+    return out.filter(a => !dismissed.includes(a.id));
+  }, [totals, totalActifs, totalPassifs, dismissed]);
+
+  if (alerts.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      {alerts.map(a => (
+        <div key={a.id} style={{
+          display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderRadius: 14,
+          background: a.level === "red" ? "rgba(255,90,95,0.08)" : "rgba(245,158,11,0.08)",
+          border: `1px solid ${a.level === "red" ? "rgba(255,90,95,0.25)" : "rgba(245,158,11,0.25)"}`,
+        }}>
+          <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 13, color: "#d1d5db", lineHeight: 1.5 }}>{a.msg}</span>
+          </div>
+          <button onClick={() => onDismiss(a.id)}
+            style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", padding: "0 2px", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ONBOARDING — wizard de première connexion                         */
+/* ------------------------------------------------------------------ */
+function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
+  const [step, setStep]         = useState(0);
+  const [prenom, setPrenom]     = useState("");
+  const [age, setAge]           = useState(30);
+  const [revenus, setRevenus]   = useState(3000);
+  const [loyer, setLoyer]       = useState(800);
+  const [epargne, setEpargne]   = useState(300);
+
+  const steps = [
+    { title: "Bienvenue sur WealthTrack", sub: "Quelques infos pour personnaliser votre expérience" },
+    { title: "Vos revenus & charges",     sub: "Ces données restent sur votre appareil" },
+    { title: "Votre épargne",             sub: "On calcule votre potentiel d'indépendance financière" },
+  ];
+
+  const finish = () => {
+    setProfile(p => ({ ...p, firstName: prenom, age }));
+    const ts = Date.now();
+    setTransactions([
+      { id: ts+1, label: "Salaire / Revenus",  cat: "Freelance",    type: "revenu",            amount:  revenus,  recurring: true },
+      { id: ts+2, label: "Loyer / Logement",   cat: "Logement",     type: "charge_fixe",       amount: -loyer,    recurring: true },
+      { id: ts+3, label: "Épargne mensuelle",  cat: "Épargne",      type: "investissement",    amount: -epargne,  recurring: true },
+    ]);
+    onDone();
+  };
+
+  const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
+  const modal   = { background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 480 };
+  const inpO    = { ...inputStyle, marginTop: 6 };
+
+  return (
+    <div className="wt-fade-in" style={overlay}>
+      <div className="wt-scale-in" style={modal}>
+        {/* Progress dots + skip */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
+          <div style={{ display: "flex", gap: 6, flex: 1 }}>
+            {steps.map((_, i) => (
+              <div key={i} style={{ height: 4, flex: 1, borderRadius: 4, background: i <= step ? C.blue : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
+            ))}
+          </div>
+          <button onClick={onDone} style={{ fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", padding: "2px 4px" }}>
+            Passer ›
+          </button>
+        </div>
+        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{steps[step].title}</h2>
+        <p style={{ color: C.muted, fontSize: 14, marginBottom: 28 }}>{steps[step].sub}</p>
+
+        {step === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Votre prénom</label>
+              <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
+            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Votre âge</label>
+              <input type="number" value={age} onChange={e => setAge(+e.target.value)} style={inpO} /></div>
+          </div>
+        )}
+        {step === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Revenus mensuels nets (€)</label>
+              <input type="number" value={revenus} onChange={e => setRevenus(+e.target.value)} style={inpO} /></div>
+            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Loyer / charge principale (€/mois)</label>
+              <input type="number" value={loyer} onChange={e => setLoyer(+e.target.value)} style={inpO} /></div>
+          </div>
+        )}
+        {step === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Épargne / investissement mensuel (€)</label>
+              <input type="number" value={epargne} onChange={e => setEpargne(+e.target.value)} style={inpO} /></div>
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${C.blue}22` }}>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: C.blue }}>
+                {eur(Math.round(fvMonthly(epargne, RATE_A, 20)))}
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>⚠ {RATE_DISCLAIMER}</div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 28, gap: 12 }}>
+          {step > 0
+            ? <button onClick={() => setStep(s => s - 1)} style={{ padding: "11px 20px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+            : <div />}
+          {step < steps.length - 1
+            ? <button onClick={() => setStep(s => s + 1)} style={{ padding: "11px 24px", borderRadius: 12, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 700 }}>Continuer →</button>
+            : <button onClick={finish} style={{ padding: "11px 24px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#22c79a,#0070f3)", color: "#fff", cursor: "pointer", fontWeight: 700 }}>Démarrer →</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  OBJECTIFS FINANCIERS                                               */
+/* ------------------------------------------------------------------ */
+const GOAL_ICONS = {
+  apport: Home,
+  urgence: Shield,
+  voyage: Plane,
+  retraite: Palmtree,
+  voiture: Car,
+  formation: GraduationCap,
+  autre: Star,
+};
+
+const GOAL_PRESETS = [
+  { name: "Apport immobilier", color: "#2f9bff", type: "apport" },
+  { name: "Fonds d'urgence",   color: "#22c79a", type: "urgence" },
+  { name: "Voyage",            color: "#f5a623", type: "voyage" },
+  { name: "Retraite / IF",     color: "#a855f7", type: "retraite" },
+  { name: "Voiture",           color: "#ec4899", type: "voiture" },
+  { name: "Formation",         color: "#14b8a6", type: "formation" },
+  { name: "Autre objectif",    color: "#6366f1", type: "autre" },
+];
+
+function ObjectifsView({ goals, setGoals, totals }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newGoal, setNewGoal] = useState({ name: "", icon: "autre", target: 10000, saved: 0, monthly: 200, color: "#6366f1" });
+
+  const addGoal = () => {
+    if (!newGoal.name.trim() || !newGoal.target) return;
+    setGoals(gs => [...gs, { ...newGoal, id: Date.now() }]);
+    setNewGoal({ name: "", icon: "autre", target: 10000, saved: 0, monthly: 200, color: "#6366f1" });
+    setShowAdd(false);
+  };
+
+  const monthsLeft = (g) => {
+    if (g.saved >= g.target) return 0;
+    if (g.monthly <= 0) return null;
+    return Math.ceil((g.target - g.saved) / g.monthly);
+  };
+
+  // Formate un nombre de mois en "X ans Y mois" (ou "X mois" si < 1 an)
+  const formatMonths = (m) => {
+    if (m == null) return "—";
+    if (m === 0) return "Atteint";
+    const years = Math.floor(m / 12);
+    const rem = m % 12;
+    if (years === 0) return `${rem} mois`;
+    if (rem === 0) return `${years} an${years > 1 ? "s" : ""}`;
+    return `${years} an${years > 1 ? "s" : ""} ${rem} mois`;
+  };
+
+  const inpG = { ...inputStyle, padding: "7px 12px", fontSize: 13 };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Objectifs financiers</h1>
+          <p style={{ color: C.muted }}>Suivez vos projets d'épargne et leur progression</p>
+        </div>
+        <button onClick={() => setShowAdd(s => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
+          style={{ background: C.blue, color: "#fff" }}>
+          <Plus size={18} /> Nouvel objectif
+        </button>
+      </div>
+
+      {showAdd && (
+        <Card style={{ borderColor: `${C.blue}44` }}>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: C.muted }}>NOUVEL OBJECTIF</h2>
+          {/* Presets */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            {GOAL_PRESETS.map(p => {
+              const PresetIcon = GOAL_ICONS[p.type];
+              return (
+                <button key={p.type} onClick={() => setNewGoal(g => ({ ...g, name: p.name, icon: p.type, color: p.color }))}
+                  className="flex items-center gap-2"
+                  style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${newGoal.name === p.name ? p.color : C.border}`, background: newGoal.name === p.name ? p.color + "22" : "rgba(255,255,255,0.03)", color: C.text, fontSize: 13, cursor: "pointer" }}>
+                  <PresetIcon size={14} style={{ color: p.color }} /> {p.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Nom de l'objectif">
+              <input value={newGoal.name} placeholder="Mon objectif" style={inpG} onChange={e => setNewGoal(g => ({ ...g, name: e.target.value }))} />
+            </Field>
+            <Field label="Montant cible (€)">
+              <input type="number" value={newGoal.target} style={inpG} onChange={e => setNewGoal(g => ({ ...g, target: +e.target.value || 0 }))} />
+            </Field>
+            <Field label="Déjà épargné (€)">
+              <input type="number" value={newGoal.saved} style={inpG} onChange={e => setNewGoal(g => ({ ...g, saved: +e.target.value || 0 }))} />
+            </Field>
+            <Field label="Versement mensuel (€)">
+              <input type="number" value={newGoal.monthly} style={inpG} onChange={e => setNewGoal(g => ({ ...g, monthly: +e.target.value || 0 }))} />
+            </Field>
+          </div>
+          <div className="flex gap-3 mt-3">
+            <button onClick={addGoal} style={{ padding: "9px 20px", borderRadius: 12, border: "none", background: C.blue, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
+              <Check size={14} className="inline mr-1.5" /> Créer l'objectif
+            </button>
+            <button onClick={() => setShowAdd(false)} style={{ padding: "9px 16px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontSize: 13 }}>Annuler</button>
+          </div>
+        </Card>
+      )}
+
+      {goals.length === 0 && !showAdd && (
+        <Card>
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <Target size={40} style={{ color: C.muted, margin: "0 auto 12px" }} />
+            <p style={{ color: C.text, fontWeight: 600, marginBottom: 6 }}>Aucun objectif défini</p>
+            <p style={{ color: C.muted, fontSize: 13 }}>Créez votre premier objectif pour suivre votre progression.</p>
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {goals.map(g => {
+          const pct      = Math.min(100, g.target > 0 ? (g.saved / g.target) * 100 : 0);
+          const months   = monthsLeft(g);
+          const done     = g.saved >= g.target;
+          const dateEst  = months != null && !done
+            ? (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); })()
+            : null;
+          const GoalIcon = GOAL_ICONS[g.icon] || Star;
+
+          return (
+            <Card key={g.id} style={{ borderColor: done ? `${C.green}44` : `${g.color}33` }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${g.color}1a`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <GoalIcon size={18} style={{ color: g.color }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{g.name}</div>
+                    {done
+                      ? <div style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Objectif atteint !</div>
+                      : <div style={{ fontSize: 12, color: C.muted }}>{dateEst ? `Estimé : ${dateEst}` : months == null ? "Définissez un versement mensuel" : ""}</div>}
+                  </div>
+                </div>
+                <button onClick={() => setGoals(gs => gs.filter(x => x.id !== g.id))}
+                  style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", padding: 2 }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ marginBottom: 10 }}>
+                <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: done ? C.green : g.color }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 12, color: C.muted }}>
+                  <span>{eur(g.saved)} épargné</span>
+                  <span style={{ fontWeight: 700, color: g.color }}>{pct.toFixed(0)}%</span>
+                  <span>sur {eur(g.target)}</span>
+                </div>
+              </div>
+
+              {/* Métriques */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Reste à épargner</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{eur(Math.max(0, g.target - g.saved))}</div>
+                </div>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Versement mensuel</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: g.color }}>{eur(g.monthly)}</div>
+                </div>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Temps restant</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: done ? C.green : C.text }}>{done ? "Atteint ✓" : formatMonths(months)}</div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FIRE INFO MODAL                                                    */
+/* ------------------------------------------------------------------ */
+function FIREInfoModal({ onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="wt-fade-in"
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="wt-scale-in"
+        style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 560, position: "relative" }}
+      >
+        {/* Close */}
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#6b7280", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>✕</button>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15))", border: "1px solid rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+            🔥
+          </div>
+          <div>
+            <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 22, margin: 0 }}>FIRE</h2>
+            <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>Financial Independence, Retire Early</p>
+          </div>
+        </div>
+
+        {/* Définition */}
+        <p style={{ color: "#d1d5db", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+          Le mouvement <strong style={{ color: "#f9fafb" }}>FIRE</strong> repose sur une idée simple : accumuler suffisamment de capital pour que les rendements passifs couvrent vos dépenses à vie — vous permettant d'arrêter de travailler quand <em>vous</em> le décidez, pas à 65 ans.
+        </p>
+
+        <button
+          onClick={onClose}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff" }}
+        >
+          🔥 Calculer mon objectif FIRE
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  APP                                                                */
+/* ------------------------------------------------------------------ */
+export default function App() {
+  const [showApp,    setShowApp]    = useState(false);
+  const [view,       setView]       = useState("dashboard");
+  const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
+  const [transactions, setTransactions] = useLocalStorage("wt_transactions", TX);
+  const [histo,      setHisto]      = useLocalStorage("wt_histo", HISTO);
+  const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false });
+  const [simParams,  setSimParams]  = useLocalStorage("wt_simParams", { monthly: 500, initial: 10000, price: 200000, horizon: 20 });
+  const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", DEFAULT_PATRIMOINE);
+  // Nouvelles features
+  const [budgets,    setBudgets]    = useLocalStorage("wt_budgets", {});
+  const [goals,      setGoals]      = useLocalStorage("wt_goals", []);
+  const [dismissed,  setDismissed]  = useLocalStorage("wt_dismissed_alerts", []);
+  const [onboarded,  setOnboarded]  = useLocalStorage("wt_onboarded", false);
+  const [fireClicks, setFireClicks] = useLocalStorage("wt_fire_clicks", 0);
+  const [showFIREModal, setShowFIREModal] = useState(false);
+  const [trialPopupSeen, setTrialPopupSeen] = useLocalStorage("wt_trial_popup_seen", null);
+  const [showTrialPopup, setShowTrialPopup] = useState(false);
+
+  // Déclenche onboarding si pas encore fait ET prénom vide
+  const showOnboarding = showApp && !onboarded && !profile.firstName;
+
+  // Ouvre le modal FIRE pour les 10 premiers clics
+  useEffect(() => {
+    if (view === "fi" && fireClicks < 10) {
+      setShowFIREModal(true);
+      setFireClicks(n => n + 1);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (view === "couple" && !profile.coupleMode) setView("dashboard");
+  }, [profile.coupleMode]);
+
+  // Popup essai gratuit : une fois par mois si plan Gratuit
+  useEffect(() => {
+    if (!showApp || plan !== "free") return;
+    const last = trialPopupSeen ? new Date(trialPopupSeen).getTime() : 0;
+    const now = Date.now();
+    if (now - last > 30 * 24 * 60 * 60 * 1000) setShowTrialPopup(true);
+  }, [showApp, plan]);
+
+  const dismissTrialPopup = () => {
+    setTrialPopupSeen(new Date().toISOString());
+    setShowTrialPopup(false);
+  };
+
+  const injectProfile = (p) => {
+    setTransactions(p.transactions);
+    if (p.histo) setHisto(p.histo);
+    setProfile({ ...p.profile, coupleMode: profile.coupleMode });
+    setSimParams({ ...p.simParams });
+    if (p.patrimoine) setPatrimoine(JSON.parse(JSON.stringify(p.patrimoine)));
+    setView("dashboard");
+  };
+
+  const totals = useMemo(() => {
+    const sum = (t) => transactions.filter((x) => x.type === t).reduce((s, x) => s + Math.abs(x.amount), 0);
+    const revenus     = sum("revenu");
+    const chargesFixes = sum("charge_fixe");
+    const depensesVar = sum("depense_variable");
+    const invest      = sum("investissement");
+    const restant     = revenus - chargesFixes - depensesVar - invest;
+    const conso       = chargesFixes + depensesVar;
+    const tauxEpargne = revenus > 0 ? ((revenus - conso) / revenus) * 100 : 0;
+    return { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne };
+  }, [transactions]);
+
+  const breakdown = useMemo(() => {
+    const map = {};
+    transactions.filter((t) => t.amount < 0).forEach((t) => {
+      map[t.cat] = (map[t.cat] || 0) + Math.abs(t.amount);
+    });
+    return Object.entries(map).map(([cat, amount]) => ({ cat, amount })).sort((a, b) => b.amount - a.amount);
+  }, [transactions]);
+
+  const handleImport = (imported) => {
+    setTransactions((prev) => [...prev, ...imported.map((tx) => ({ ...tx, id: Date.now() + Math.random() }))]);
+    setView("finances");
+  };
+
+  const handleDeleteTx  = (id) => setTransactions(prev => prev.filter(t => t.id !== id));
+  const handleUpdateTx  = (id, changes) => setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...changes } : t));
+  const handleDismissAlert = (alertId) => setDismissed(prev => [...prev, alertId]);
+
+  if (!showApp) return <Landing onStart={() => setShowApp(true)} />;
+
+  return (
+    <div className="flex min-h-screen" style={{ background: C.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+      <ScrollProgressBar />
+      {showFIREModal && (
+        <FIREInfoModal onClose={() => setShowFIREModal(false)} />
+      )}
+      {showTrialPopup && (
+        <TrialPopup
+          onDiscover={() => { dismissTrialPopup(); setView("pricing"); }}
+          onClose={dismissTrialPopup}
+        />
+      )}
+      {showOnboarding && (
+        <OnboardingWizard
+          profile={profile}
+          setProfile={setProfile}
+          setTransactions={setTransactions}
+          onDone={() => setOnboarded(true)}
+        />
+      )}
+      <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
+      <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
+        {/* nav mobile */}
+        <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
+          {["dashboard", "finances", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
+            <Pill key={v} active={view === v} onClick={() => setView(v)}>
+              {{ dashboard: "Tableau", finances: "Finances", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", assistant: "IA", couple: "Couple", profil: "Profil" }[v]}
+            </Pill>
+          ))}
+        </div>
+
+        {/* Alertes in-app (tous vues sauf pricing) */}
+        {view !== "pricing" && view !== "importer" && (
+          <AlertsBanner totals={totals} patrimoine={patrimoine} dismissed={dismissed} onDismiss={handleDismissAlert} />
+        )}
+
+        {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
+        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoine} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} />}
+        {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
+            onAdd={(tx) => setTransactions(prev => [...prev, tx])}
+            onDelete={handleDeleteTx}
+            onUpdate={handleUpdateTx}
+            budgets={budgets}
+            setBudgets={setBudgets}
+            plan={plan}
+          />}
+        {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
+        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoine} setPatrimoine={setPatrimoine} />}
+        {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} />}
+        {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
+        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoine} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "portefeuille" && <Portefeuille />}
+
+        {/* Vues Premium */}
+        {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoine} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoine} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "defi"         && (canAccess(plan, "defi")        ? <DeFi />   : <PaywallBanner feature="defi"  plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "assistant"    && (canAccess(plan, "assistant")   ? <Chatbot totals={totals} simParams={simParams} patrimoine={patrimoine} /> : <PaywallBanner feature="assistant" plan={plan} onUpgrade={() => setView("pricing")} />)}
+
+        {/* Vues Pro */}
+        {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoine} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
+
+        <LegalDisclaimer />
+      </main>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  DISCLAIMER LÉGAL                                                   */
+/* ------------------------------------------------------------------ */
+function LegalDisclaimer() {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <footer
+      className="mt-16 rounded-2xl p-5"
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1">
+          <Info size={15} style={{ color: C.muted, flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: C.muted }}>
+              Informations légales — non contractuel
+            </span>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: C.muted }}>
+              WealthTrack est un outil de simulation et de suivi patrimonial personnel à titre purement informatif. Les informations, calculs, projections et simulations présentés sur cette plateforme <strong style={{ color: C.text }}>ne constituent en aucun cas un conseil en investissement, un conseil financier, fiscal ou juridique</strong> au sens des articles L. 321-1 et suivants du Code monétaire et financier.
+            </p>
+            {expanded && (
+              <div className="mt-3 space-y-2 text-xs leading-relaxed" style={{ color: C.muted }}>
+                <p>
+                  <strong style={{ color: C.text }}>Rendements passés :</strong> Les performances passées, les taux de rendement historiques (ETF, crypto-actifs, immobilier, livrets réglementés, etc.) affichés sur WealthTrack ne préjugent pas des performances futures et ne sont pas garantis. Tout investissement comporte un risque de perte partielle ou totale du capital investi.
+                </p>
+                <p>
+                  <strong style={{ color: C.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement, d'inflation et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
+                </p>
+                <p>
+                  <strong style={{ color: C.text }}>Crypto-actifs :</strong> Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI).
+                </p>
+                <p>
+                  <strong style={{ color: C.text }}>Responsabilité :</strong> WealthTrack et ses auteurs déclinent toute responsabilité pour les décisions d'investissement ou patrimoniales prises sur la base des informations contenues dans cette application. L'utilisateur est seul responsable de l'utilisation des données et des décisions financières qui en découlent.
+                </p>
+                <p>
+                  <strong style={{ color: C.text }}>Conseil professionnel :</strong> Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation.
+                </p>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>
+                  WealthTrack n'est pas un prestataire de services d'investissement (PSI) au sens de la directive MIF II. Cette application ne fait pas l'objet d'un enregistrement auprès de l'AMF ou de l'ACPR en tant que conseiller en investissements financiers (CIF). © WealthTrack — Tous droits réservés.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="text-xs flex-shrink-0 px-3 py-1.5 rounded-lg"
+          style={{ color: C.muted, border: `1px solid ${C.border}`, background: "rgba(255,255,255,0.02)", whiteSpace: "nowrap" }}
+        >
+          {expanded ? "Réduire ▲" : "Lire tout ▼"}
+        </button>
+      </div>
+    </footer>
+  );
+}

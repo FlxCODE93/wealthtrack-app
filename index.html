@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WealthTrack — Gestion Patrimoniale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.2.5/index.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      body {
+        font-family: 'IBM Plex Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        position: relative;
+      }
+      h1, h2, h3, h4 { font-family: 'IBM Plex Sans', 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.015em; }
+      input, select, textarea, button { font-family: 'IBM Plex Sans', 'Inter', sans-serif; }
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+      ::selection { background: rgba(106,63,251,0.30); }
+
+      /* Grain / bruit subtil sur fond sombre — texture premium discrète */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0.035;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+
+      @keyframes wt-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes wt-blob {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(24px, -16px) scale(1.08); }
+      }
+      @keyframes wt-fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes wt-slide-up {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes wt-scale-in {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes wt-glow-pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      .wt-fade-in { animation: wt-fade-in 0.35s ease-out both; }
+      .wt-slide-up { animation: wt-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+      .wt-scale-in { animation: wt-scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+      /* Stagger — décale l'entrée de chaque enfant pour un effet cascade */
+      .wt-stagger > * { animation-fill-mode: both; }
+      .wt-stagger > *:nth-child(1) { animation-delay: 0ms; }
+      .wt-stagger > *:nth-child(2) { animation-delay: 60ms; }
+      .wt-stagger > *:nth-child(3) { animation-delay: 120ms; }
+      .wt-stagger > *:nth-child(4) { animation-delay: 180ms; }
+      .wt-stagger > *:nth-child(5) { animation-delay: 240ms; }
+      .wt-stagger > *:nth-child(6) { animation-delay: 300ms; }
+      .wt-stagger > *:nth-child(7) { animation-delay: 360ms; }
+      .wt-stagger > *:nth-child(8) { animation-delay: 420ms; }
+      .wt-stagger > *:nth-child(9) { animation-delay: 480ms; }
+
+      /* Glassmorphism — cartes et overlays translucides */
+      .wt-glass {
+        background: rgba(255,255,255,0.04);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.08);
+      }
+
+      /* Halo lumineux discret derrière titres / éléments clés */
+      .wt-glow-text {
+        text-shadow: 0 0 36px rgba(106,63,251,0.35);
+      }
+
+      /* Micro-interactions globales */
+      button, a, [role="button"] {
+        transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+      }
+      button:active { transform: scale(0.97); }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        .wt-fade-in, .wt-slide-up, .wt-scale-in { animation: wt-fade-in 0.01ms ease-out both; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

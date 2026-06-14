@@ -1,0 +1,252 @@
+/* ─────────────────────────────────────────────────────────────── */
+/* WealthTrack Animations — Phase 1 Implementation                  */
+/* ─────────────────────────────────────────────────────────────── */
+
+/* Easing function (cubic-bezier) for all animations */
+:root {
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 1. Button Press Animation                                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-button-press {
+  transition: all 150ms var(--ease-smooth);
+  cursor: pointer;
+}
+
+.wt-button-press:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.wt-button-press:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 2. Card Entrance Animation (Staggered)                           */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-card-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wt-card-enter {
+  animation: wt-card-slide-up 0.5s var(--ease-out) forwards;
+}
+
+.wt-card-enter:nth-child(1) { animation-delay: 0ms; }
+.wt-card-enter:nth-child(2) { animation-delay: 100ms; }
+.wt-card-enter:nth-child(3) { animation-delay: 200ms; }
+.wt-card-enter:nth-child(4) { animation-delay: 300ms; }
+.wt-card-enter:nth-child(5) { animation-delay: 400ms; }
+.wt-card-enter:nth-child(6) { animation-delay: 500ms; }
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 3. Card Hover Glow (Dark OLED)                                   */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-card-hover {
+  transition: all 200ms var(--ease-smooth);
+}
+
+.wt-card-hover:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 4. Modal Entrance Animation                                      */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-modal-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wt-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wt-modal {
+  animation: wt-modal-fade 0.3s var(--ease-smooth);
+}
+
+.wt-modal-backdrop {
+  animation: wt-backdrop-fade 0.3s var(--ease-out);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 5. Scroll Reveal Animation (Intersection Observer)               */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s var(--ease-out);
+  will-change: opacity, transform;
+}
+
+.wt-reveal.wt-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 6. Stagger Animation (for grids)                                 */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-stagger-item {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: wt-card-slide-up 0.5s var(--ease-out) forwards;
+}
+
+.wt-stagger-item:nth-child(1) { animation-delay: 0ms; }
+.wt-stagger-item:nth-child(2) { animation-delay: 100ms; }
+.wt-stagger-item:nth-child(3) { animation-delay: 200ms; }
+.wt-stagger-item:nth-child(4) { animation-delay: 300ms; }
+.wt-stagger-item:nth-child(5) { animation-delay: 400ms; }
+.wt-stagger-item:nth-child(6) { animation-delay: 500ms; }
+.wt-stagger-item:nth-child(7) { animation-delay: 600ms; }
+.wt-stagger-item:nth-child(8) { animation-delay: 700ms; }
+.wt-stagger-item:nth-child(9) { animation-delay: 800ms; }
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 7. Number Animation (Count-up for metrics)                       */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-metric-value {
+  transition: all 0.3s var(--ease-smooth);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 8. Fade In Animation                                              */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wt-fade-in {
+  animation: wt-fade-in 0.3s var(--ease-out);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 9. Hero Entrance (Slide Up)                                      */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-hero-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wt-hero-enter {
+  animation: wt-hero-up 0.8s var(--ease-out) forwards;
+}
+
+.wt-hero-enter:nth-child(1) { animation-delay: 0ms; }
+.wt-hero-enter:nth-child(2) { animation-delay: 100ms; }
+.wt-hero-enter:nth-child(3) { animation-delay: 200ms; }
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 10. Pulse Animation (for badges/indicators)                      */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.wt-pulse {
+  animation: wt-pulse 2s infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 11. Link Hover Animation                                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+.wt-link-hover {
+  transition: all 200ms var(--ease-smooth);
+  position: relative;
+}
+
+.wt-link-hover:hover {
+  color: #f59e0b;
+  transform: translateX(2px);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 12. Respect prefers-reduced-motion                               */
+/* ─────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .wt-card-hover:hover {
+    transform: none;
+  }
+
+  .wt-link-hover:hover {
+    transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Chart Animation (for Recharts)                                   */
+/* ─────────────────────────────────────────────────────────────── */
+
+.recharts-surface {
+  /* Enable hardware acceleration for smooth chart animations */
+  will-change: transform, opacity;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* End of animations.css                                            */
+/* ─────────────────────────────────────────────────────────────── */

@@ -58,7 +58,9 @@
       "Bash(git commit -m 'Add comprehensive design system documentation *)",
       "Bash(git commit -m 'Add animated background integration guide *)",
       "Bash(pkill -f \"vite\\\\|node\")",
-      "Bash(git commit -m 'Integrate AnimatedBackground into Landing page *)"
+      "Bash(git commit -m 'Integrate AnimatedBackground into Landing page *)",
+      "Bash(pkill -9 vite node)",
+      "Bash(git commit -m 'Fix AnimatedBackground visibility issues *)"
     ]
   }
 }

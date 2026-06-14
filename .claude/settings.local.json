@@ -60,7 +60,8 @@
       "Bash(pkill -f \"vite\\\\|node\")",
       "Bash(git commit -m 'Integrate AnimatedBackground into Landing page *)",
       "Bash(pkill -9 vite node)",
-      "Bash(git commit -m 'Fix AnimatedBackground visibility issues *)"
+      "Bash(git commit -m 'Fix AnimatedBackground visibility issues *)",
+      "Bash(git commit -m 'Integrate Three.js Aurora Shader Background *)"
     ]
   }
 }

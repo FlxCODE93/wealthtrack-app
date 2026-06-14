@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { C, glow } from "./theme.js";
 import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
-import AnimatedBackground from "./AnimatedBackground.jsx";
+import ShaderBackground from "./ShaderBackground.jsx";
 import {
   BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target,
   Building2, ChevronDown, ArrowRight,
@@ -692,7 +692,7 @@ export default function Landing({ onStart }) {
 
   return (
     <div style={{ color: C.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
-      <AnimatedBackground />
+      <ShaderBackground />
 
       <div className="relative z-10">
         <ScrollProgressBar />

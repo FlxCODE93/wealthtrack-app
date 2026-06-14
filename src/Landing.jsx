@@ -1009,24 +1009,51 @@ export default function Landing({ onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-3 gap-5 ${inView ? "wt-stagger" : ""}`}>
-              {TESTIMONIALS.map((t) => (
-                <div key={t.name} className={`p-6 flex flex-col wt-card-hover wt-card-enter ${inView ? "wt-slide-up" : "opacity-0"}`}
-                  style={{ background: C.panel, border: `1px solid ${C.border}` }}>
-                  <div className="flex gap-0.5 mb-4">
+            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${inView ? "wt-stagger" : ""}`}>
+              {TESTIMONIALS.map((t, idx) => (
+                <div
+                  key={t.name}
+                  className={`rounded-2xl p-8 flex flex-col wt-card-hover wt-card-enter transition-all duration-300 ${inView ? "wt-slide-up" : "opacity-0"}`}
+                  style={{
+                    background: C.panel,
+                    border: `1px solid ${C.border}`,
+                    animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
+                    animationDelay: `${idx * 100}ms`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.amber + "44";
+                    e.currentTarget.style.background = `${C.amber}05`;
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.background = C.panel;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}>
+                  <div className="flex gap-1 mb-5">
                     {Array(5).fill(0).map((_, i) => (
-                      <Star key={i} size={13} fill={C.amber} style={{ color: C.amber }} />
+                      <Star key={i} size={16} fill={C.amber} style={{ color: C.amber }} />
                     ))}
                   </div>
-                  <p className="text-sm leading-relaxed mb-5 flex-1" style={{ color: C.muted }}>«&thinsp;{t.text}&thinsp;»</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: `${C.blue}22`, color: C.blue, border: `1px solid ${C.blue}33` }}>
+                  <p className="text-sm leading-relaxed mb-6 flex-1" style={{ color: C.text }}>
+                    «&nbsp;<span style={{ color: C.muted }}>{t.text}</span>&nbsp;»
+                  </p>
+                  <div className="flex items-center gap-4 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${C.blue} 0%, ${C.violet} 100%)`,
+                        color: "#fff",
+                      }}>
                       {t.initials}
                     </div>
                     <div>
-                      <div className="font-semibold text-sm" style={{ color: C.text }}>{t.name}</div>
-                      <div className="text-xs" style={{ color: C.muted }}>{t.role}</div>
+                      <div className="font-semibold text-sm" style={{ color: C.text }}>
+                        {t.name}
+                      </div>
+                      <div className="text-xs leading-tight" style={{ color: C.muted }}>
+                        {t.role}
+                      </div>
                     </div>
                   </div>
                 </div>

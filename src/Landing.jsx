@@ -877,13 +877,13 @@ export default function Landing({ onStart }) {
         <div className="rounded-2xl p-8 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-8"
           style={{ background: C.panel, border: `1px solid ${C.border}` }}>
           {[
-            ["2 300+",  "utilisateurs actifs"],
-            ["142 M€",  "patrimoine simulé"],
-            ["4,8 / 5", "satisfaction"],
+            ["0",       "utilisateurs actifs"],
+            ["0 €",     "patrimoine simulé"],
+            ["0",       "satisfaction"],
             ["0 €",     "pour commencer"],
           ].map(([v, l]) => (
             <div key={l} className="text-center">
-              <div className="text-4xl md:text-5xl font-black mb-2" style={{ color: C.blue }}>{v}</div>
+              <div className="text-2xl md:text-3xl font-black mb-2" style={{ color: C.blue }}>{v}</div>
               <div className="text-xs leading-tight" style={{ color: C.muted }}>{l}</div>
             </div>
           ))}

@@ -54,7 +54,8 @@
       "Bash(claude mcp *)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit -m 'Phase 1-4 Complete: Design System Overhaul *)"
+      "Bash(git commit -m 'Phase 1-4 Complete: Design System Overhaul *)",
+      "Bash(git commit -m 'Add comprehensive design system documentation *)"
     ]
   }
 }

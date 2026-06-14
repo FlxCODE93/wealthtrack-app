@@ -64,7 +64,8 @@
       "Bash(git commit -m 'Integrate Three.js Aurora Shader Background *)",
       "Bash(git commit -m 'Add Dark/Light Mode Toggle *)",
       "Bash(git commit -m 'Fix Three.js Shader Animation - WebGL Compilation Issue *)",
-      "Bash(git commit -m 'Fix dashboard stats on Landing page *)"
+      "Bash(git commit -m 'Fix dashboard stats on Landing page *)",
+      "Bash(git commit -m 'Replace ShaderBackground with AnoAI component *)"
     ]
   }
 }

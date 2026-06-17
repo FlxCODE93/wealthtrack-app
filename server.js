@@ -1,13 +1,24 @@
 /**
- * WealthTrack — API Express
- * Endpoints: /api/import-transactions · /api/categorize · /api/save-transactions
+ * WealthTrack — API Express (service STATELESS)
  *
- * Usage:
- *   ANTHROPIC_API_KEY=sk-ant-... node server.js
- *   (ou: npm run server)
+ * Principe : ce serveur ne stocke AUCUNE donnée utilisateur.
+ *   - Les transactions, lots et ventes fiscales vivent côté client + Supabase
+ *     (avec RLS). Le calcul fiscal FIFO est fait dans le front.
+ *   - Le serveur ne fait que : catégorisation (heuristique + IA), parsing de
+ *     fichiers importés, et proxy/cache de données PUBLIQUES (DeFi, staking).
  *
- * Optionnel PostgreSQL:
- *   DATABASE_URL=postgresql://user:pass@localhost/wealthtrack node server.js
+ * Endpoints :
+ *   POST /api/import-transactions  — parse CSV/OFX → transactions catégorisées
+ *   POST /api/categorize           — catégorise une transaction (IA Tier 3)
+ *   GET  /api/defi/opportunities   — cache DefiLlama (public)
+ *   GET  /api/staking-offers       — offres staking (public, scrape + fallback)
+ *   GET  /api/tax/ping             — health check (badge "serveur connecté")
+ *   GET  /api/health               — health check
+ *
+ * Env :
+ *   ANTHROPIC_API_KEY   clé Claude (catégorisation IA)
+ *   CORS_ORIGINS        origines de prod autorisées (séparées par des virgules)
+ *   PORT                port d'écoute (défaut 3001)
  */
 
 import express    from "express";
@@ -19,6 +30,8 @@ import path       from "path";
 
 const app    = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+app.disable("x-powered-by");
 
 /* CORS : localhost en dev + origines de prod via CORS_ORIGINS (séparées par des virgules).
    Ex : CORS_ORIGINS="https://wealthtrack.app,https://www.wealthtrack.app" */
@@ -84,8 +97,8 @@ function catByKw(desc) {
 
 function catByAmount(amount) {
   if (amount >  1500) return { category: "SALAIRE",           confidence: 0.40 };
-  if (amount < -800)  return { category: "LOYER",             confidence: 0.30 };
   if (amount < -1500) return { category: "INVESTISSEMENT",    confidence: 0.30 };
+  if (amount < -800)  return { category: "LOYER",             confidence: 0.30 };
   return              { category: "CHARGES_VARIABLES", confidence: 0.20 };
 }
 
@@ -113,6 +126,7 @@ async function categorizeWithAI(description, amount, date) {
         content: `Catégorise cette transaction bancaire française. Réponds UNIQUEMENT avec: CATEGORY|confidence (ex: SALAIRE|0.92)\n\nCatégories possibles: SALAIRE, LOYER, INVESTISSEMENT, PRET, CHARGES_FIXES, CHARGES_VARIABLES\n\nDate: ${date}\nDescription: ${description}\nMontant: ${amount}€`,
       }],
     }),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) throw new Error(`Claude API ${res.status}`);
@@ -151,15 +165,12 @@ function parseDate(str) {
   return s;
 }
 
-/* ─── Store en mémoire (→ remplacer par PostgreSQL) ─────────────── */
-const memoryStore = [];
-
-/* ─── DeFi — cache DefiLlama (actualisé toutes les heures) ──────── */
+/* ─── DeFi — cache DefiLlama (données publiques, actualisé chaque heure) ── */
 let defiCache = { data: null, fetchedAt: null };
 
 async function refreshDefiCache() {
   try {
-    const res  = await fetch("https://yields.llama.fi/pools");
+    const res  = await fetch("https://yields.llama.fi/pools", { signal: AbortSignal.timeout(10000) });
     const json = await res.json();
     defiCache  = {
       data: (json.data || [])
@@ -178,14 +189,21 @@ async function refreshDefiCache() {
 refreshDefiCache();
 setInterval(refreshDefiCache, 60 * 60 * 1000);
 
-/* ─── Routes ─────────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════
+   ROUTES — stateless (aucune donnée utilisateur stockée serveur)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* GET /api/health · GET /api/tax/ping — health checks */
+app.get("/api/health", (_req, res) =>
+  res.json({ ok: true, ai: Boolean(process.env.ANTHROPIC_API_KEY), defi: Boolean(defiCache.data) }));
+app.get("/api/tax/ping", (_req, res) => res.json({ ok: true }));
 
 /**
  * POST /api/import-transactions
- * Accepte multipart/form-data { file: <CSV> }
- * Retourne { success, count, transactions }
+ * multipart/form-data { file: <CSV/OFX> } → { success, count, transactions }
+ * Parse + catégorise. Ne stocke rien : le front persiste via Supabase.
  */
-app.post("/api/import-transactions", importLimiter, upload.single("file"), async (req, res) => {
+app.post("/api/import-transactions", importLimiter, upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: "Aucun fichier." });
     if (!validateUpload(req.file)) {
@@ -200,25 +218,23 @@ app.post("/api/import-transactions", importLimiter, upload.single("file"), async
     });
 
     if (!parsed.data.length) return res.status(400).json({ success: false, error: "Fichier vide." });
+    if (parsed.data.length > 5000) return res.status(400).json({ success: false, error: "Fichier trop volumineux (max 5000 lignes)." });
 
     const headers = parsed.meta.fields || [];
     const cols    = detectCols(headers);
 
     const transactions = await Promise.all(
       parsed.data.map(async (row, i) => {
-        let amount = 0;
-        if (cols.amount) {
-          amount = parseAmt(row[cols.amount]);
-        } else {
-          amount = parseAmt(row[cols.credit]) - parseAmt(row[cols.debit]);
-        }
+        let amount = cols.amount
+          ? parseAmt(row[cols.amount])
+          : parseAmt(row[cols.credit]) - parseAmt(row[cols.debit]);
 
         const description = cols.desc ? String(row[cols.desc] || "").trim() : `Transaction ${i + 1}`;
         const date        = cols.date ? parseDate(String(row[cols.date] || "")) : "";
 
         let result = categorize(description, amount);
 
-        // Tier 3 pour les faibles confiances
+        // Tier 3 (IA) pour les faibles confiances
         if (result.confidence < 0.7 && process.env.ANTHROPIC_API_KEY) {
           try {
             result = await categorizeWithAI(description, amount, date);
@@ -238,197 +254,50 @@ app.post("/api/import-transactions", importLimiter, upload.single("file"), async
 
     res.json({ success: true, count: transactions.length, transactions });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    next(err);
   }
 });
 
 /**
  * POST /api/categorize
- * Body: { description, amount, date }
- * Tier 3 à la demande (pour bouton ✨ dans le composant)
+ * Body: { description, amount, date } → { category, confidence, source }
  */
-app.post("/api/categorize", aiLimiter, async (req, res) => {
-  const { description = "", amount = 0, date = "" } = req.body;
+app.post("/api/categorize", aiLimiter, async (req, res, next) => {
+  try {
+    const { description = "", amount = 0, date = "" } = req.body;
 
-  if (typeof description !== "string" || description.length > 500) {
-    return res.status(400).json({ success: false, error: "Description invalide." });
-  }
-  if (typeof amount !== "number" || !isFinite(amount)) {
-    return res.status(400).json({ success: false, error: "Montant invalide." });
-  }
-
-  // Tier 1 d'abord
-  const tier1 = catByKw(description);
-  if (tier1 && tier1.confidence >= 0.8) {
-    return res.json({ ...tier1, source: "keywords" });
-  }
-
-  // Tier 3 si clé disponible
-  if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      const result = await categorizeWithAI(description, amount, date);
-      return res.json({ ...result, source: "claude" });
-    } catch (err) {
-      return res.status(503).json({ success: false, error: "Claude API indisponible: " + err.message });
+    if (typeof description !== "string" || description.length > 500) {
+      return res.status(400).json({ success: false, error: "Description invalide." });
     }
-  }
-
-  // Fallback Tier 2
-  const tier2 = catByAmount(amount);
-  res.json({ ...tier2, source: "heuristic" });
-});
-
-/**
- * POST /api/save-transactions
- * Body: { profile, transactions: [{date, description, amount, category}] }
- */
-app.post("/api/save-transactions", (req, res) => {
-  const { profile = "default", transactions = [] } = req.body;
-  if (typeof profile !== "string" || profile.length > 64) {
-    return res.status(400).json({ success: false, error: "Profil invalide." });
-  }
-  if (!Array.isArray(transactions) || transactions.length > 5000) {
-    return res.status(400).json({ success: false, error: "Transactions invalides." });
-  }
-  const saved = transactions.map((tx, i) => ({
-    id:         `${Date.now()}_${i}`,
-    profile_id: profile,
-    created_at: new Date().toISOString(),
-    ...tx,
-  }));
-  memoryStore.push(...saved);
-  res.json({ success: true, imported: saved.length });
-});
-
-/**
- * GET /api/transactions?profile=default
- */
-app.get("/api/transactions", (req, res) => {
-  const { profile = "default" } = req.query;
-  const txs = memoryStore.filter((t) => t.profile_id === profile);
-  res.json({ success: true, count: txs.length, transactions: txs });
-});
-
-/* ─── Tax — store en mémoire ─────────────────────────────────────── */
-/*
-  SQL schema (PostgreSQL) :
-  CREATE TABLE tax_lots (
-    id BIGINT PRIMARY KEY, user_id TEXT DEFAULT 'default',
-    symbol TEXT NOT NULL, name TEXT, amount NUMERIC NOT NULL,
-    cost_per_unit NUMERIC NOT NULL, date DATE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-  CREATE TABLE tax_sells (
-    id BIGINT PRIMARY KEY, user_id TEXT DEFAULT 'default',
-    symbol TEXT NOT NULL, amount NUMERIC NOT NULL,
-    price_per_unit NUMERIC NOT NULL, date DATE NOT NULL,
-    notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-  CREATE TABLE tax_reports (
-    id SERIAL PRIMARY KEY, user_id TEXT DEFAULT 'default',
-    tax_year INT NOT NULL, net_gain NUMERIC, estimated_tax NUMERIC,
-    generated_at TIMESTAMPTZ DEFAULT NOW(), payload JSONB
-  );
-*/
-const taxStore = { lots: [], sells: [], reports: [] };
-
-function fifoServer(lots, sells) {
-  const remaining = lots.map(l => ({ ...l, remaining: l.amount }));
-  const results   = [];
-  for (const sell of [...sells].sort((a, b) => new Date(a.date) - new Date(b.date))) {
-    let toSell = sell.amount, costUsed = 0;
-    for (const lot of remaining.filter(l => l.symbol === sell.symbol).sort((a, b) => new Date(a.date) - new Date(b.date))) {
-      if (toSell <= 0) break;
-      const used = Math.min(lot.remaining, toSell);
-      costUsed += used * lot.costPerUnit; lot.remaining -= used; toSell -= used;
+    if (typeof amount !== "number" || !isFinite(amount)) {
+      return res.status(400).json({ success: false, error: "Montant invalide." });
     }
-    const proceeds = sell.amount * sell.pricePerUnit;
-    const gain     = proceeds - costUsed;
-    results.push({ id: sell.id, date: sell.date, symbol: sell.symbol, amount: sell.amount, proceeds, costBasis: costUsed, gain, tax: gain > 0 ? gain * 0.30 : 0 });
+
+    // Tier 1 (mots-clés)
+    const tier1 = catByKw(description);
+    if (tier1 && tier1.confidence >= 0.8) {
+      return res.json({ ...tier1, source: "keywords" });
+    }
+
+    // Tier 3 (IA) si clé disponible
+    if (process.env.ANTHROPIC_API_KEY) {
+      try {
+        const result = await categorizeWithAI(description, amount, date);
+        return res.json({ ...result, source: "claude" });
+      } catch (err) {
+        return res.status(503).json({ success: false, error: "Claude API indisponible: " + err.message });
+      }
+    }
+
+    // Fallback Tier 2 (montant)
+    res.json({ ...catByAmount(amount), source: "heuristic" });
+  } catch (err) {
+    next(err);
   }
-  return results;
-}
-
-/* GET /api/tax/ping */
-app.get("/api/tax/ping", (_req, res) => res.json({ ok: true }));
-
-/* GET /api/tax/lots */
-app.get("/api/tax/lots", (req, res) => {
-  const { userId = "default" } = req.query;
-  res.json({ success: true, data: taxStore.lots.filter(l => l.userId === userId) });
-});
-
-/* POST /api/tax/lots */
-app.post("/api/tax/lots", (req, res) => {
-  const { id, symbol, name, amount, costPerUnit, date, userId = "default" } = req.body;
-  if (!symbol || !amount || !costPerUnit || !date) return res.status(400).json({ success: false, error: "Champs manquants." });
-  const lot = { id: id || Date.now(), userId, symbol: String(symbol).toUpperCase(), name: name || symbol, amount: +amount, costPerUnit: +costPerUnit, date };
-  taxStore.lots.push(lot);
-  res.json({ success: true, data: lot });
-});
-
-/* DELETE /api/tax/lots/:id */
-app.delete("/api/tax/lots/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  taxStore.lots = taxStore.lots.filter(l => l.id !== id);
-  res.json({ success: true });
-});
-
-/* GET /api/tax/sells */
-app.get("/api/tax/sells", (req, res) => {
-  const { userId = "default" } = req.query;
-  res.json({ success: true, data: taxStore.sells.filter(s => s.userId === userId) });
-});
-
-/* POST /api/tax/sells */
-app.post("/api/tax/sells", (req, res) => {
-  const { id, symbol, amount, pricePerUnit, date, notes, userId = "default" } = req.body;
-  if (!symbol || !amount || !pricePerUnit || !date) return res.status(400).json({ success: false, error: "Champs manquants." });
-  const sell = { id: id || Date.now(), userId, symbol: String(symbol).toUpperCase(), amount: +amount, pricePerUnit: +pricePerUnit, date, notes: notes || "" };
-  taxStore.sells.push(sell);
-  res.json({ success: true, data: sell });
-});
-
-/* DELETE /api/tax/sells/:id */
-app.delete("/api/tax/sells/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  taxStore.sells = taxStore.sells.filter(s => s.id !== id);
-  res.json({ success: true });
 });
 
 /**
- * GET /api/tax/summary?year=2025&userId=default
- * Calcul FIFO côté serveur + rapport persisté
- */
-app.get("/api/tax/summary", (req, res) => {
-  const { year = new Date().getFullYear() - 1, userId = "default" } = req.query;
-  const lots    = taxStore.lots.filter(l => l.userId === userId);
-  const sells   = taxStore.sells.filter(s => s.userId === userId);
-  const all     = fifoServer(lots, sells);
-  const inYear  = all.filter(c => c.date?.startsWith(String(year)));
-
-  const netGain = inYear.reduce((s, c) => s + c.gain, 0);
-  const gains   = inYear.filter(c => c.gain > 0).reduce((s, c) => s + c.gain, 0);
-  const losses  = inYear.filter(c => c.gain < 0).reduce((s, c) => s + c.gain, 0);
-  const tax     = netGain > 0 ? netGain * 0.30 : 0;
-
-  const byAsset = {};
-  inYear.forEach(c => {
-    if (!byAsset[c.symbol]) byAsset[c.symbol] = { symbol: c.symbol, gain: 0, loss: 0, tax: 0, proceeds: 0 };
-    if (c.gain >= 0) byAsset[c.symbol].gain += c.gain; else byAsset[c.symbol].loss += c.gain;
-    byAsset[c.symbol].tax      += c.tax;
-    byAsset[c.symbol].proceeds += c.proceeds;
-  });
-
-  const report = { id: Date.now(), userId, taxYear: +year, netGain, gains, losses, estimatedTax: tax, byAsset: Object.values(byAsset), cessions: inYear, generatedAt: new Date().toISOString() };
-  taxStore.reports.push(report);
-
-  res.json({ success: true, ...report });
-});
-
-/**
- * GET /api/defi/opportunities
- * Cache DefiLlama actualisé toutes les heures
+ * GET /api/defi/opportunities — cache DefiLlama (données publiques)
  */
 app.get("/api/defi/opportunities", (req, res) => {
   if (!defiCache.data) {
@@ -436,22 +305,18 @@ app.get("/api/defi/opportunities", (req, res) => {
   }
   const { chain, minApy, limit = 100 } = req.query;
   let data = defiCache.data;
-  if (chain) data = data.filter(p => p.chain?.toLowerCase() === chain.toLowerCase());
+  if (chain)  data = data.filter(p => p.chain?.toLowerCase() === chain.toLowerCase());
   if (minApy) data = data.filter(p => p.apy >= parseFloat(minApy));
-  res.json({ success: true, count: data.length, fetchedAt: defiCache.fetchedAt, data: data.slice(0, Math.min(parseInt(limit), 500)) });
+  res.json({ success: true, count: data.length, fetchedAt: defiCache.fetchedAt, data: data.slice(0, Math.min(parseInt(limit) || 100, 500)) });
 });
 
-/* ─── Staking Crypto.com ─────────────────────────────────────────── */
-/*
+/* ─── Staking Crypto.com (données publiques) ─────────────────────────
  * Offres indicatives basées sur les taux publics Crypto.com Earn (mai 2025).
- * Le serveur essaie de scraper la page live ; si Cloudflare bloque ou que le
- * rendu JS est nécessaire, il retombe sur ce dataset statique.
- * Source : https://crypto.com/en-fr/staking
- */
+ * Le serveur tente de scraper la page live ; en cas d'échec (Cloudflare,
+ * rendu JS, markup modifié), il retombe sur ce dataset statique.
+ * ─────────────────────────────────────────────────────────────────── */
 const STAKING_OFFERS_FALLBACK = [
-  // ── Flagship & native ───────────────────────────────────────────
-  { coin:"CRO",  name:"Crypto.com Coin",  flexApy:10.0, lock1m:12.0, lock3m:14.0, category:"native",  risk:"Faible",  note:"Taux de base sans carte ; boostedavec tier Ruby+" },
-  // ── PoS haute performance ────────────────────────────────────────
+  { coin:"CRO",  name:"Crypto.com Coin",  flexApy:10.0, lock1m:12.0, lock3m:14.0, category:"native",  risk:"Faible",  note:"Taux de base sans carte ; boosté avec tier Ruby+" },
   { coin:"TIA",  name:"Celestia",         flexApy:12.0, lock1m:null, lock3m:null, category:"pos",     risk:"Élevé",   note:"Unbonding 21 jours" },
   { coin:"INJ",  name:"Injective",        flexApy:11.5, lock1m:null, lock3m:null, category:"pos",     risk:"Élevé",   note:"Unbonding 21 jours" },
   { coin:"DOT",  name:"Polkadot",         flexApy:11.0, lock1m:null, lock3m:null, category:"pos",     risk:"Moyen",   note:"Unbonding 28 jours" },
@@ -468,9 +333,7 @@ const STAKING_OFFERS_FALLBACK = [
   { coin:"POL",  name:"Polygon (POL)",    flexApy: 4.0, lock1m:null, lock3m:null, category:"pos",     risk:"Faible",  note:"Anciennement MATIC" },
   { coin:"TRX",  name:"TRON",             flexApy: 4.0, lock1m:null, lock3m:null, category:"pos",     risk:"Moyen",   note:"3 jours d'unbonding" },
   { coin:"ALGO", name:"Algorand",         flexApy: 3.5, lock1m:null, lock3m:null, category:"pos",     risk:"Faible",  note:"Récompenses automatiques" },
-  // ── Liquid staking ETH ──────────────────────────────────────────
   { coin:"ETH",  name:"Ethereum",         flexApy: 4.0, lock1m:null, lock3m:null, category:"eth",     risk:"Faible",  note:"Liquid staking — retrait sans délai" },
-  // ── Earn / Lending ──────────────────────────────────────────────
   { coin:"XRP",  name:"XRP",              flexApy: 2.5, lock1m: 3.5, lock3m: 4.5, category:"earn",    risk:"Faible",  note:"" },
   { coin:"BNB",  name:"BNB",              flexApy: 2.5, lock1m: 3.5, lock3m: 4.5, category:"earn",    risk:"Faible",  note:"" },
   { coin:"LTC",  name:"Litecoin",         flexApy: 2.0, lock1m: 3.0, lock3m: 4.0, category:"earn",    risk:"Faible",  note:"" },
@@ -495,9 +358,8 @@ app.get("/api/staking-offers", async (req, res) => {
       signal: AbortSignal.timeout(8000),
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const html  = await r.text();
+    const html = await r.text();
 
-    // Crypto.com est rendu côté client via Next.js — on tente d'extraire __NEXT_DATA__
     const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
     if (!m) throw new Error("__NEXT_DATA__ absent");
 
@@ -509,7 +371,6 @@ app.get("/api/staking-offers", async (req, res) => {
     if (!rewards || !Array.isArray(rewards) || rewards.length === 0)
       throw new Error("données non trouvées dans __NEXT_DATA__");
 
-    // Normalisation vers notre format
     const parsed = rewards.map(r => ({
       coin:     r.symbol || r.coin || "?",
       name:     r.name || r.assetName || "",
@@ -521,10 +382,11 @@ app.get("/api/staking-offers", async (req, res) => {
       note:     r.description || "",
     })).filter(o => o.flexApy > 0);
 
+    if (parsed.length === 0) throw new Error("aucune offre exploitable");
+
     stakingCache = { ts: Date.now(), source: "live", data: parsed };
     console.log(`[staking] Scraped ${parsed.length} offres depuis crypto.com`);
     return res.json({ success: true, source: "live", ts: stakingCache.ts, data: parsed });
-
   } catch (e) {
     console.log(`[staking] Scrape échoué (${e.message}) → fallback statique`);
     stakingCache = { ts: Date.now(), source: "fallback", data: STAKING_OFFERS_FALLBACK };
@@ -532,9 +394,21 @@ app.get("/api/staking-offers", async (req, res) => {
   }
 });
 
+/* ─── 404 + gestionnaire d'erreurs global ────────────────────────── */
+app.use("/api", (_req, res) => res.status(404).json({ success: false, error: "Endpoint introuvable." }));
+
+app.use((err, _req, res, _next) => {
+  // Erreur CORS → 403 ; reste → 500. Jamais de crash silencieux.
+  if (err?.message?.startsWith("Origine non autorisée")) {
+    return res.status(403).json({ success: false, error: "Origine non autorisée." });
+  }
+  console.error("Erreur serveur:", err?.message || err);
+  res.status(err?.status || 500).json({ success: false, error: err?.message || "Erreur interne." });
+});
+
 /* ─── Démarrage ──────────────────────────────────────────────────── */
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`\n  WealthTrack API  →  http://localhost:${PORT}`);
-  console.log(`  Claude Tier 3    →  ${process.env.ANTHROPIC_API_KEY ? "✓ activé" : "✗ ANTHROPIC_API_KEY manquante"}\n`);
+  console.log(`\n  WealthTrack API (stateless)  →  http://localhost:${PORT}`);
+  console.log(`  Claude Tier 3                →  ${process.env.ANTHROPIC_API_KEY ? "✓ activé" : "✗ ANTHROPIC_API_KEY manquante"}\n`);
 });

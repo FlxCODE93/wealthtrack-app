@@ -395,14 +395,12 @@ export default function Tax() {
     if (!lotForm.symbol || !lotForm.amount || !lotForm.costPerUnit) return;
     const lot = { id: Date.now(), symbol: lotForm.symbol.toUpperCase().trim(), name: lotForm.name.trim() || lotForm.symbol.toUpperCase(), amount: parseFloat(lotForm.amount), costPerUnit: parseFloat(lotForm.costPerUnit), date: lotForm.date };
     setLots(prev => [...prev, lot]);
-    if (serverOk) fetch(`${API_URL}/api/tax/lots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lot) }).catch(() => {});
     setLotForm(EMPTY_LOT); setShowLotForm(false);
   };
   const addSell = () => {
     if (!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit) return;
     const sell = { id: Date.now(), symbol: sellForm.symbol.toUpperCase().trim(), amount: parseFloat(sellForm.amount), pricePerUnit: parseFloat(sellForm.pricePerUnit), date: sellForm.date, notes: sellForm.notes };
     setSells(prev => [...prev, sell]);
-    if (serverOk) fetch(`${API_URL}/api/tax/sells`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sell) }).catch(() => {});
     setSellForm(EMPTY_SELL); setShowSellForm(false);
   };
   const deleteLot  = (id) => setLots(prev => prev.filter(l => l.id !== id));

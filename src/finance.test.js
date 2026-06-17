@@ -4,6 +4,7 @@ import {
   loanPayment, loanRemaining, loanFromPayment, loanCap,
   immoDetailedSeries, longTermGain, yearsTo, monthsTo, yearsToTarget,
   RATE_SCENARIOS, IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC,
+  monthlyPaymentFromRemaining, earlyRepaymentPenalty, repayVsInvest, breakevenInvestRate,
 } from "./finance.js";
 
 /* ── fv (valeur future, intérêts composés mensuels) ──────────────── */
@@ -171,5 +172,67 @@ describe("yearsToTarget", () => {
   });
   it("renvoie une durée décimale positive", () => {
     expect(yearsToTarget(500, 0.06, 50000)).toBeGreaterThan(0);
+  });
+});
+
+/* ── Crédit immobilier : rembourser vs investir ──────────────────── */
+describe("monthlyPaymentFromRemaining", () => {
+  it("cohérent avec loanPayment", () => {
+    expect(monthlyPaymentFromRemaining(200000, 0.035, 300)).toBeCloseTo(loanPayment(200000, 0.035, 25), 4);
+  });
+  it("taux nul = amortissement linéaire", () => {
+    expect(monthlyPaymentFromRemaining(12000, 0, 12)).toBeCloseTo(1000, 6);
+  });
+});
+
+describe("earlyRepaymentPenalty (IRA)", () => {
+  it("plafonnée à 3 % du capital restant", () => {
+    // taux 8 % → 6 mois d'intérêts = 4 % > plafond 3 % → plafonné à 3 %
+    const ira = earlyRepaymentPenalty(200000, 200000, 0.08);
+    expect(ira).toBeCloseTo(200000 * 0.03, 6);
+  });
+  it("sinon = 6 mois d'intérêts sur le capital remboursé", () => {
+    // petit taux → 6 mois d'intérêts < 3%
+    const ira = earlyRepaymentPenalty(100000, 100000, 0.01);
+    expect(ira).toBeCloseTo(100000 * (0.01 / 12) * 6, 6);
+  });
+  it("jamais négative", () => {
+    expect(earlyRepaymentPenalty(0, 100000, 0.03)).toBe(0);
+  });
+});
+
+describe("repayVsInvest", () => {
+  const base = {
+    remainingPrincipal: 150000, annualRate: 0.012, insuranceMonthly: 30,
+    remainingMonths: 180, lumpSum: 160000, taxRate: 0.30,
+  };
+  it("prêt pas cher (1,2 %) + bon rendement → garder gagne", () => {
+    const r = repayVsInvest({ ...base, investReturn: 0.07 });
+    expect(r.winner).toBe("keep");
+    expect(r.keepWealth).toBeGreaterThan(r.repayWealth);
+  });
+  it("prêt cher (5 %) + rendement faible → rembourser gagne", () => {
+    const r = repayVsInvest({ ...base, annualRate: 0.05, investReturn: 0.01 });
+    expect(r.winner).toBe("repay");
+  });
+  it("IRA et mensualité exposées et positives", () => {
+    const r = repayVsInvest({ ...base, investReturn: 0.05 });
+    expect(r.ira).toBeGreaterThan(0);
+    expect(r.monthlyDebt).toBeGreaterThan(r.pmtPI);   // assurance incluse
+  });
+  it("remboursement total → mensualité entièrement libérée", () => {
+    const r = repayVsInvest({ ...base, investReturn: 0.05 });
+    expect(r.newPrincipal).toBe(0);
+    expect(r.freedMonthly).toBeCloseTo(r.monthlyDebt, 6);
+  });
+});
+
+describe("breakevenInvestRate", () => {
+  it("renvoie un taux entre 0 et 20 %", () => {
+    const r = breakevenInvestRate({
+      remainingPrincipal: 150000, annualRate: 0.03, insuranceMonthly: 25,
+      remainingMonths: 180, lumpSum: 160000, taxRate: 0.30,
+    });
+    expect(r === null || (r > 0 && r <= 0.20)).toBe(true);
   });
 });

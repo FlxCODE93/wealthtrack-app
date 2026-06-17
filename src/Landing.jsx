@@ -4,6 +4,7 @@ import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
 import AnoAI from "./AnoAI.jsx";
 import AnimatedShaderHero from "./AnimatedShaderHero.jsx";
+import PaperShaderBackground from "./PaperShaderBackground.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import AIChatWidget from "./AIChatWidget.jsx";
 import NeonGlow from "./NeonGlow.jsx";
@@ -99,7 +100,7 @@ const FEATURES = [
   {
     icon: TrendingUp, color: C.blue,
     title: "Fiscalité nette en France",
-    desc: "Visualisez votre capital net après impôts — PFU 30%, PEA 0% après 5 ans, assurance-vie. Pas les gains bruts.",
+    desc: "Visualisez votre capital et rendement nets après impôts : fiscalité Crypto, PEA, CTO, AV et Immobilier. Pas les gains bruts.",
     stat: "+60 k€ en moyenne",
   },
   {
@@ -764,7 +765,7 @@ export default function Landing({ onStart }) {
 
   return (
     <div style={{ color: T.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
-      <AnimatedShaderHero />
+      <PaperShaderBackground />
       <HeroOrbs />
 
       <div className="relative z-10" style={{ zIndex: 2 }}>

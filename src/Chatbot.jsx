@@ -354,24 +354,35 @@ function mkPER(ctx, params) {
 
 function mkEmergencyFund(ctx, params) {
   const monthly = (ctx.totals?.chargesFixes || 0) + (ctx.totals?.depensesVar || 0);
-  const t3 = Math.round(monthly * 3);
-  const t6 = Math.round(monthly * 6);
   const current = ctx.totals?.invest || 0;
+  const stable = (ctx.profileType || "salarie_stable") === "salarie_stable";
+
+  // CDI → cible 3 mois (revenu sécurisé). Revenus variables → cible 6-9 mois.
+  const lowMonths  = stable ? 3 : 6;
+  const highMonths = stable ? 6 : 9;
+  const tLow  = Math.round(monthly * lowMonths);
+  const tHigh = Math.round(monthly * highMonths);
+
+  const bullets = [
+    "**Toujours sur Livret A ou LDDS** : disponible en 24h, sans risque, sans impôts.",
+    "Ne jamais investir ce capital en bourse — il doit être accessible immédiatement.",
+    stable
+      ? "En CDI, votre revenu est sécurisé : 3 mois suffisent, 6 mois pour plus de confort. Tout surplus va vers PEA ou assurance-vie."
+      : "Vos revenus sont variables (freelance, intérim, indépendant) : visez 6 à 9 mois pour absorber les périodes creuses.",
+  ];
+
   return {
-    intro: "Le fonds d'urgence est votre filet de sécurité : il couvre vos dépenses si vous perdez vos revenus du jour au lendemain.",
+    intro: stable
+      ? "Le fonds d'urgence est votre filet de sécurité : il couvre vos dépenses en cas d'imprévu (perte d'emploi, gros pépin)."
+      : "Le fonds d'urgence est votre filet de sécurité : avec des revenus variables, il doit couvrir des périodes sans rentrée d'argent.",
     table: [
       ["Objectif", "Cible", "Votre situation"],
-      ["Minimum — 3 mois de dépenses", eur(t3), current >= t3 ? "Atteint ✓" : `Manque ${eur(Math.max(0, t3 - current))}`],
-      ["Recommandé — 6 mois",          eur(t6), current >= t6 ? "Atteint ✓" : `Manque ${eur(Math.max(0, t6 - current))}`],
+      [`Minimum — ${lowMonths} mois de dépenses`,  eur(tLow),  current >= tLow  ? "Atteint ✓" : `Manque ${eur(Math.max(0, tLow - current))}`],
+      [`Recommandé — ${highMonths} mois`,           eur(tHigh), current >= tHigh ? "Atteint ✓" : `Manque ${eur(Math.max(0, tHigh - current))}`],
     ],
-    bullets: [
-      "**Toujours sur Livret A ou LDDS** : disponible en 24h, sans risque, sans impôts.",
-      "Ne jamais investir ce capital en bourse — il doit être accessible immédiatement.",
-      "**Revenus irréguliers** (freelance, intérim) : visez 6 à 9 mois plutôt que 3.",
-      "Une fois le fonds constitué, tout surplus va vers PEA ou assurance-vie.",
-    ],
+    bullets,
     note: monthly > 0
-      ? `Avec ${eur(monthly)}/mois de dépenses, vos cibles sont ${eur(t3)} (3 mois) et ${eur(t6)} (6 mois).`
+      ? `Avec ${eur(monthly)}/mois de dépenses, vos cibles sont ${eur(tLow)} (${lowMonths} mois) et ${eur(tHigh)} (${highMonths} mois).`
       : "Renseignez vos dépenses dans Finances pour un calcul personnalisé.",
     chips: ["Livret A / Livrets", "Comment épargner plus ?", "Allocation idéale"],
   };

@@ -248,3 +248,121 @@ export function yearsToTarget(monthly, annualRate, target) {
   if (x <= 1) return 0;
   return Math.log(x) / Math.log(1 + r) / 12;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   Crédit immobilier — rembourser par anticipation OU garder + investir ?
+   ──────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mensualité (hors assurance) d'un capital restant dû sur `months` mois au
+ * taux nominal `annualRate`. Sert quand on ne connaît que le capital restant.
+ */
+export function monthlyPaymentFromRemaining(remainingPrincipal, annualRate, months) {
+  if (months <= 0) return remainingPrincipal;
+  const i = annualRate / 12;
+  if (i === 0) return remainingPrincipal / months;
+  return (remainingPrincipal * i) / (1 - Math.pow(1 + i, -months));
+}
+
+/**
+ * Indemnités de remboursement anticipé (IRA), plafond légal France :
+ * min(6 mois d'intérêts sur le capital remboursé, 3 % du capital restant dû).
+ * (Crédit immobilier — art. R313-25 du Code de la consommation.)
+ */
+export function earlyRepaymentPenalty(repaidPrincipal, remainingPrincipal, annualRate) {
+  const sixMonthsInterest = repaidPrincipal * (annualRate / 12) * 6;
+  const threePctCap = remainingPrincipal * 0.03;
+  return Math.max(0, Math.min(sixMonthsInterest, threePctCap));
+}
+
+/** Valeur future nette d'impôt sur les plus-values (PFU 30 %, PEA 0 %, …). */
+function fvNetOfTax(initial, monthly, annualRate, months, taxRate) {
+  const gross = fv(initial, monthly, annualRate, months / 12);
+  const invested = initial + monthly * months;
+  const gain = Math.max(0, gross - invested);
+  return gross - gain * taxRate;
+}
+
+/**
+ * Compare, sur la durée restante du prêt, deux stratégies à horizon identique :
+ *   - REPAY : rembourser (total ou partiel) maintenant, puis investir la
+ *             mensualité libérée chaque mois.
+ *   - KEEP  : garder le prêt et investir l'épargne disponible en une fois.
+ *
+ * opts: { remainingPrincipal, annualRate, insuranceMonthly?, remainingMonths,
+ *         lumpSum, investReturn, taxRate? }
+ * Tous les taux en décimal (0.035 = 3,5 %).
+ */
+export function repayVsInvest(opts) {
+  const {
+    remainingPrincipal, annualRate, insuranceMonthly = 0,
+    remainingMonths, lumpSum, investReturn, taxRate = 0,
+  } = opts;
+
+  const N = remainingMonths;
+  const i = annualRate / 12;
+
+  const pmtPI       = monthlyPaymentFromRemaining(remainingPrincipal, annualRate, N);
+  const monthlyDebt = pmtPI + insuranceMonthly;
+
+  // Capital remboursé avec l'épargne (l'IRA est payée en plus, prélevée sur l'épargne).
+  const repaid    = Math.min(lumpSum, remainingPrincipal);
+  const ira       = earlyRepaymentPenalty(repaid, remainingPrincipal, annualRate);
+  const cashUsed  = Math.min(lumpSum, repaid + ira);
+  const leftover  = Math.max(0, lumpSum - cashUsed);
+  const newPrincipal = remainingPrincipal - repaid;
+
+  // Remboursement partiel → on réduit la mensualité en gardant la durée.
+  const newPmtPI       = newPrincipal <= 0 ? 0 : monthlyPaymentFromRemaining(newPrincipal, annualRate, N);
+  const newMonthlyDebt = newPrincipal <= 0 ? 0 : newPmtPI + insuranceMonthly;
+  const freedMonthly   = monthlyDebt - newMonthlyDebt;
+
+  // Coût d'intérêt restant si on garde le prêt (vs si on rembourse).
+  const interestKept    = pmtPI * N - remainingPrincipal;
+  const interestRepaid  = newPmtPI * N - newPrincipal;
+  const interestSaved   = Math.max(0, interestKept - interestRepaid);
+
+  const repayWealth = fvNetOfTax(leftover, freedMonthly, investReturn, N, taxRate);
+  const keepWealth  = fvNetOfTax(lumpSum, 0, investReturn, N, taxRate);
+
+  return {
+    pmtPI, monthlyDebt, ira, repaid, newPrincipal, freedMonthly,
+    interestSaved, repayWealth, keepWealth,
+    diff: keepWealth - repayWealth,                 // > 0 → garder gagne
+    winner: keepWealth >= repayWealth ? "keep" : "repay",
+  };
+}
+
+/**
+ * Taux de rendement annuel (placement) à partir duquel GARDER le prêt devient
+ * plus avantageux que rembourser. Recherche numérique 0 → 20 %.
+ * Retourne null si garder gagne déjà à 0 % (prêt très coûteux : rembourser).
+ */
+export function breakevenInvestRate(opts) {
+  for (let pct = 0; pct <= 20; pct += 0.1) {
+    const r = pct / 100;
+    const { winner } = repayVsInvest({ ...opts, investReturn: r });
+    if (winner === "keep") return pct === 0 ? null : r;
+  }
+  return null;
+}
+
+/** Série annuelle des deux trajectoires (pour le graphe comparatif). */
+export function repayVsInvestSeries(opts) {
+  const {
+    remainingPrincipal, annualRate, insuranceMonthly = 0,
+    remainingMonths, lumpSum, investReturn, taxRate = 0, startYear = new Date().getFullYear(),
+  } = opts;
+  const base = repayVsInvest(opts);
+  const years = Math.ceil(remainingMonths / 12);
+  const out = [];
+  for (let y = 0; y <= years; y++) {
+    const m = Math.min(y * 12, remainingMonths);
+    out.push({
+      year: startYear + y,
+      repay: Math.round(fvNetOfTax(base.repayWealth >= 0 ? lumpSum - Math.min(lumpSum, remainingPrincipal + base.ira) : 0, base.freedMonthly, investReturn, m, taxRate)),
+      keep:  Math.round(fvNetOfTax(lumpSum, 0, investReturn, m, taxRate)),
+    });
+  }
+  return out;
+}

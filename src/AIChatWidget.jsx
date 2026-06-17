@@ -27,6 +27,7 @@ function AIChatCard({ ctx, onClose, onSignup }) {
     totals: { ...DEFAULT_CTX.totals, ...(ctx?.totals || {}) },
     simParams: { ...DEFAULT_CTX.simParams, ...(ctx?.simParams || {}) },
     patrimoine: ctx?.patrimoine || DEFAULT_CTX.patrimoine,
+    profileType: ctx?.profileType || "salarie_stable",
   }), [ctx]);
 
   const particles = useMemo(
@@ -179,9 +180,14 @@ export default function AIChatWidget({ ctx, onSignup }) {
     const onScroll = () => { if (window.scrollY > SHOW_SCROLL_PX) reveal(); };
     window.addEventListener("scroll", onScroll, { passive: true });
 
+    // Ouverture forcée depuis un bouton ailleurs dans l'app
+    const onOpenChat = () => { setVisible(true); setOpen(true); };
+    window.addEventListener("wt:open-chat", onOpenChat);
+
     return () => {
       clearTimeout(timer);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wt:open-chat", onOpenChat);
     };
   }, []);
 

@@ -218,7 +218,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: wt-shiny-text 3.6s ease-in-out infinite;
+  animation: wt-shiny-text 5.4s ease-in-out infinite;
   text-shadow: 0 0 18px rgba(124, 58, 237, 0.55);
   will-change: background-position;
 }

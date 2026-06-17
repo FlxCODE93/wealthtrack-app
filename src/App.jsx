@@ -35,6 +35,7 @@ import {
   IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
   loanFromPayment, longTermGain,
+  repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
 import { useLocalStorage } from "./storage.js";
@@ -42,6 +43,7 @@ import { TX, HISTO, WHATIF, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge, calculateWhatIfScenarios } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
+import AIChatWidget from "./AIChatWidget.jsx";
 
 /* ------------------------------------------------------------------ */
 /*  Icône d'alerte par niveau (remplace les emojis 🔴🟡💡)            */
@@ -296,8 +298,8 @@ const PLANS = {
 
 const PLAN_ACCESS = {
   free:   ["dashboard", "finances", "patrimoine", "profil", "pricing", "objectifs"],
-  pro:    ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", "pdf", "objectifs", "plans"],
-  couple: ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", "couple", "pdf", "objectifs", "plans"],
+  pro:    ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
+  couple: ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
 };
 
 function canAccess(plan, feature) {
@@ -359,7 +361,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
     },
   };
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
-  const needed = ["simulations","fi","immobilier","crypto","defi","fiscalite","assistant","plans"].includes(feature) ? "pro" : "couple";
+  const needed = ["simulations","fi","immobilier","crypto","defi","fiscalite","plans"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
   const price = needed === "pro" ? "5,99 €" : "8,99 €";
   return (
@@ -653,7 +655,6 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "defi",        label: "DeFi Yield",         icon: Zap },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
-    { id: "assistant",   label: "Assistant",          icon: MessageCircle },
     ...(profile?.coupleMode ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "pricing",     label: "Tarifs",             icon: Crown },
@@ -1065,7 +1066,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
             );
           })}
           <button
-            onClick={() => setView("assistant")}
+            onClick={() => window.dispatchEvent(new Event("wt:open-chat"))}
             className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
             style={{ background: "linear-gradient(90deg,#7c3aed,#8b5cf6)", color: "#fff" }}>
             <Sparkles size={18} /> Optimiser mon mois par IA
@@ -2452,15 +2453,15 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
         </div>
         <button
           onClick={() => setLiveOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shrink-0"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shrink-0 wt-button-press"
           style={{
-            background: "linear-gradient(135deg, #f7931a 0%, #627eea 100%)",
+            background: T.gradientPrimary,
             color: "#fff", border: "none", cursor: "pointer",
-            boxShadow: "0 2px 12px rgba(247,147,26,0.3)",
+            boxShadow: glow(T.violet, 40, "33"),
             transition: "transform 0.15s, box-shadow 0.15s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(247,147,26,0.45)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 2px 12px rgba(247,147,26,0.3)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 56, "55"); }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 40, "33"); }}
         >
           {liveLoading
             ? <RefreshCw size={14} className="animate-spin" />
@@ -4026,6 +4027,150 @@ const TAUX_TF_PAR_DEPT = {
 const TAUX_TF_DEFAUT = 46; // moyenne nationale indicative pour les départements non listés
 
 /* ------------------------------------------------------------------ */
+/*  Mon crédit immobilier — rembourser par anticipation OU investir ?  */
+/* ------------------------------------------------------------------ */
+const FISCALITE_OPTIONS = [
+  ["pea",    "PEA (après 5 ans)",      0],
+  ["av",     "Assurance-vie (>8 ans)", 0.172],
+  ["cto",    "CTO / Crypto (PFU 30 %)", 0.30],
+];
+
+function CreditArbitrage() {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const chartTip = makeChartTip(T);
+
+  const [remaining, setRemaining]   = useState(150000); // capital restant dû
+  const [ratePct, setRatePct]       = useState(1.5);    // taux nominal
+  const [insurance, setInsurance]   = useState(30);     // assurance €/mois
+  const [yearsLeft, setYearsLeft]   = useState(15);     // durée restante (ans)
+  const [lumpSum, setLumpSum]       = useState(50000);  // épargne dispo
+  const [returnPct, setReturnPct]   = useState(7);      // rendement placement
+  const [envelope, setEnvelope]     = useState("pea");  // fiscalité
+
+  const taxRate = FISCALITE_OPTIONS.find(o => o[0] === envelope)?.[2] ?? 0;
+
+  const opts = {
+    remainingPrincipal: Math.max(0, remaining),
+    annualRate: ratePct / 100,
+    insuranceMonthly: Math.max(0, insurance),
+    remainingMonths: Math.max(1, Math.round(yearsLeft * 12)),
+    lumpSum: Math.max(0, lumpSum),
+    investReturn: returnPct / 100,
+    taxRate,
+  };
+
+  const r          = useMemo(() => repayVsInvest(opts), [remaining, ratePct, insurance, yearsLeft, lumpSum, returnPct, taxRate]);
+  const breakeven  = useMemo(() => breakevenInvestRate(opts), [remaining, ratePct, insurance, yearsLeft, lumpSum, taxRate]);
+  const series     = useMemo(() => repayVsInvestSeries(opts), [remaining, ratePct, insurance, yearsLeft, lumpSum, returnPct, taxRate]);
+
+  const keepWins = r.winner === "keep";
+  const accent   = keepWins ? T.green : T.amber;
+
+  const Num = ({ label, val, color }) => (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+      <div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: color || T.text, fontWeight: 800, fontSize: 18 }}>{val}</div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Saisie du prêt */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Home size={20} style={{ color: T.blue }} />
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Mon crédit immobilier</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
+          <Field label="Capital restant dû (€)">
+            <input type="number" value={remaining} onChange={e => setRemaining(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Taux du prêt (%)">
+            <input type="number" step="0.1" value={ratePct} onChange={e => setRatePct(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Assurance (€/mois)">
+            <input type="number" value={insurance} onChange={e => setInsurance(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Durée restante (ans)">
+            <input type="number" step="1" value={yearsLeft} onChange={e => setYearsLeft(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Épargne dispo (€)">
+            <input type="number" value={lumpSum} onChange={e => setLumpSum(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Rendement visé (%/an)">
+            <input type="number" step="0.5" value={returnPct} onChange={e => setReturnPct(+e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Fiscalité">
+            <select value={envelope} onChange={e => setEnvelope(e.target.value)} style={inputStyle}>
+              {FISCALITE_OPTIONS.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
+            </select>
+          </Field>
+        </div>
+      </Card>
+
+      {/* Verdict */}
+      <Card style={{ borderColor: accent + "55", background: accent + "0d" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          {keepWins ? <TrendingUp size={22} style={{ color: accent }} /> : <PiggyBank size={22} style={{ color: accent }} />}
+          <h2 className="text-xl font-bold" style={{ color: accent }}>
+            {keepWins ? "Gardez votre prêt et investissez" : "Remboursez par anticipation"}
+          </h2>
+        </div>
+        <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          {keepWins
+            ? `Au rendement visé (${returnPct} %/an net), placer votre épargne rapporte plus que les intérêts économisés. Vous gardez votre capacité d'investissement.`
+            : `Au rendement visé (${returnPct} %/an net), rembourser fait gagner plus que le placement — le coût du crédit est trop élevé.`}
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+          <Num label={`Patrimoine si vous GARDEZ (dans ${Math.round(yearsLeft)} ans)`} val={eur(r.keepWealth)} color={keepWins ? accent : T.text} />
+          <Num label={`Patrimoine si vous REMBOURSEZ (dans ${Math.round(yearsLeft)} ans)`} val={eur(r.repayWealth)} color={!keepWins ? accent : T.text} />
+          <Num label="Écart en faveur du meilleur choix" val={eur(Math.abs(r.diff))} color={accent} />
+        </div>
+      </Card>
+
+      {/* Détails */}
+      <Card>
+        <h3 className="text-lg font-bold mb-4" style={{ color: T.text }}>Détails du calcul</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, marginBottom: 16 }}>
+          <Num label="Mensualité actuelle (assurance incl.)" val={eur(r.monthlyDebt)} />
+          <Num label="Indemnités remb. anticipé (IRA)" val={eur(r.ira)} color={T.amber} />
+          <Num label="Intérêts économisés en remboursant" val={eur(r.interestSaved)} />
+          <Num label="Mensualité libérée → investie" val={eur(r.freedMonthly)} />
+        </div>
+        <div style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33`, borderRadius: 12, padding: "12px 16px", fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
+          {breakeven == null
+            ? <>Même à 0 % de rendement, rembourser ce prêt est gagnant : son taux est élevé.</>
+            : <>Seuil de bascule : au-dessus de <b style={{ color: T.text }}>{(breakeven * 100).toFixed(1)} %/an net</b> de rendement, garder le prêt devient plus rentable que rembourser.</>}
+        </div>
+      </Card>
+
+      {/* Graphe comparatif */}
+      <Card>
+        <h3 className="text-lg font-bold mb-4" style={{ color: T.text }}>Patrimoine projeté : garder vs rembourser</h3>
+        <div style={{ width: "100%", height: 280 }}>
+          <ResponsiveContainer>
+            <LineChart data={series} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+              <XAxis dataKey="year" tick={{ fontSize: 11, fill: T.muted }} />
+              <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+              <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "keep" ? "Garder + investir" : "Rembourser"]} />
+              <Legend formatter={v => v === "keep" ? "Garder + investir" : "Rembourser + investir mensualité"} />
+              <Line type="monotone" dataKey="keep" stroke={T.green} strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="repay" stroke={T.amber} strokeWidth={2.5} strokeDasharray="6 3" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.muted }}>
+          <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <span>Estimation pédagogique. Hypothèses : rendement net constant, IRA plafonnée légalement, fiscalité appliquée aux plus-values à la sortie. Ne constitue pas un conseil en investissement.</span>
+        </p>
+      </Card>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  FEATURE 5: SIMULATEUR IMMOBILIER AVANCÉ                            */
 /* ------------------------------------------------------------------ */
 function Immobilier({ totals, simParams, patrimoine, transactions }) {
@@ -4285,6 +4430,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           ["residence", "Résidence principale", "Le bien que vous habiterez"],
           ["locatif", "Investissement locatif", "Un bien que vous achetez pour le louer"],
           ["location", "Mettre un bien en location", "Un bien que vous possédez déjà"],
+          ["credit", "Mon crédit immobilier", "Rembourser ou investir ?"],
         ].map(([val, lbl]) => (
           <button key={val} onClick={() => setMode(val)} style={{
             padding: "9px 18px", borderRadius: 10, border: `1px solid ${mode === val ? T.blue : T.border}`,
@@ -4297,10 +4443,13 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         {mode === "residence" && "Résidence principale : le logement que vous occuperez vous-même."}
         {mode === "locatif" && "Investissement locatif : un bien acheté pour être loué — rendement, charges et cash-flow sont calculés séparément."}
         {mode === "location" && "Mise en location d'un bien déjà détenu : simulez le cash-flow si vous le louez, charges et imposition incluses."}
+        {mode === "credit" && "Vous avez déjà un crédit immobilier ? Comparez : rembourser par anticipation, ou garder le prêt et investir votre épargne."}
       </p>
 
+      {mode === "credit" && <CreditArbitrage />}
+
       {/* Capacité d'emprunt */}
-      {mode !== "location" && (
+      {mode !== "location" && mode !== "credit" && (
       <Card style={{ borderColor: profileType === "salarie_stable" ? "rgba(34,199,154,0.25)" : "rgba(245,166,35,0.25)" }}>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Home size={20} style={{ color: T.green }} />
@@ -5047,7 +5196,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       )}
 
       {/* ---- Recherche d'annonces ---- */}
-      {mode !== "location" && <ImmobilierSearch budget={mode === "locatif" ? locBudgetSearch : loan25} />}
+      {mode !== "location" && mode !== "credit" && <ImmobilierSearch budget={mode === "locatif" ? locBudgetSearch : loan25} />}
     </div>
   );
 }
@@ -6299,7 +6448,7 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
+          {["dashboard", "finances", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Tableau", finances: "Finances", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", assistant: "IA", couple: "Couple", profil: "Profil" }[v]}
             </Pill>
@@ -6341,6 +6490,9 @@ export default function App() {
 
         <LegalDisclaimer />
       </main>
+
+      {/* Assistant IA — popup flottant (remplace l'ancien onglet Assistant) */}
+      <AIChatWidget ctx={{ totals, patrimoine, profile, simParams, profileType: detectProfileType(transactions || []) }} />
     </div>
   );
 }

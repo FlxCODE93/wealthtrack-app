@@ -5,6 +5,8 @@ import {
   immoDetailedSeries, longTermGain, yearsTo, monthsTo, yearsToTarget,
   RATE_SCENARIOS, IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC,
   monthlyPaymentFromRemaining, earlyRepaymentPenalty, repayVsInvest, breakevenInvestRate,
+  pmcaCessions, pmcaSummary, SEUIL_EXONERATION_CESSION,
+  perSimulation, perSeries,
 } from "./finance.js";
 
 /* ── fv (valeur future, intérêts composés mensuels) ──────────────── */
@@ -234,5 +236,108 @@ describe("breakevenInvestRate", () => {
       remainingMonths: 180, lumpSum: 160000, taxRate: 0.30,
     });
     expect(r === null || (r > 0 && r <= 0.20)).toBe(true);
+  });
+});
+
+/* ── PMCA (plus-values crypto, art. 150 VH bis) ──────────────────── */
+describe("pmcaCessions / pmcaSummary", () => {
+  it("formule légale : 1 achat puis 1 cession partielle", () => {
+    // Achat 1 BTC à 20 000. Cession 0.5 BTC à 30 000 (proceeds 15 000),
+    // valeur globale portefeuille au moment = 30 000 (1 BTC × 30 000).
+    // fraction acq = 20000 × (15000/30000) = 10000 → gain = 15000 − 10000 = 5000.
+    const lots  = [{ id: 1, symbol: "BTC", amount: 1, costPerUnit: 20000, date: "2025-01-01" }];
+    const sells = [{ id: 2, symbol: "BTC", amount: 0.5, pricePerUnit: 30000, date: "2025-06-01", portfolioValue: 30000 }];
+    const [c] = pmcaCessions(lots, sells);
+    expect(c.proceeds).toBe(15000);
+    expect(c.acquisitionFraction).toBeCloseTo(10000, 6);
+    expect(c.gain).toBeCloseTo(5000, 6);
+    expect(c.estimated).toBe(false);
+  });
+
+  it("globale au portefeuille (multi-actifs), pas FIFO par actif", () => {
+    const lots = [
+      { id: 1, symbol: "BTC", amount: 1, costPerUnit: 20000, date: "2025-01-01" },
+      { id: 2, symbol: "ETH", amount: 10, costPerUnit: 2000, date: "2025-02-01" }, // +20000 → acq total 40000
+    ];
+    // Cession ETH : proceeds 5000, valeur globale 50000 → fraction = 40000×(5000/50000)=4000 → gain 1000
+    const sells = [{ id: 3, symbol: "ETH", amount: 2, pricePerUnit: 2500, date: "2025-05-01", portfolioValue: 50000 }];
+    const [c] = pmcaCessions(lots, sells);
+    expect(c.acquisitionFraction).toBeCloseTo(4000, 6);
+    expect(c.gain).toBeCloseTo(1000, 6);
+  });
+
+  it("cession sans valeur de portefeuille → marquée estimée", () => {
+    const lots  = [{ id: 1, symbol: "BTC", amount: 1, costPerUnit: 20000, date: "2025-01-01" }];
+    const sells = [{ id: 2, symbol: "BTC", amount: 0.5, pricePerUnit: 30000, date: "2025-06-01" }];
+    const [c] = pmcaCessions(lots, sells);
+    expect(c.estimated).toBe(true);
+  });
+
+  it("exonération si total annuel des cessions ≤ 305 €", () => {
+    const lots  = [{ id: 1, symbol: "BTC", amount: 1, costPerUnit: 100, date: "2025-01-01" }];
+    const sells = [{ id: 2, symbol: "BTC", amount: 0.01, pricePerUnit: 200, date: "2025-06-01", portfolioValue: 200 }];
+    const sum = pmcaSummary(lots, sells, 2025);
+    expect(sum.totalProceeds).toBeLessThanOrEqual(SEUIL_EXONERATION_CESSION);
+    expect(sum.exonerated).toBe(true);
+    expect(sum.tax).toBe(0);
+  });
+
+  it("impôt = 30 % PFU du gain net si non exonéré", () => {
+    const lots  = [{ id: 1, symbol: "BTC", amount: 1, costPerUnit: 20000, date: "2025-01-01" }];
+    const sells = [{ id: 2, symbol: "BTC", amount: 0.5, pricePerUnit: 30000, date: "2025-06-01", portfolioValue: 30000 }];
+    const sum = pmcaSummary(lots, sells, 2025);
+    expect(sum.netGain).toBeCloseTo(5000, 6);
+    expect(sum.tax).toBeCloseTo(1500, 6); // 5000 × 30%
+  });
+
+  it("ne compte que les cessions de l'année demandée", () => {
+    const lots  = [{ id: 1, symbol: "BTC", amount: 2, costPerUnit: 20000, date: "2024-01-01" }];
+    const sells = [
+      { id: 2, symbol: "BTC", amount: 0.5, pricePerUnit: 30000, date: "2024-06-01", portfolioValue: 60000 },
+      { id: 3, symbol: "BTC", amount: 0.5, pricePerUnit: 30000, date: "2025-06-01", portfolioValue: 45000 },
+    ];
+    const sum = pmcaSummary(lots, sells, 2025);
+    expect(sum.cessions).toHaveLength(1);
+    expect(sum.cessions[0].date).toBe("2025-06-01");
+  });
+});
+
+/* ── PER (Plan Épargne Retraite) ─────────────────────────────────── */
+describe("perSimulation", () => {
+  const base = { monthly: 200, years: 20, tmiNow: 0.30, tmiRetraite: 0.11, annualReturn: 0.05 };
+
+  it("économie d'impôt annuelle = versement annuel × TMI actuelle", () => {
+    const s = perSimulation(base);
+    expect(s.economieImpotAnnuelle).toBeCloseTo(200 * 12 * 0.30, 6);
+  });
+
+  it("capital brut > versements (rendement positif)", () => {
+    const s = perSimulation(base);
+    expect(s.capitalBrut).toBeGreaterThan(s.versements);
+  });
+
+  it("TMI entrée > TMI sortie → PER gagne", () => {
+    const s = perSimulation(base);
+    expect(s.winner).toBe("per");
+    expect(s.avantage).toBeGreaterThan(0);
+  });
+
+  it("TMI égales → PER reste ≥ CTO (avantage du report d'impôt)", () => {
+    const s = perSimulation({ ...base, tmiNow: 0.30, tmiRetraite: 0.30 });
+    expect(s.netPER).toBeGreaterThanOrEqual(s.netCTO - 1);
+  });
+
+  it("TMI sortie très élevée vs entrée faible → CTO peut gagner", () => {
+    const s = perSimulation({ ...base, tmiNow: 0.11, tmiRetraite: 0.41 });
+    expect(s.netCTO).toBeGreaterThan(0);
+    expect(s.avantage).toBeLessThan(perSimulation(base).avantage);
+  });
+});
+
+describe("perSeries", () => {
+  it("years+1 points, croissants", () => {
+    const s = perSeries({ monthly: 200, years: 10, annualReturn: 0.05 }, 2026);
+    expect(s).toHaveLength(11);
+    expect(s[10].per).toBeGreaterThan(s[1].per);
   });
 });

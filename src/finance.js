@@ -366,3 +366,139 @@ export function repayVsInvestSeries(opts) {
   }
   return out;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   Plus-values crypto — méthode PMCA (art. 150 VH bis CGI)
+   Méthode LÉGALE française : globale au portefeuille, pas FIFO par actif.
+
+   Pour chaque cession :
+     PV = prix_cession − (prix_total_acquisition × prix_cession / valeur_globale_portefeuille)
+   où prix_total_acquisition est réduit, à chaque cession, de la fraction imputée.
+
+   `valeur_globale_portefeuille` (valeur de TOUT le portefeuille crypto au jour
+   de la cession) n'est pas dérivable des seuls lots/ventes → fournie par
+   l'utilisateur (champ du formulaire 2086). Absente → cession marquée `estimated`.
+   ──────────────────────────────────────────────────────────────────── */
+export function pmcaCessions(lots = [], sells = []) {
+  const events = [
+    ...lots.map(l => ({ kind: "buy", date: l.date, cost: (+l.amount || 0) * (+l.costPerUnit || 0) })),
+    ...sells.map(s => ({ kind: "sell", date: s.date, sell: s })),
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  let prixTotalAcq = 0; // prix total d'acquisition net des fractions déjà imputées
+  const cessions = [];
+
+  for (const e of events) {
+    if (e.kind === "buy") { prixTotalAcq += e.cost; continue; }
+
+    const s = e.sell;
+    const proceeds = (+s.amount || 0) * (+s.pricePerUnit || 0);
+    const pv = +s.portfolioValue > 0 ? +s.portfolioValue : null;
+    const estimated = !(pv && pv >= proceeds);
+
+    // Sans valeur globale fiable, on retombe sur prix_cession (fraction maximale imputée).
+    const denom = estimated ? Math.max(proceeds, pv || proceeds) : pv;
+    const acquisitionFraction = denom > 0 ? prixTotalAcq * (proceeds / denom) : 0;
+    const gain = proceeds - acquisitionFraction;
+    prixTotalAcq = Math.max(0, prixTotalAcq - acquisitionFraction);
+
+    cessions.push({
+      id: s.id, date: s.date, symbol: s.symbol,
+      amount: +s.amount || 0, pricePerUnit: +s.pricePerUnit || 0,
+      proceeds, portfolioValue: pv, acquisitionFraction,
+      gain, estimated,
+    });
+  }
+  return cessions;
+}
+
+/** Récapitulatif PMCA pour une année fiscale (montants 2086 / 2042-C). */
+export function pmcaSummary(lots = [], sells = [], year = new Date().getFullYear() - 1) {
+  const all = pmcaCessions(lots, sells);
+  const cessions = all.filter(c => String(c.date).startsWith(String(year)));
+  const totalProceeds = cessions.reduce((s, c) => s + c.proceeds, 0);
+  const totalAcquisition = cessions.reduce((s, c) => s + c.acquisitionFraction, 0);
+  const netGain = cessions.reduce((s, c) => s + c.gain, 0);
+  // Exonération si total annuel des cessions ≤ 305 € (art. 150 VH bis).
+  const exonerated = totalProceeds <= SEUIL_EXONERATION_CESSION;
+  const tax = exonerated || netGain <= 0 ? 0 : netGain * RATE_PFU;
+  const anyEstimated = cessions.some(c => c.estimated);
+  return { year, cessions, totalProceeds, totalAcquisition, netGain, tax, exonerated, anyEstimated };
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   PER (Plan Épargne Retraite) — économie d'impôt + arbitrage vs CTO
+   Versements déductibles du revenu imposable (dans le plafond épargne
+   retraite). Sortie en capital : versements imposés au barème (≈ TMI
+   retraite), plus-values au PFU 30 %.
+   ──────────────────────────────────────────────────────────────────── */
+
+/** Capital d'une rente annuelle (versement en début d'année) composée à `r`. */
+function annualFV(annualContribution, r, years) {
+  let cap = 0;
+  for (let y = 0; y < years; y++) cap = (cap + annualContribution) * (1 + r);
+  return cap;
+}
+
+/**
+ * Compare verser sur un PER vs investir le même montant sur un CTO.
+ * opts: { monthly, years, tmiNow, tmiRetraite, annualReturn, reinvestRefund? }
+ * Taux en décimal (0.30 = 30 %). Hypothèse : sortie en capital.
+ */
+export function perSimulation(opts) {
+  const {
+    monthly, years, tmiNow, tmiRetraite, annualReturn, reinvestRefund = true,
+  } = opts;
+  const annual = monthly * 12;
+  const r = annualReturn;
+  const versements = annual * years;
+
+  // Capital PER brut (versements composés)
+  const capitalBrut = annualFV(annual, r, years);
+  const gainsPER = Math.max(0, capitalBrut - versements);
+
+  // Économie d'impôt annuelle à l'entrée (déduction × TMI actuelle)
+  const economieImpotAnnuelle = annual * tmiNow;
+
+  // Imposition à la sortie : versements au barème (TMI retraite), gains au PFU
+  const impotSortie = versements * tmiRetraite + gainsPER * RATE_PFU;
+  const netPERbase = capitalBrut - impotSortie;
+
+  // L'économie d'impôt est réinvestie sur un CTO (gains au PFU à la sortie)
+  let netRefund;
+  if (reinvestRefund) {
+    const capRefund = annualFV(economieImpotAnnuelle, r, years);
+    const refundGains = Math.max(0, capRefund - economieImpotAnnuelle * years);
+    netRefund = capRefund - refundGains * RATE_PFU;
+  } else {
+    netRefund = economieImpotAnnuelle * years;
+  }
+  const netPER = netPERbase + netRefund;
+
+  // CTO direct : même versement, plus-values au PFU
+  const capCTO = annualFV(annual, r, years);
+  const gainsCTO = Math.max(0, capCTO - versements);
+  const netCTO = capCTO - gainsCTO * RATE_PFU;
+
+  return {
+    versements, economieImpotAnnuelle, economieImpotTotale: economieImpotAnnuelle * years,
+    capitalBrut, gainsPER, impotSortie, netRefund,
+    netPER, netCTO, avantage: netPER - netCTO,
+    winner: netPER >= netCTO ? "per" : "cto",
+  };
+}
+
+/** Série annuelle PER brut vs CTO net (graphe). */
+export function perSeries(opts, startYear = new Date().getFullYear()) {
+  const { monthly, years, annualReturn } = opts;
+  const annual = monthly * 12;
+  const out = [];
+  let capPER = 0, capCTO = 0;
+  out.push({ year: startYear, per: 0, cto: 0 });
+  for (let y = 1; y <= years; y++) {
+    capPER = (capPER + annual) * (1 + annualReturn);
+    capCTO = (capCTO + annual) * (1 + annualReturn);
+    out.push({ year: startYear + y, per: Math.round(capPER), cto: Math.round(capCTO) });
+  }
+  return out;
+}

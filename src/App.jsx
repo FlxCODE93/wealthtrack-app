@@ -20,7 +20,7 @@ import {
   Users, Building2, Briefcase, Check, X, RefreshCw,
   ExternalLink, Landmark, ChevronDown, ChevronUp, CreditCard,
   MessageCircle, Lightbulb, Bitcoin, AlertTriangle, AlertCircle, Calculator, Flag, Info,
-  Crown, Star, FileText, ChevronRight,
+  Crown, Star, FileText, ChevronRight, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap,
@@ -36,6 +36,7 @@ import {
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
   loanFromPayment, longTermGain,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
+  perSimulation, perSeries,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
 import { useLocalStorage } from "./storage.js";
@@ -635,7 +636,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : TABLEAU DE BORD                                            */
 /* ------------------------------------------------------------------ */
-function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile }) {
+function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [] }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
@@ -720,6 +721,43 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
         <Stat label="Dépenses variables" value={eur(depensesVar)} color={T.amber} icon={ArrowDownRight} />
         <Stat label="Investissements" value={eur(invest)} color={T.cyan} icon={PiggyBank} />
       </div>
+
+      {/* Évolution réelle du patrimoine net (snapshots mensuels auto) */}
+      <Card>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={18} style={{ color: T.green }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Évolution de votre patrimoine net</h2>
+          </div>
+          {snapshots.length > 0 && (
+            <span className="text-sm" style={{ color: T.muted }}>{eur(snapshots[snapshots.length - 1].v)} aujourd'hui</span>
+          )}
+        </div>
+        {snapshots.length >= 2 ? (
+          <div style={{ width: "100%", height: 220 }}>
+            <ResponsiveContainer>
+              <AreaChart data={snapshots} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.green} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={T.green} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} />
+                <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+                <Tooltip {...makeChartTip(T)} formatter={v => [eur(v), "Patrimoine net"]} />
+                <Area type="monotone" dataKey="v" stroke={T.green} strokeWidth={2.5} fill="url(#nwGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0", color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
+            <Calendar size={18} style={{ color: T.blue, flexShrink: 0 }} />
+            <span>Votre patrimoine net est enregistré chaque mois automatiquement. Revenez le mois prochain pour voir votre courbe réelle se construire — pas une projection, vos vraies valeurs.</span>
+          </div>
+        )}
+      </Card>
 
       {/* Score de santé gamifié */}
       <Card style={{ border: `2px solid ${badge.color}55` }}>
@@ -2155,6 +2193,121 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
         </Card>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  PER — économie d'impôt + arbitrage vs CTO                          */
+/* ------------------------------------------------------------------ */
+const TMI_BRACKETS = [
+  ["0 %", 0], ["11 %", 0.11], ["30 %", 0.30], ["41 %", 0.41], ["45 %", 0.45],
+];
+
+function PERSimulator() {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const chartTip = makeChartTip(T);
+
+  const [monthly, setMonthly]         = useState(200);
+  const [years, setYears]             = useState(20);
+  const [tmiNow, setTmiNow]           = useState(0.30);
+  const [tmiRetraite, setTmiRetraite] = useState(0.11);
+  const [returnPct, setReturnPct]     = useState(5);
+
+  const opts = { monthly, years, tmiNow, tmiRetraite, annualReturn: returnPct / 100 };
+  const r      = useMemo(() => perSimulation(opts), [monthly, years, tmiNow, tmiRetraite, returnPct]);
+  const series = useMemo(() => perSeries(opts), [monthly, years, returnPct]);
+
+  const perWins = r.winner === "per";
+  const accent  = perWins ? T.green : T.amber;
+
+  const Num = ({ label, val, color }) => (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+      <div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: color || T.text, fontWeight: 800, fontSize: 18 }}>{val}</div>
+    </div>
+  );
+
+  const TmiSelect = ({ value, onChange }) => (
+    <select value={value} onChange={e => onChange(+e.target.value)} style={inputStyle}>
+      {TMI_BRACKETS.map(([lbl, v]) => <option key={v} value={v}>{lbl}</option>)}
+    </select>
+  );
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-1">
+        <PiggyBank size={20} style={{ color: T.violet }} />
+        <h2 className="text-xl font-bold" style={{ color: T.text }}>PER — économie d'impôt</h2>
+      </div>
+      <p className="text-sm mb-5" style={{ color: T.muted }}>
+        Vos versements sur un Plan Épargne Retraite sont déductibles de votre revenu imposable. Comparez avec un investissement direct (CTO).
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 18 }}>
+        <Field label="Versement (€/mois)">
+          <input type="number" value={monthly} onChange={e => setMonthly(+e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Durée (ans)">
+          <input type="number" value={years} onChange={e => setYears(+e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Rendement (%/an)">
+          <input type="number" step="0.5" value={returnPct} onChange={e => setReturnPct(+e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Votre TMI aujourd'hui">
+          <TmiSelect value={tmiNow} onChange={setTmiNow} />
+        </Field>
+        <Field label="TMI estimée à la retraite">
+          <TmiSelect value={tmiRetraite} onChange={setTmiRetraite} />
+        </Field>
+      </div>
+
+      {/* Économie d'impôt — le chiffre vedette */}
+      <div style={{ background: T.violet + "12", border: `1px solid ${T.violet}44`, borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
+        <div style={{ color: T.muted, fontSize: 13 }}>Économie d'impôt dès cette année</div>
+        <div style={{ color: T.violet, fontWeight: 800, fontSize: 28 }}>{eur(r.economieImpotAnnuelle)}</div>
+        <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+          soit {eur(r.economieImpotTotale)} sur {years} ans (versement {eur(monthly * 12)}/an × TMI {(tmiNow * 100).toFixed(0)} %)
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, marginBottom: 16 }}>
+        <Num label={`Net PER (capital, dans ${years} ans)`} val={eur(r.netPER)} color={perWins ? accent : T.text} />
+        <Num label={`Net CTO (même effort)`} val={eur(r.netCTO)} color={!perWins ? accent : T.text} />
+        <Num label="Avantage du meilleur choix" val={eur(Math.abs(r.avantage))} color={accent} />
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        {perWins ? <TrendingUp size={18} style={{ color: accent }} /> : <AlertTriangle size={18} style={{ color: accent }} />}
+        <span style={{ color: accent, fontWeight: 700, fontSize: 14 }}>
+          {perWins
+            ? "Le PER est plus avantageux — surtout si votre TMI baisse à la retraite."
+            : "Le CTO l'emporte ici — votre TMI à la retraite est trop élevée pour profiter de la déduction."}
+        </span>
+      </div>
+
+      <div style={{ width: "100%", height: 240 }}>
+        <ResponsiveContainer>
+          <AreaChart data={series} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
+            <defs>
+              <linearGradient id="perGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={T.violet} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+            <XAxis dataKey="year" tick={{ fontSize: 11, fill: T.muted }} />
+            <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+            <Tooltip {...chartTip} formatter={v => [eur(v), "Capital brut"]} />
+            <Area type="monotone" dataKey="per" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.muted }}>
+        <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+        <span>Hypothèse : sortie en capital (versements imposés au barème, plus-values au PFU 30 %), versements dans le plafond épargne retraite, économie d'impôt réinvestie. Estimation pédagogique, pas un conseil fiscal.</span>
+      </p>
+    </Card>
   );
 }
 
@@ -6266,6 +6419,25 @@ export default function App() {
     return Object.entries(map).map(([cat, amount]) => ({ cat, amount })).sort((a, b) => b.amount - a.amount);
   }, [transactions]);
 
+  /* ── Suivi du patrimoine dans le temps : snapshot mensuel auto ──────── */
+  const [snapshots, setSnapshots] = useLocalStorage("wt_networth_snapshots", []);
+  const netWorthNow = useMemo(() => {
+    const a = (patrimoine?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
+    const p = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
+    return a - p;
+  }, [patrimoine]);
+  useEffect(() => {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${MOIS_ABBR[now.getMonth()]} ${now.getFullYear()}`;
+    setSnapshots(prev => {
+      const exists = prev.some(s => s.ym === ym);
+      // Met à jour le mois courant à chaque changement ; crée le point au 1er passage du mois.
+      if (exists) return prev.map(s => s.ym === ym ? { ...s, v: netWorthNow, label } : s);
+      return [...prev, { ym, v: netWorthNow, label }].slice(-120); // garde 10 ans max
+    });
+  }, [netWorthNow]);
+
   const handleImport = (imported) => {
     setTransactions((prev) => [...prev, ...imported.map((tx) => ({ ...tx, id: Date.now() + Math.random() }))]);
     setView("finances");
@@ -6339,7 +6511,7 @@ export default function App() {
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoine} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} />}
+        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoine} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}
@@ -6356,7 +6528,7 @@ export default function App() {
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}
-        {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "simulations"  && (canAccess(plan, "simulations") ? <div className="flex flex-col gap-6"><Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /><PERSimulator /></div> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoine} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoine} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}

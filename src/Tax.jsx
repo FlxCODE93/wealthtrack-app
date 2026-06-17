@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { eur } from "./theme.js";
 import { useT } from "./ThemeProvider.jsx";
-import { SEUIL_EXONERATION_CESSION } from "./finance.js";
+import { SEUIL_EXONERATION_CESSION, pmcaSummary } from "./finance.js";
 import { API_URL } from "./config.js";
 import InfoTooltip from "./InfoTooltip.jsx";
 import { useLocalStorage } from "./storage.js";
@@ -28,9 +28,9 @@ const DEMO_LOTS = [
 ];
 
 const DEMO_SELLS = [
-  { id: 20001, symbol: "BTC", amount: 0.15, pricePerUnit: 58000, date: "2025-09-10", notes: "Kraken → EUR" },
-  { id: 20002, symbol: "ETH", amount: 1.50, pricePerUnit:  3500, date: "2025-10-05", notes: "Coinbase" },
-  { id: 20003, symbol: "SOL", amount: 20,   pricePerUnit:   180, date: "2025-11-20", notes: "Binance → EUR" },
+  { id: 20001, symbol: "BTC", amount: 0.15, pricePerUnit: 58000, portfolioValue: 32000, date: "2025-09-10", notes: "Kraken → EUR" },
+  { id: 20002, symbol: "ETH", amount: 1.50, pricePerUnit:  3500, portfolioValue: 28000, date: "2025-10-05", notes: "Coinbase" },
+  { id: 20003, symbol: "SOL", amount: 20,   pricePerUnit:   180, portfolioValue: 25000, date: "2025-11-20", notes: "Binance → EUR" },
 ];
 
 /* ─── FIFO engine ───────────────────────────────────────────────────── */
@@ -156,9 +156,73 @@ function exportFiscalRecap(cessions, lots, taxYear) {
   link.click();
 }
 
+/* ─── Formulaire 2086 pré-rempli (PDF) — méthode légale PMCA ─────────── */
+const eur2 = (n) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0) + " €";
+
+async function generate2086PDF(pmca, taxYear) {
+  if (!pmca.cessions.length) { alert(`Aucune cession en ${taxYear}.`); return; }
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const ML = 14, MR = 196;
+  let y = 18;
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+  doc.text(`Formulaire 2086 — Cessions d'actifs numériques ${taxYear}`, ML, y); y += 6;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(90);
+  doc.text("Méthode PMCA (prix moyen pondéré d'acquisition) — art. 150 VH bis du CGI.", ML, y); y += 4;
+  doc.text("Document d'aide à la déclaration. À vérifier et reporter sur impots.gouv.fr. Ne constitue pas un conseil fiscal.", ML, y); y += 8;
+  doc.setTextColor(0);
+
+  // Détail par cession
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+  doc.text("Détail des cessions (un bloc = une cession à reporter sur le formulaire 2086)", ML, y); y += 2;
+  doc.setLineWidth(0.2); doc.line(ML, y, MR, y); y += 5;
+  doc.setFontSize(8);
+  pmca.cessions.forEach((c, i) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(`Cession ${i + 1} — ${c.date} — ${c.symbol}${c.estimated ? "  (valeur portefeuille manquante : à compléter)" : ""}`, ML, y); y += 4;
+    doc.setFont("helvetica", "normal");
+    const lines = [
+      `Prix de cession : ${eur2(c.proceeds)}`,
+      `Valeur globale du portefeuille au jour de la cession : ${c.portfolioValue ? eur2(c.portfolioValue) : "— à renseigner —"}`,
+      `Prix d'acquisition de la fraction cédée (PMCA) : ${eur2(c.acquisitionFraction)}`,
+      `Plus ou moins-value de la cession : ${eur2(c.gain)}`,
+    ];
+    lines.forEach(t => { doc.text(t, ML + 4, y); y += 4; });
+    y += 2;
+    if (y > 260) { doc.addPage(); y = 18; }
+  });
+
+  // Synthèse → report 2042-C
+  y += 2; doc.setLineWidth(0.2); doc.line(ML, y, MR, y); y += 6;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+  doc.text("Synthèse annuelle → report sur la déclaration 2042-C", ML, y); y += 6;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  const synth = [
+    `Total des prix de cession ${taxYear} : ${eur2(pmca.totalProceeds)}`,
+    `Plus-value nette globale (case 3AN) : ${eur2(Math.max(0, pmca.netGain))}`,
+    `Moins-value nette globale (case 3BN) : ${eur2(Math.min(0, pmca.netGain))}`,
+    `Imposition forfaitaire 30 % (PFU) estimée : ${eur2(pmca.tax)}`,
+  ];
+  synth.forEach(t => { doc.text(t, ML + 2, y); y += 5; });
+  y += 2;
+  if (pmca.exonerated) {
+    doc.setTextColor(180, 100, 20);
+    doc.text(`Total des cessions ≤ ${SEUIL_EXONERATION_CESSION} € → exonération (art. 150 VH bis).`, ML + 2, y); y += 5;
+    doc.setTextColor(0);
+  }
+  if (pmca.anyEstimated) {
+    doc.setTextColor(200, 40, 40);
+    doc.text("⚠ Certaines cessions n'ont pas de valeur de portefeuille : montants incomplets, à corriger.", ML + 2, y);
+    doc.setTextColor(0);
+  }
+
+  doc.save(`formulaire-2086-crypto-${taxYear}.pdf`);
+}
+
 /* ─── Styles partagés ───────────────────────────────────────────────── */
 const EMPTY_LOT  = { symbol: "", name: "", amount: "", costPerUnit: "", date: new Date().toISOString().slice(0, 10) };
-const EMPTY_SELL = { symbol: "", amount: "", pricePerUnit: "", date: new Date().toISOString().slice(0, 10), notes: "" };
+const EMPTY_SELL = { symbol: "", amount: "", pricePerUnit: "", portfolioValue: "", date: new Date().toISOString().slice(0, 10), notes: "" };
 const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shadow duration-150";
 
 /* ─── ID map CoinGecko ──────────────────────────────────────────────── */
@@ -281,7 +345,10 @@ export default function Tax() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showLotForm, showSellForm]);
 
-  /* ── FIFO + dérivés ── */
+  /* ── PMCA (méthode légale, art. 150 VH bis) — pour le formulaire 2086 ── */
+  const pmca = useMemo(() => pmcaSummary(lots, sells, taxYear), [lots, sells, taxYear]);
+
+  /* ── FIFO + dérivés (vue indicative interne) ── */
   const cessions      = useMemo(() => computeFIFO(lots, sells), [lots, sells]);
   const sessionsInYear = useMemo(() => cessions.filter(c => c.date?.startsWith(String(taxYear))), [cessions, taxYear]);
   const byAsset       = useMemo(() => groupByAsset(sessionsInYear), [sessionsInYear]);
@@ -399,7 +466,7 @@ export default function Tax() {
   };
   const addSell = () => {
     if (!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit) return;
-    const sell = { id: Date.now(), symbol: sellForm.symbol.toUpperCase().trim(), amount: parseFloat(sellForm.amount), pricePerUnit: parseFloat(sellForm.pricePerUnit), date: sellForm.date, notes: sellForm.notes };
+    const sell = { id: Date.now(), symbol: sellForm.symbol.toUpperCase().trim(), amount: parseFloat(sellForm.amount), pricePerUnit: parseFloat(sellForm.pricePerUnit), portfolioValue: parseFloat(sellForm.portfolioValue) || null, date: sellForm.date, notes: sellForm.notes };
     setSells(prev => [...prev, sell]);
     setSellForm(EMPTY_SELL); setShowSellForm(false);
   };
@@ -442,9 +509,13 @@ export default function Tax() {
                   ))}
                 </select>
               </div>
-              <button onClick={() => exportFiscalRecap(cessions, lots, taxYear)} title="Document indicatif non officiel — ne remplace pas le formulaire 2086"
+              <button onClick={() => generate2086PDF(pmca, taxYear)} title="Formulaire 2086 pré-rempli (méthode légale PMCA) — aide à la déclaration"
+                style={{ background: T.green, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                <Download size={14} /> Formulaire 2086 {taxYear}
+              </button>
+              <button onClick={() => exportFiscalRecap(cessions, lots, taxYear)} title="Export CSV interne (vue FIFO indicative)"
                 style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
-                <Download size={14} /> Export récap. fiscal {taxYear}
+                <Download size={14} /> CSV interne
               </button>
             </div>
           )}
@@ -476,10 +547,10 @@ export default function Tax() {
           }}>
             <AlertTriangle size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
             <p style={{ margin: 0 }}>
-              <strong style={{ color: "#f59e0b" }}>Calcul FIFO simplifié — non conforme au calcul fiscal officiel.</strong>{" "}
-              La loi française (art. 150 VH bis CGI) impose la méthode PMCA (prix moyen pondéré du <em>portefeuille global</em>), pas le FIFO utilisé ici lot par lot. Les montants de plus-value et d'impôt affichés peuvent donc différer significativement de votre déclaration réelle.
+              <strong style={{ color: "#f59e0b" }}>Vue interne en FIFO (indicative).</strong>{" "}
+              Le tableau ci-dessous utilise le FIFO pour un aperçu rapide. Pour votre <strong>déclaration officielle</strong>, utilisez le bouton <strong>« Formulaire 2086 »</strong> en haut : il applique la méthode légale <strong>PMCA</strong> (art. 150 VH bis CGI) et pré-remplit le formulaire.
               <br />
-              Pour votre déclaration 2086, utilisez un outil dédié (<strong>Waltio</strong>, <strong>Koinly</strong>, Accointing…) ou un expert-comptable — ne reportez pas ces chiffres tels quels aux impôts.
+              Renseignez la <em>valeur globale de votre portefeuille</em> à chaque vente pour un calcul exact. Document d'aide — vérifiez avant de reporter sur impots.gouv.fr.
             </p>
           </div>
 
@@ -776,9 +847,9 @@ export default function Tax() {
           )}
 
           <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-            <span style={{ color: T.text, fontWeight: 600 }}>Méthode FIFO</span> — calcul simplifié, <strong>non officiel</strong> ·
-            La méthode légale française (art. 150 VH bis CGI) utilise le PMCA (quote-part du portefeuille global), pas le FIFO ·
-            PFU 30 % (art. 200 A CGI) · L'export ci-dessus est un brouillon de travail — pour votre déclaration 2086, passez par <strong>Waltio</strong>, <strong>Koinly</strong> ou un expert-comptable
+            <span style={{ color: T.text, fontWeight: 600 }}>Tableau FIFO</span> = aperçu interne indicatif ·
+            Le <strong>Formulaire 2086</strong> (bouton en haut) applique la méthode légale <strong>PMCA</strong> (art. 150 VH bis CGI), quote-part du portefeuille global ·
+            PFU 30 % (art. 200 A CGI) · Document d'aide à la déclaration — vérifiez vos montants avant report
             {serverOk && <span style={{ color: T.green, marginLeft: 8 }}>· Serveur connecté</span>}
           </div>
         </>
@@ -1368,12 +1439,14 @@ export default function Tax() {
               { label: "Symbole",                   key: "symbol",       placeholder: "BTC, ETH, SOL…" },
               { label: "Quantité vendue",            key: "amount",       placeholder: "0.1", type: "number" },
               { label: "Prix de vente (€ / unité)",  key: "pricePerUnit", placeholder: "55000", type: "number" },
+              { label: "Valeur globale du portefeuille à cette date (€)", key: "portfolioValue", placeholder: "ex. 45000", type: "number", hint: "Valeur de TOUTES vos cryptos au jour de la vente. Requis par la méthode légale (PMCA, formulaire 2086)." },
               { label: "Date de cession",            key: "date",         type: "date" },
               { label: "Notes (optionnel)",          key: "notes",        placeholder: "ex. Binance → EUR" },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 14 }}>
                 <label style={LBL}>{f.label}</label>
                 <input type={f.type || "text"} value={sellForm[f.key]} placeholder={f.placeholder || ""} onChange={e => setSellForm(p => ({ ...p, [f.key]: e.target.value }))} className={INPUT_FOCUS_CLASS} style={INPUT} />
+                {f.hint && <div style={{ color: T.muted, fontSize: 11, marginTop: 4, lineHeight: 1.4 }}>{f.hint}</div>}
               </div>
             ))}
             {sellForm.amount && sellForm.pricePerUnit && (

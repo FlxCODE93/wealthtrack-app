@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle } from "lucide-react";
 import { C, eur } from "./theme.js";
+import { API_URL } from "./config.js";
 
 /* ─── Catégories ────────────────────────────────────────────────────── */
 export const IMPORT_CATS = {
@@ -249,7 +250,7 @@ export default function TransactionImportTab({ onImport }) {
   const requestAI = async (tx) => {
     setAiPending((prev) => new Set(prev).add(tx.id));
     try {
-      const res = await fetch("http://localhost:3001/api/categorize", {
+      const res = await fetch(`${API_URL}/api/categorize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: tx.description, amount: tx.amount, date: tx.date }),
@@ -599,7 +600,7 @@ export default function TransactionImportTab({ onImport }) {
           }}>
             <span style={{ color: C.violet, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12} /> Catégorisation IA (Tier 3) </span>
             — Le bouton <Sparkles size={11} style={{ display: "inline", verticalAlign: "middle" }} /> sur les lignes à faible confiance appelle Claude via le serveur Express
-            (<code style={{ color: C.text }}>localhost:3001</code>). Lancez <code style={{ color: C.text }}>npm run server</code> pour l'activer.
+            (<code style={{ color: C.text }}>{API_URL}</code>). Lancez <code style={{ color: C.text }}>npm run server</code> pour l'activer.
           </div>
         </>
       )}

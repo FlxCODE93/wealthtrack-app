@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { C, glow } from "./theme.js";
+import { C, glow, ASSET } from "./theme.js";
+import { useT } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
 import Landing from "./Landing.jsx";
 import TransactionImportTab from "./TransactionImportTab.jsx";
-import Chatbot from "./Chatbot.jsx";
 import Plans   from "./Plans.jsx";
 import Crypto  from "./Crypto.jsx";
 import DeFi    from "./DeFi.jsx";
@@ -14,12 +14,12 @@ import {
   FinTechPieChart, FinTechScatterChart, FinTechComposedChart,
 } from "./ChartComponents.jsx";
 import {
-  BarChart3, TrendingUp, Shield, Zap, Wallet, PiggyBank, Home,
+  BarChart3, TrendingUp, TrendingDown, Shield, Zap, Wallet, PiggyBank, Home,
   User, LayoutDashboard, ListTree, Plus, Upload, Sparkles, Activity,
   ArrowUpRight, ArrowDownRight, Search, Lock, Sun, LogOut,
   Users, Building2, Briefcase, Check, X, RefreshCw,
   ExternalLink, Landmark, ChevronDown, ChevronUp, CreditCard,
-  MessageCircle, Lightbulb, Bitcoin, AlertTriangle, Calculator, Flag, Info,
+  MessageCircle, Lightbulb, Bitcoin, AlertTriangle, AlertCircle, Calculator, Flag, Info,
   Crown, Star, FileText, ChevronRight,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
@@ -30,27 +30,35 @@ import {
   Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
 import {
-  RATE_A, RATE_C, RATE_BTC, RATE_ETH, RATE_IMMO_APPRECIATION, RATE_DISCLAIMER,
-  SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET,
-  fv, fvMonthly, fvSeries, fvDetailedSeries, loanFromPayment, longTermGain,
+  RATE_A, RATE_C, RATE_DISCLAIMER,
+  SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET, RATE_SCENARIOS,
+  IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
+  fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
+  loanFromPayment, longTermGain,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
+import { useLocalStorage } from "./storage.js";
+import { TX, HISTO, WHATIF, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
+import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
+import { supabase } from "./supabaseClient.js";
 
 /* ------------------------------------------------------------------ */
-/*  Persistence                                                        */
+/*  Icône d'alerte par niveau (remplace les emojis 🔴🟡💡)            */
 /* ------------------------------------------------------------------ */
-function useLocalStorage(key, defaultValue) {
-  const [state, setState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : defaultValue;
-    } catch { return defaultValue; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
-  return [state, setState];
+const ALERT_LEVEL_ICON = {
+  red:   { Icon: AlertCircle,   color: "#ef4444" },
+  amber: { Icon: AlertTriangle, color: "#f59e0b" },
+  info:  { Icon: Lightbulb,     color: "#38bdf8" },
+};
+function AlertLevelIcon({ level = "info", size = 15 }) {
+  const { Icon, color } = ALERT_LEVEL_ICON[level] || ALERT_LEVEL_ICON.info;
+  return <Icon size={size} style={{ color, flexShrink: 0 }} aria-hidden="true" />;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Persistence — centralisée dans storage.js (point de swap Supabase)  */
+/* ------------------------------------------------------------------ */
+// `useLocalStorage` est ré-exporté depuis ./storage.js (cf. import en tête).
 
 const CAT_COLORS = {
   Logement: "#2f9bff", WPEA: "#22c79a", Bourse: "#f5a623", Alimentation: "#a855f7",
@@ -163,427 +171,17 @@ const simsYFmt = (v) => {
   return String(v);
 };
 
-/* ------------------------------------------------------------------ */
-/*  Données d'exemple (en mémoire — remplaçables par une vraie API)    */
-/* ------------------------------------------------------------------ */
-const TX = [
-  { id: 1, label: "Versement programmé", cat: "WPEA", type: "investissement", amount: -500 },
-  { id: 2, label: "Investissement Bourse", cat: "Bourse", type: "investissement", amount: -489 },
-  { id: 3, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4781 },
-  { id: 4, label: "Loyer appartement", cat: "Logement", type: "charge_fixe", amount: -900 },
-  { id: 5, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -200 },
-  { id: 6, label: "Frais professionnels", cat: "Frais pro", type: "charge_fixe", amount: -251 },
-  { id: 7, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -100 },
-  { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -381 },
-  { id: 9, label: "Loisirs & sorties", cat: "Loisirs", type: "depense_variable", amount: -269 },
-  { id: 10, label: "Transport", cat: "Transport", type: "depense_variable", amount: -187 },
-];
-
-const HISTO = [
-  { m: "Aoû 2025", rev: 4520, dep: 2250, inv:  980 },
-  { m: "Sep 2025", rev: 4781, dep: 2340, inv:  989 },
-  { m: "Oct 2025", rev: 5100, dep: 2200, inv:  989 },
-  { m: "Nov 2025", rev: 4650, dep: 2280, inv:  989 },
-  { m: "Déc 2025", rev: 3800, dep: 2900, inv:  700 },
-  { m: "Jan 2026", rev: 5500, dep: 2100, inv: 1200 },
-  { m: "Fév 2026", rev: 4781, dep: 2280, inv:  989 },
-  { m: "Mar 2026", rev: 5230, dep: 2480, inv: 1300 },
-  { m: "Avr 2026", rev: 4410, dep: 2510, inv: 1280 },
-  { m: "Mai 2026", rev: 4920, dep: 2470, inv: 1300 },
-  { m: "Jun 2026", rev: 5270, dep: 2480, inv: 1290 },
-  { m: "Jul 2026", rev: 4781, dep: 2350, inv:  989 },
-];
-
-const WHATIF = [
-  { id: "salaire", label: "Négocier une augmentation de +15% sur mon salaire", gain: 717 },
-  { id: "fumer", label: "Arrêter de fumer / vapoter", gain: 90 },
-  { id: "abos", label: "Résilier mes abonnements optionnels", gain: 45 },
-  { id: "repas", label: "Réduire les livraisons de repas de moitié", gain: 60 },
-];
-
-/* ------------------------------------------------------------------ */
-/*  Profils de test                                                    */
-/* ------------------------------------------------------------------ */
-const TEST_PROFILES = [
-  {
-    id: "prudent",
-    label: "Le Prudent",
-    description: "CDI stable, divorcée, disciplinée, faible marge budgétaire",
-    profile: { firstName: "Marie", lastName: "Dupont", age: 38, email: "marie.dupont@email.com" },
-    transactions: [
-      { id: 1, label: "Salaire CDI", cat: "Salaire", type: "revenu", amount: 2500 },
-      { id: 2, label: "Loyer", cat: "Logement", type: "charge_fixe", amount: -900 },
-      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -80 },
-      { id: 4, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -170 },
-      { id: 5, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -60 },
-      { id: 6, label: "Cantine enfant", cat: "Alimentation", type: "depense_variable", amount: -40 },
-      { id: 7, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -300 },
-      { id: 8, label: "Pharmacie", cat: "Santé", type: "depense_variable", amount: -50 },
-      { id: 9, label: "Essence", cat: "Transport", type: "depense_variable", amount: -120 },
-      { id: 10, label: "Loisirs", cat: "Loisirs", type: "depense_variable", amount: -60 },
-      { id: 11, label: "Livret A", cat: "Épargne", type: "investissement", amount: -200 },
-    ],
-    histo: [
-      { m: "Aoû 2023", rev: 2300, dep: 1598, inv: 150 },
-      { m: "Sep 2023", rev: 2308, dep: 1613, inv: 150 },
-      { m: "Oct 2023", rev: 2316, dep: 1610, inv: 150 },
-      { m: "Nov 2023", rev: 2323, dep: 1630, inv: 150 },
-      { m: "Déc 2023", rev: 2931, dep: 2135, inv: 150 },
-      { m: "Jan 2024", rev: 2339, dep: 1682, inv: 150 },
-      { m: "Fév 2024", rev: 2347, dep: 1665, inv: 150 },
-      { m: "Mar 2024", rev: 2355, dep: 1687, inv: 150 },
-      { m: "Avr 2024", rev: 2363, dep: 1683, inv: 150 },
-      { m: "Mai 2024", rev: 2370, dep: 1670, inv: 150 },
-      { m: "Jun 2024", rev: 2378, dep: 1664, inv: 150 },
-      { m: "Jul 2024", rev: 2386, dep: 1668, inv: 150 },
-      { m: "Aoû 2024", rev: 2394, dep: 1706, inv: 150 },
-      { m: "Sep 2024", rev: 2402, dep: 1705, inv: 150 },
-      { m: "Oct 2024", rev: 2410, dep: 1732, inv: 150 },
-      { m: "Nov 2024", rev: 2417, dep: 1729, inv: 150 },
-      { m: "Déc 2024", rev: 3025, dep: 2208, inv: 150 },
-      { m: "Jan 2025", rev: 2433, dep: 1728, inv: 200 },
-      { m: "Fév 2025", rev: 2441, dep: 1754, inv: 200 },
-      { m: "Mar 2025", rev: 2449, dep: 1772, inv: 200 },
-      { m: "Avr 2025", rev: 2457, dep: 1752, inv: 200 },
-      { m: "Mai 2025", rev: 2464, dep: 1762, inv: 200 },
-      { m: "Jun 2025", rev: 2472, dep: 1750, inv: 200 },
-      { m: "Jul 2025", rev: 2480, dep: 1781, inv: 200 },
-      { m: "Aoû 2025", rev: 2500, dep: 1780, inv: 200 },
-      { m: "Sep 2025", rev: 2500, dep: 1750, inv: 200 },
-      { m: "Oct 2025", rev: 2500, dep: 1800, inv: 200 },
-      { m: "Nov 2025", rev: 2500, dep: 1820, inv: 200 },
-      { m: "Déc 2025", rev: 3100, dep: 2280, inv: 200 },
-      { m: "Jan 2026", rev: 2500, dep: 1620, inv: 200 },
-      { m: "Fév 2026", rev: 2500, dep: 1730, inv: 200 },
-      { m: "Mar 2026", rev: 2500, dep: 1760, inv: 200 },
-      { m: "Avr 2026", rev: 2500, dep: 1810, inv: 200 },
-      { m: "Mai 2026", rev: 2500, dep: 1740, inv: 200 },
-      { m: "Jun 2026", rev: 2500, dep: 1790, inv: 200 },
-      { m: "Jul 2026", rev: 2500, dep: 2100, inv: 200 },
-    ],
-    simParams: { monthly: 200, initial: 10000, price: 150000, horizon: 30 },
-    patrimoine: {
-      actifs: [
-        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 12000 }] },
-        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF PEA", value: 18000 }] },
-        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [{ label: "Résidence principale", value: 150000 }] },
-        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
-      ],
-      passifs: [
-        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [{ label: "Prêt résidence principale", value: 95000 }] },
-        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [] },
-      ],
-      historique: [
-        { m: "Juil 2023", v: 45000 }, { m: "Aoû 2023", v: 45677 }, { m: "Sep 2023", v: 46833 },
-        { m: "Oct 2023", v: 47794 }, { m: "Nov 2023", v: 48868 }, { m: "Déc 2023", v: 49570 },
-        { m: "Jan 2024", v: 50776 }, { m: "Fév 2024", v: 51773 }, { m: "Mar 2024", v: 53030 },
-        { m: "Avr 2024", v: 53955 }, { m: "Mai 2024", v: 55219 }, { m: "Jun 2024", v: 56345 },
-        { m: "Juil 2024", v: 57770 }, { m: "Aoû 2024", v: 59251 }, { m: "Sep 2024", v: 60572 },
-        { m: "Oct 2024", v: 61620 }, { m: "Nov 2024", v: 63046 }, { m: "Déc 2024", v: 64522 },
-        { m: "Jan 2025", v: 65780 }, { m: "Fév 2025", v: 67233 }, { m: "Mar 2025", v: 68887 },
-        { m: "Avr 2025", v: 70253 }, { m: "Mai 2025", v: 72062 }, { m: "Jun 2025", v: 73312 },
-        { m: "Juil 2025", v: 75000 }, { m: "Aoû 2025", v: 76000 }, { m: "Sep 2025", v: 76800 },
-        { m: "Oct 2025", v: 77500 }, { m: "Nov 2025", v: 78200 }, { m: "Déc 2025", v: 79000 },
-        { m: "Jan 2026", v: 79800 }, { m: "Fév 2026", v: 80500 }, { m: "Mar 2026", v: 81200 },
-        { m: "Avr 2026", v: 82000 }, { m: "Mai 2026", v: 83500 }, { m: "Jun 2026", v: 85000 },
-      ],
-    },
-  },
-  {
-    id: "interimaire",
-    label: "L'Intérimaire",
-    description: "Intérimaire célibataire, dépenses impulsives, quasi zéro épargne",
-    profile: { firstName: "Lucas", lastName: "Moreau", age: 26, email: "lucas.moreau@email.com" },
-    transactions: [
-      { id: 1, label: "Mission intérim", cat: "Salaire", type: "revenu", amount: 2800 },
-      { id: 2, label: "Loyer coloc", cat: "Logement", type: "charge_fixe", amount: -600 },
-      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -80 },
-      { id: 4, label: "Téléphone", cat: "Abonnements", type: "charge_fixe", amount: -50 },
-      { id: 5, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -300 },
-      { id: 6, label: "Restos & apéros", cat: "Alimentation", type: "depense_variable", amount: -300 },
-      { id: 7, label: "Bars & clubs", cat: "Loisirs", type: "depense_variable", amount: -900 },
-      { id: 8, label: "Jeux & loisirs", cat: "Loisirs", type: "depense_variable", amount: -80 },
-      { id: 9, label: "Essence", cat: "Transport", type: "depense_variable", amount: -100 },
-      { id: 10, label: "Livret A", cat: "Épargne", type: "investissement", amount: -50 },
-    ],
-    histo: [
-      { m: "Aoû 2023", rev: 2587, dep: 2358, inv: 0 },
-      { m: "Sep 2023", rev: 2583, dep: 2340, inv: 0 },
-      { m: "Oct 2023", rev: 2600, dep: 2405, inv: 0 },
-      { m: "Nov 2023", rev: 1400, dep: 1254, inv: 0 },
-      { m: "Déc 2023", rev: 2537, dep: 2902, inv: 0 },
-      { m: "Jan 2024", rev: 2517, dep: 2506, inv: 0 },
-      { m: "Fév 2024", rev: 2584, dep: 2323, inv: 0 },
-      { m: "Mar 2024", rev: 2664, dep: 2413, inv: 0 },
-      { m: "Avr 2024", rev: 0, dep: 1255, inv: 0 },
-      { m: "Mai 2024", rev: 2541, dep: 2372, inv: 0 },
-      { m: "Jun 2024", rev: 2578, dep: 2394, inv: 0 },
-      { m: "Jul 2024", rev: 2571, dep: 2603, inv: 0 },
-      { m: "Aoû 2024", rev: 2640, dep: 2554, inv: 50 },
-      { m: "Sep 2024", rev: 1400, dep: 1292, inv: 0 },
-      { m: "Oct 2024", rev: 2588, dep: 2483, inv: 50 },
-      { m: "Nov 2024", rev: 2537, dep: 2578, inv: 50 },
-      { m: "Déc 2024", rev: 2555, dep: 3086, inv: 50 },
-      { m: "Jan 2025", rev: 2572, dep: 2577, inv: 50 },
-      { m: "Fév 2025", rev: 0, dep: 1309, inv: 0 },
-      { m: "Mar 2025", rev: 2591, dep: 2724, inv: 50 },
-      { m: "Avr 2025", rev: 2559, dep: 2702, inv: 50 },
-      { m: "Mai 2025", rev: 2646, dep: 2689, inv: 50 },
-      { m: "Jun 2025", rev: 0, dep: 1281, inv: 0 },
-      { m: "Jul 2025", rev: 2608, dep: 2595, inv: 50 },
-      { m: "Aoû 2025", rev: 2800, dep: 2750, inv:  50 },
-      { m: "Sep 2025", rev: 1400, dep: 2200, inv:   0 },
-      { m: "Oct 2025", rev: 2800, dep: 2580, inv:  50 },
-      { m: "Nov 2025", rev: 2800, dep: 2650, inv:   0 },
-      { m: "Déc 2025", rev: 2800, dep: 3300, inv:   0 },
-      { m: "Jan 2026", rev:    0, dep: 1350, inv:   0 },
-      { m: "Fév 2026", rev: 2800, dep: 2450, inv:  50 },
-      { m: "Mar 2026", rev: 2800, dep: 2420, inv:  50 },
-      { m: "Avr 2026", rev: 2800, dep: 2750, inv:   0 },
-      { m: "Mai 2026", rev: 1400, dep: 2100, inv:   0 },
-      { m: "Jun 2026", rev: 2800, dep: 2620, inv:  50 },
-      { m: "Jul 2026", rev: 2800, dep: 3150, inv:   0 },
-    ],
-    simParams: { monthly: 50, initial: 2000, price: 150000, horizon: 20 },
-    patrimoine: {
-      actifs: [
-        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 6000 }, { label: "Compte chèques", value: 2000 }] },
-        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "Crypto", value: 2000 }] },
-        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [] },
-        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
-      ],
-      passifs: [
-        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [] },
-        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [{ label: "Découvert bancaire", value: 2000 }] },
-      ],
-      historique: [
-        { m: "Juil 2023", v: 4000 }, { m: "Aoû 2023", v: 3693 }, { m: "Sep 2023", v: 5005 },
-        { m: "Oct 2023", v: 4901 }, { m: "Nov 2023", v: 3986 }, { m: "Déc 2023", v: 5207 },
-        { m: "Jan 2024", v: 5236 }, { m: "Fév 2024", v: 3885 }, { m: "Mar 2024", v: 5177 },
-        { m: "Avr 2024", v: 5289 }, { m: "Mai 2024", v: 4392 }, { m: "Jun 2024", v: 6019 },
-        { m: "Juil 2024", v: 5326 }, { m: "Aoû 2024", v: 5466 }, { m: "Sep 2024", v: 6432 },
-        { m: "Oct 2024", v: 5076 }, { m: "Nov 2024", v: 5627 }, { m: "Déc 2024", v: 6436 },
-        { m: "Jan 2025", v: 5557 }, { m: "Fév 2025", v: 6824 }, { m: "Mar 2025", v: 6850 },
-        { m: "Avr 2025", v: 7317 }, { m: "Mai 2025", v: 6306 }, { m: "Jun 2025", v: 6663 },
-        { m: "Juil 2025", v: 7200 }, { m: "Aoû 2025", v: 6800 }, { m: "Sep 2025", v: 7500 },
-        { m: "Oct 2025", v: 6200 }, { m: "Nov 2025", v: 7800 }, { m: "Déc 2025", v: 6500 },
-        { m: "Jan 2026", v: 7200 }, { m: "Fév 2026", v: 8500 }, { m: "Mar 2026", v: 7000 },
-        { m: "Avr 2026", v: 6800 }, { m: "Mai 2026", v: 7500 }, { m: "Jun 2026", v: 8000 },
-      ],
-    },
-  },
-  {
-    id: "independant",
-    label: "L'Indépendante",
-    description: "Consultante, très disciplinée, stratégie long terme, ~26% d'épargne",
-    profile: { firstName: "Sophie", lastName: "Laurent", age: 35, email: "sophie.laurent@email.com" },
-    transactions: [
-      { id: 1, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4500 },
-      { id: 2, label: "Loyer bureau", cat: "Logement", type: "charge_fixe", amount: -1200 },
-      { id: 3, label: "Électricité", cat: "Logement", type: "charge_fixe", amount: -150 },
-      { id: 4, label: "Assurances pro", cat: "Assurances", type: "charge_fixe", amount: -200 },
-      { id: 5, label: "Santé & retraite", cat: "Assurances", type: "charge_fixe", amount: -150 },
-      { id: 6, label: "Téléphone pro", cat: "Abonnements", type: "charge_fixe", amount: -40 },
-      { id: 7, label: "Logiciels & outils", cat: "Frais pro", type: "charge_fixe", amount: -60 },
-      { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -400 },
-      { id: 9, label: "Restaurant", cat: "Alimentation", type: "depense_variable", amount: -300 },
-      { id: 10, label: "Salle de sport", cat: "Loisirs", type: "depense_variable", amount: -50 },
-      { id: 11, label: "Transport", cat: "Transport", type: "depense_variable", amount: -150 },
-      { id: 12, label: "VPEA ETF World", cat: "WPEA", type: "investissement", amount: -800 },
-      { id: 13, label: "Fonds immo", cat: "Bourse", type: "investissement", amount: -400 },
-    ],
-    histo: [
-      { m: "Aoû 2023", rev: 2401, dep: 1956, inv: 600 },
-      { m: "Sep 2023", rev: 3875, dep: 2083, inv: 650 },
-      { m: "Oct 2023", rev: 3036, dep: 2083, inv: 650 },
-      { m: "Nov 2023", rev: 2829, dep: 2115, inv: 700 },
-      { m: "Déc 2023", rev: 2967, dep: 2540, inv: 500 },
-      { m: "Jan 2024", rev: 2717, dep: 2132, inv: 750 },
-      { m: "Fév 2024", rev: 2933, dep: 2018, inv: 750 },
-      { m: "Mar 2024", rev: 4421, dep: 2164, inv: 800 },
-      { m: "Avr 2024", rev: 2556, dep: 2080, inv: 800 },
-      { m: "Mai 2024", rev: 2625, dep: 2085, inv: 850 },
-      { m: "Jun 2024", rev: 3055, dep: 2184, inv: 850 },
-      { m: "Jul 2024", rev: 3710, dep: 2177, inv: 900 },
-      { m: "Aoû 2024", rev: 4793, dep: 2095, inv: 900 },
-      { m: "Sep 2024", rev: 3809, dep: 2187, inv: 950 },
-      { m: "Oct 2024", rev: 4661, dep: 2235, inv: 950 },
-      { m: "Nov 2024", rev: 2681, dep: 2261, inv: 1000 },
-      { m: "Déc 2024", rev: 2995, dep: 2711, inv: 700 },
-      { m: "Jan 2025", rev: 4897, dep: 2198, inv: 1050 },
-      { m: "Fév 2025", rev: 4232, dep: 2197, inv: 1050 },
-      { m: "Mar 2025", rev: 3071, dep: 2230, inv: 1100 },
-      { m: "Avr 2025", rev: 3081, dep: 2313, inv: 1100 },
-      { m: "Mai 2025", rev: 4317, dep: 2221, inv: 1150 },
-      { m: "Jun 2025", rev: 4970, dep: 2319, inv: 1150 },
-      { m: "Jul 2025", rev: 3276, dep: 2211, inv: 1200 },
-      { m: "Aoû 2025", rev: 4500, dep: 2300, inv: 1200 },
-      { m: "Sep 2025", rev: 5200, dep: 2250, inv: 1200 },
-      { m: "Oct 2025", rev: 6100, dep: 2400, inv: 1200 },
-      { m: "Nov 2025", rev: 4800, dep: 2350, inv: 1200 },
-      { m: "Déc 2025", rev: 3000, dep: 2900, inv:  800 },
-      { m: "Jan 2026", rev: 7000, dep: 2200, inv: 1400 },
-      { m: "Fév 2026", rev: 4500, dep: 2300, inv: 1200 },
-      { m: "Mar 2026", rev: 5000, dep: 2350, inv: 1200 },
-      { m: "Avr 2026", rev: 4200, dep: 2300, inv: 1200 },
-      { m: "Mai 2026", rev: 5500, dep: 2400, inv: 1200 },
-      { m: "Jun 2026", rev: 6000, dep: 2350, inv: 1400 },
-      { m: "Jul 2026", rev: 3500, dep: 2500, inv:  800 },
-    ],
-    simParams: { monthly: 1200, initial: 50000, price: 250000, horizon: 30 },
-    patrimoine: {
-      actifs: [
-        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "Livret A", value: 25000 }, { label: "Compte chèques", value: 5000 }] },
-        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF World PEA", value: 100000 }, { label: "Actions", value: 20000 }] },
-        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [{ label: "Résidence principale", value: 200000 }] },
-        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
-      ],
-      passifs: [
-        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [{ label: "Prêt résidence principale", value: 65000 }] },
-        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [] },
-      ],
-      historique: [
-        { m: "Juil 2023", v: 160000 }, { m: "Aoû 2023", v: 162448 }, { m: "Sep 2023", v: 166975 },
-        { m: "Oct 2023", v: 167084 }, { m: "Nov 2023", v: 171176 }, { m: "Déc 2023", v: 172881 },
-        { m: "Jan 2024", v: 177169 }, { m: "Fév 2024", v: 180912 }, { m: "Mar 2024", v: 183561 },
-        { m: "Avr 2024", v: 186122 }, { m: "Mai 2024", v: 190143 }, { m: "Jun 2024", v: 192027 },
-        { m: "Juil 2024", v: 195064 }, { m: "Aoû 2024", v: 198269 }, { m: "Sep 2024", v: 203466 },
-        { m: "Oct 2024", v: 206071 }, { m: "Nov 2024", v: 209557 }, { m: "Déc 2024", v: 215058 },
-        { m: "Jan 2025", v: 216087 }, { m: "Fév 2025", v: 219611 }, { m: "Mar 2025", v: 225281 },
-        { m: "Avr 2025", v: 228217 }, { m: "Mai 2025", v: 231345 }, { m: "Jun 2025", v: 236637 },
-        { m: "Juil 2025", v: 240000 }, { m: "Aoû 2025", v: 245000 }, { m: "Sep 2025", v: 250000 },
-        { m: "Oct 2025", v: 254000 }, { m: "Nov 2025", v: 259000 }, { m: "Déc 2025", v: 263000 },
-        { m: "Jan 2026", v: 267000 }, { m: "Fév 2026", v: 271000 }, { m: "Mar 2026", v: 275000 },
-        { m: "Avr 2026", v: 278000 }, { m: "Mai 2026", v: 281000 }, { m: "Jun 2026", v: 285000 },
-      ],
-    },
-  },
-  {
-    id: "etudiant",
-    label: "L'Étudiant",
-    description: "Étudiant en fin de cursus, revenus modestes, charges légères, début d'épargne",
-    profile: { firstName: "Tom", lastName: "Bernard", age: 26, email: "tom.bernard@email.com" },
-    transactions: [
-      { id: 1, label: "Salaire alternance / job", cat: "Salaire", type: "revenu", amount: 1800 },
-      { id: 2, label: "Loyer", cat: "Logement", type: "charge_fixe", amount: -500 },
-      { id: 3, label: "Prêt étudiant", cat: "Remboursements", type: "charge_fixe", amount: -200 },
-      { id: 4, label: "Prêt téléphone", cat: "Abonnements", type: "charge_fixe", amount: -50 },
-      { id: 5, label: "Abonnements divers", cat: "Abonnements", type: "charge_fixe", amount: -50 },
-      { id: 6, label: "Salle de sport", cat: "Transport", type: "charge_fixe", amount: -30 },
-      { id: 7, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -150 },
-      { id: 8, label: "Transports", cat: "Transport", type: "depense_variable", amount: -70 },
-      { id: 9, label: "Sorties & loisirs", cat: "Transport", type: "depense_variable", amount: -100 },
-      { id: 10, label: "ETF World PEA", cat: "Épargne", type: "investissement", amount: -750 },
-    ],
-    histo: [
-      { m: "Aoû 2023", rev: 1300, dep: 734, inv: 0 },
-      { m: "Sep 2023", rev: 1320, dep: 745, inv: 0 },
-      { m: "Oct 2023", rev: 1339, dep: 759, inv: 0 },
-      { m: "Nov 2023", rev: 1359, dep: 774, inv: 0 },
-      { m: "Déc 2023", rev: 1378, dep: 956, inv: 0 },
-      { m: "Jan 2024", rev: 1398, dep: 754, inv: 0 },
-      { m: "Fév 2024", rev: 1417, dep: 787, inv: 400 },
-      { m: "Mar 2024", rev: 1437, dep: 797, inv: 400 },
-      { m: "Avr 2024", rev: 1457, dep: 789, inv: 400 },
-      { m: "Mai 2024", rev: 1476, dep: 817, inv: 400 },
-      { m: "Jun 2024", rev: 1496, dep: 795, inv: 400 },
-      { m: "Jul 2024", rev: 1515, dep: 832, inv: 400 },
-      { m: "Aoû 2024", rev: 1535, dep: 793, inv: 400 },
-      { m: "Sep 2024", rev: 1554, dep: 815, inv: 400 },
-      { m: "Oct 2024", rev: 1574, dep: 839, inv: 650 },
-      { m: "Nov 2024", rev: 1593, dep: 814, inv: 650 },
-      { m: "Déc 2024", rev: 1613, dep: 1005, inv: 650 },
-      { m: "Jan 2025", rev: 1633, dep: 846, inv: 650 },
-      { m: "Fév 2025", rev: 1652, dep: 848, inv: 650 },
-      { m: "Mar 2025", rev: 1672, dep: 843, inv: 650 },
-      { m: "Avr 2025", rev: 1691, dep: 856, inv: 650 },
-      { m: "Mai 2025", rev: 1711, dep: 863, inv: 650 },
-      { m: "Jun 2025", rev: 1730, dep: 876, inv: 650 },
-      { m: "Jul 2025", rev: 1750, dep: 859, inv: 650 },
-      { m: "Aoû 2025", rev: 1800, dep: 900, inv: 750 },
-      { m: "Sep 2025", rev: 1800, dep: 950, inv: 750 },
-      { m: "Oct 2025", rev: 1800, dep: 880, inv: 750 },
-      { m: "Nov 2025", rev: 1800, dep: 920, inv: 750 },
-      { m: "Déc 2025", rev: 1800, dep: 1100, inv: 500 },
-      { m: "Jan 2026", rev: 1800, dep: 870, inv: 750 },
-      { m: "Fév 2026", rev: 1800, dep: 910, inv: 750 },
-      { m: "Mar 2026", rev: 1800, dep: 890, inv: 750 },
-      { m: "Avr 2026", rev: 1800, dep: 940, inv: 750 },
-      { m: "Mai 2026", rev: 1800, dep: 860, inv: 750 },
-      { m: "Jun 2026", rev: 1800, dep: 930, inv: 750 },
-      { m: "Jul 2026", rev: 1800, dep: 980, inv: 750 },
-    ],
-    simParams: { monthly: 750, initial: 16000, price: 150000, horizon: 30 },
-    patrimoine: {
-      actifs: [
-        { id: "liquidites", label: "Épargne liquide", color: "#0369a1", items: [{ label: "LDDS", value: 12000 }, { label: "Livret A", value: 1500 }] },
-        { id: "investissements", label: "Investissements", color: "#22d3ee", items: [{ label: "ETF World", value: 2500 }, { label: "Bitcoin", value: 500 }] },
-        { id: "immobilier", label: "Immobilier", color: "#2f9bff", items: [] },
-        { id: "autres", label: "Autres actifs", color: "#f5a623", items: [] },
-      ],
-      passifs: [
-        { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f", items: [] },
-        { id: "autresDettes", label: "Autres dettes", color: "#ff8c42", items: [{ label: "Prêt étudiant (0 %)", value: 23500 }] },
-      ],
-      historique: [
-        { m: "Juil 2023", v: -22500 }, { m: "Aoû 2023", v: -22283 }, { m: "Sep 2023", v: -21845 },
-        { m: "Oct 2023", v: -21461 }, { m: "Nov 2023", v: -21229 }, { m: "Déc 2023", v: -20846 },
-        { m: "Jan 2024", v: -20794 }, { m: "Fév 2024", v: -20145 }, { m: "Mar 2024", v: -19946 },
-        { m: "Avr 2024", v: -19278 }, { m: "Mai 2024", v: -19084 }, { m: "Jun 2024", v: -18627 },
-        { m: "Juil 2024", v: -17982 }, { m: "Aoû 2024", v: -17379 }, { m: "Sep 2024", v: -16972 },
-        { m: "Oct 2024", v: -16703 }, { m: "Nov 2024", v: -15973 }, { m: "Déc 2024", v: -15384 },
-        { m: "Jan 2025", v: -14904 }, { m: "Fév 2025", v: -14314 }, { m: "Mar 2025", v: -13513 },
-        { m: "Avr 2025", v: -12875 }, { m: "Mai 2025", v: -12211 }, { m: "Jun 2025", v: -11664 },
-        { m: "Juil 2025", v: -11000 }, { m: "Aoû 2025", v: -10400 }, { m: "Sep 2025", v: -9800 },
-        { m: "Oct 2025", v: -9300 },  { m: "Nov 2025", v: -8900 },  { m: "Déc 2025", v: -8600 },
-        { m: "Jan 2026", v: -8200 },  { m: "Fév 2026", v: -7900 },  { m: "Mar 2026", v: -7700 },
-        { m: "Avr 2026", v: -7700 },  { m: "Mai 2026", v: -7600 },  { m: "Jun 2026", v: -7500 },
-      ],
-    },
-  },
-];
-
-const DEFAULT_PATRIMOINE = {
-  actifs: [
-    { id: "liquidites", label: "Épargne liquide", color: "#0369a1",
-      items: [{ label: "Livret A", value: 17000 }, { label: "Compte chèques", value: 5500 }] },
-    { id: "investissements", label: "Investissements", color: "#22d3ee",
-      items: [{ label: "ETF World PEA", value: 40000 }, { label: "Actions", value: 5000 }] },
-    { id: "immobilier", label: "Immobilier", color: "#2f9bff",
-      items: [{ label: "Résidence principale", value: 200000 }] },
-    { id: "autres", label: "Autres actifs", color: "#f5a623",
-      items: [{ label: "Voiture", value: 8000 }, { label: "Valuables", value: 2000 }] },
-  ],
-  passifs: [
-    { id: "creditImmo", label: "Crédit immobilier", color: "#ff5a5f",
-      items: [{ label: "Prêt résidence principale", value: 125000 }] },
-    { id: "autresDettes", label: "Autres dettes", color: "#ff8c42",
-      items: [{ label: "Crédit conso", value: 5000 }, { label: "Découvert", value: 5000 }] },
-  ],
-  historique: [
-    { m: "Juil 2023", v: 68000 },  { m: "Aoû 2023", v: 69200 },  { m: "Sep 2023", v: 70500 },
-    { m: "Oct 2023", v: 71900 },  { m: "Nov 2023", v: 73000 },  { m: "Déc 2023", v: 74500 },
-    { m: "Jan 2024", v: 76200 },  { m: "Fév 2024", v: 77800 },  { m: "Mar 2024", v: 79500 },
-    { m: "Avr 2024", v: 81000 },  { m: "Mai 2024", v: 82800 },  { m: "Jun 2024", v: 84500 },
-    { m: "Juil 2024", v: 86400 }, { m: "Aoû 2024", v: 88200 },  { m: "Sep 2024", v: 90100 },
-    { m: "Oct 2024", v: 92000 },  { m: "Nov 2024", v: 93900 },  { m: "Déc 2024", v: 95800 },
-    { m: "Jan 2025", v: 98000 },  { m: "Fév 2025", v: 100100 }, { m: "Mar 2025", v: 102300 },
-    { m: "Avr 2025", v: 104600 }, { m: "Mai 2025", v: 107200 }, { m: "Jun 2025", v: 109500 },
-    { m: "Juil 2025", v: 111000 }, { m: "Aoû 2025", v: 113500 }, { m: "Sep 2025", v: 116500 },
-    { m: "Oct 2025", v: 119000 }, { m: "Nov 2025", v: 121500 }, { m: "Déc 2025", v: 123000 },
-    { m: "Jan 2026", v: 124500 }, { m: "Fév 2026", v: 126000 }, { m: "Mar 2026", v: 127250 },
-    { m: "Avr 2026", v: 126500 }, { m: "Mai 2026", v: 127250 }, { m: "Jun 2026", v: 142500 },
-  ],
-};
+/* Données d'exemple / seed : extraites dans ./seedData.js (cf. import en tête). */
 
 /* ------------------------------------------------------------------ */
 /*  Petits composants UI                                               */
 /* ------------------------------------------------------------------ */
 function Card({ children, style, className = "" }) {
+  const T = useT();
   return (
     <div
       className={"rounded-2xl p-5 " + className}
-      style={{ background: C.card, border: `1px solid ${C.border}`, ...style }}
+      style={{ background: T.card, border: `1px solid ${T.border}`, ...style }}
     >
       {children}
     </div>
@@ -591,10 +189,11 @@ function Card({ children, style, className = "" }) {
 }
 
 function Stat({ label, value, color, icon: Icon }) {
+  const T = useT();
   return (
     <Card className="flex-1" style={{ minWidth: 160 }}>
       <div className="flex items-start justify-between">
-        <span className="text-sm" style={{ color: C.muted }}>{label}</span>
+        <span className="text-sm" style={{ color: T.muted }}>{label}</span>
         {Icon && <Icon size={18} style={{ color }} />}
       </div>
       <div className="text-2xl font-bold mt-3" style={{ color }}>{value}</div>
@@ -603,10 +202,11 @@ function Stat({ label, value, color, icon: Icon }) {
 }
 
 function Badge({ tone = "neutral", icon: Icon, label }) {
+  const T = useT();
   const palette = {
-    green:   { bg: "rgba(0,200,150,0.12)",  color: C.green },
-    red:     { bg: "rgba(255,92,122,0.12)", color: C.red },
-    neutral: { bg: "rgba(255,255,255,0.05)", color: C.muted },
+    green:   { bg: "rgba(0,200,150,0.12)",  color: T.green },
+    red:     { bg: "rgba(255,92,122,0.12)", color: T.red },
+    neutral: { bg: "rgba(255,255,255,0.05)", color: T.muted },
   };
   const { bg, color } = palette[tone] || palette.neutral;
   return (
@@ -618,14 +218,15 @@ function Badge({ tone = "neutral", icon: Icon, label }) {
 }
 
 function KpiCard({ label, value, valueColor, sub, flashRef }) {
+  const T = useT();
   return (
     <Card style={{ position: "relative", overflow: "hidden" }}>
       {flashRef && (
         <div ref={flashRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "inherit" }} />
       )}
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div className="text-sm mb-3" style={{ color: C.muted }}>{label}</div>
-        <div className="text-3xl font-bold mb-2 truncate" style={{ color: valueColor || C.text }}>{value}</div>
+        <div className="text-sm mb-3" style={{ color: T.muted }}>{label}</div>
+        <div className="text-3xl font-bold mb-2 truncate" style={{ color: valueColor || T.text }}>{value}</div>
         <div className="flex items-center gap-1.5 text-xs flex-wrap">{sub}</div>
       </div>
     </Card>
@@ -633,14 +234,15 @@ function KpiCard({ label, value, valueColor, sub, flashRef }) {
 }
 
 function Pill({ children, active, onClick }) {
+  const T = useT();
   return (
     <button
       onClick={onClick}
       className="px-4 py-2 rounded-xl text-sm font-medium transition"
       style={{
-        background: active ? C.blue : "rgba(255,255,255,0.04)",
-        color: active ? "#fff" : C.muted,
-        border: `1px solid ${active ? C.blue : C.border}`,
+        background: active ? T.blue : "rgba(255,255,255,0.04)",
+        color: active ? "#fff" : T.muted,
+        border: `1px solid ${active ? T.blue : T.border}`,
       }}
     >
       {children}
@@ -648,13 +250,13 @@ function Pill({ children, active, onClick }) {
   );
 }
 
-const chartTip = {
+const makeChartTip = (T) => ({
   contentStyle: {
-    background: C.panel, border: `1px solid ${C.border}`,
-    borderRadius: 12, color: C.text,
+    background: T.panel, border: `1px solid ${T.border}`,
+    borderRadius: 12, color: T.text,
   },
-  labelStyle: { color: C.muted },
-};
+  labelStyle: { color: T.muted },
+});
 
 // Étiquette % au centre des segments d'un donut Recharts
 const renderDonutPctLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
@@ -670,14 +272,14 @@ const renderDonutPctLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, perce
   );
 };
 
-const inputStyle = {
+const makeInputStyle = (T) => ({
   background: "rgba(255,255,255,0.04)",
-  border: `1px solid ${C.border}`,
-  color: C.text,
+  border: `1px solid ${T.border}`,
+  color: T.text,
   borderRadius: 12,
   padding: "10px 14px",
   width: "100%",
-};
+});
 
 /* ------------------------------------------------------------------ */
 /*  NAVIGATION                                                         */
@@ -702,6 +304,7 @@ function canAccess(plan, feature) {
 }
 
 function PaywallBanner({ feature, plan, onUpgrade }) {
+  const T = useT();
   const FEATURE_DETAILS = {
     simulations: {
       title: "Simulations avancées",
@@ -764,7 +367,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
         <Lock size={24} style={{ color: P.color }} />
       </div>
       <div>
-        <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 10 }}>{details.title}</div>
+        <div style={{ color: T.text, fontWeight: 800, fontSize: 22, marginBottom: 10 }}>{details.title}</div>
         <div style={{ color: P.color, fontWeight: 600, fontSize: 14, marginBottom: 16, fontStyle: "italic" }}>{details.hook}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
           {details.bullets.map((b, i) => (
@@ -796,6 +399,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
 /*  PRICING PAGE                                                        */
 /* ------------------------------------------------------------------ */
 function PricingPage({ plan, setPlan }) {
+  const T = useT();
   const [billing, setBilling] = useState("monthly"); // "monthly" | "annual"
   const tiers = [
     {
@@ -864,31 +468,31 @@ function PricingPage({ plan, setPlan }) {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Choisissez votre formule</h1>
-        <p style={{ color: C.muted, marginTop: 6 }}>Sans engagement · Résiliable à tout moment · Données locales par défaut</p>
+        <h1 className="text-3xl font-bold" style={{ color: T.text }}>Choisissez votre formule</h1>
+        <p style={{ color: T.muted, marginTop: 6 }}>Sans engagement · Résiliable à tout moment · Données locales par défaut</p>
       </div>
 
       {/* Toggle mensuel / annuel */}
-      <div className="inline-flex items-center gap-1 p-1 rounded-full self-start" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}` }}>
+      <div className="inline-flex items-center gap-1 p-1 rounded-full self-start" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}` }}>
         <button onClick={() => setBilling("monthly")} style={{
           padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
-          background: billing === "monthly" ? C.gradientPrimary : "transparent",
-          color: billing === "monthly" ? "#fff" : C.muted,
+          background: billing === "monthly" ? T.gradientPrimary : "transparent",
+          color: billing === "monthly" ? "#fff" : T.muted,
           transition: "all 0.2s",
         }}>
           Mensuel
         </button>
         <button onClick={() => setBilling("annual")} className="flex items-center gap-2" style={{
           padding: "8px 18px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
-          background: billing === "annual" ? C.gradientPrimary : "transparent",
-          color: billing === "annual" ? "#fff" : C.muted,
+          background: billing === "annual" ? T.gradientPrimary : "transparent",
+          color: billing === "annual" ? "#fff" : T.muted,
           transition: "all 0.2s",
         }}>
           Annuel
           <span style={{
             fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 10,
-            background: billing === "annual" ? "rgba(255,255,255,0.22)" : `${C.green}22`,
-            color: billing === "annual" ? "#fff" : C.green,
+            background: billing === "annual" ? "rgba(255,255,255,0.22)" : `${T.green}22`,
+            color: billing === "annual" ? "#fff" : T.green,
           }}>
             -17 %
           </span>
@@ -904,8 +508,8 @@ function PricingPage({ plan, setPlan }) {
           const period = isFree ? tier.period : billing === "annual" ? "an" : "mois";
           return (
             <div key={tier.id} style={{
-              background: C.panel,
-              border: `2px solid ${active ? tier.color : tier.id === "pro" ? tier.color + "44" : C.border}`,
+              background: T.panel,
+              border: `2px solid ${active ? tier.color : tier.id === "pro" ? tier.color + "44" : T.border}`,
               borderRadius: 20, padding: "28px 24px",
               display: "flex", flexDirection: "column", gap: 20,
               position: "relative",
@@ -927,11 +531,11 @@ function PricingPage({ plan, setPlan }) {
               <div>
                 <div style={{ color: tier.color, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>{tier.label}</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ color: C.text, fontWeight: 900, fontSize: 32 }}>{price}</span>
-                  <span style={{ color: C.muted, fontSize: 13 }}>/{period}</span>
+                  <span style={{ color: T.text, fontWeight: 900, fontSize: 32 }}>{price}</span>
+                  <span style={{ color: T.muted, fontSize: 13 }}>/{period}</span>
                 </div>
                 {billing === "annual" && !isFree && (
-                  <div style={{ color: C.green, fontSize: 12, fontWeight: 600, marginTop: 4 }}>
+                  <div style={{ color: T.green, fontSize: 12, fontWeight: 600, marginTop: 4 }}>
                     ≈ {tier.annualEquiv} · 2 mois offerts
                   </div>
                 )}
@@ -947,13 +551,13 @@ function PricingPage({ plan, setPlan }) {
                 {tier.features.map((f) => (
                   <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <Check size={14} style={{ color: tier.color, flexShrink: 0 }} />
-                    <span style={{ color: C.text }}>{f}</span>
+                    <span style={{ color: T.text }}>{f}</span>
                   </div>
                 ))}
                 {tier.locked.map((f) => (
                   <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, opacity: 0.4 }}>
-                    <Lock size={13} style={{ color: C.muted, flexShrink: 0 }} />
-                    <span style={{ color: C.muted, textDecoration: "line-through" }}>{f}</span>
+                    <Lock size={13} style={{ color: T.muted, flexShrink: 0 }} />
+                    <span style={{ color: T.muted, textDecoration: "line-through" }}>{f}</span>
                   </div>
                 ))}
               </div>
@@ -979,38 +583,38 @@ function PricingPage({ plan, setPlan }) {
 
       {/* Garanties sécurité */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(91,141,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Fingerprint size={18} style={{ color: C.blue }} />
+            <Fingerprint size={18} style={{ color: T.blue }} />
           </div>
           <div>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Connexion biométrique</div>
-            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>Face ID / empreinte digitale, disponible sur tous les plans dès l'activation.</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Connexion biométrique</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Face ID / empreinte digitale, disponible sur tous les plans dès l'activation.</div>
           </div>
         </div>
-        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Gift size={18} style={{ color: "#22c55e" }} />
           </div>
           <div>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
-            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>Sur Pro et Couple. Carte bancaire requise pour l'activation (pré-autorisation), débit automatique à l'issue des 7 jours sauf annulation.</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Sur Pro et Couple. Carte bancaire requise pour l'activation (pré-autorisation), débit automatique à l'issue des 7 jours sauf annulation.</div>
           </div>
         </div>
-        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <ShieldCheck size={18} style={{ color: "#a855f7" }} />
           </div>
           <div>
-            <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Partage de compte vérifié</div>
-            <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>En mode Couple, l'accès partagé est chiffré de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant.</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Partage de compte vérifié</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>En mode Couple, l'accès partagé est chiffré de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant.</div>
           </div>
         </div>
       </div>
 
       {/* FAQ */}
-      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, padding: "28px 32px" }}>
-        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Questions fréquentes</h2>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: "28px 32px" }}>
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Questions fréquentes</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {[
             { q: "Mes données sont-elles en sécurité ?", r: "Par défaut, toutes vos données restent locales sur votre appareil et ne sont transmises à aucun serveur tiers." },
@@ -1020,15 +624,15 @@ function PricingPage({ plan, setPlan }) {
             { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant — vos données restent privées." },
             { q: "Comment fonctionne le Bilan PDF ?", r: "Il génère un document professionnel de plusieurs pages : synthèse patrimoniale, analyse budgétaire, projections IF et recommandations — prêt à partager avec un conseiller." },
           ].map(({ q, r }) => (
-            <div key={q} style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 14 }}>
-              <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{q}</div>
-              <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{r}</div>
+            <div key={q} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 14 }}>
+              <div style={{ color: T.text, fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{q}</div>
+              <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{r}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <p style={{ color: C.muted, fontSize: 11, textAlign: "center" }}>
+      <p style={{ color: T.muted, fontSize: 11, textAlign: "center" }}>
         WealthTrack n'est pas un Conseiller en Investissement Financier. Les simulations sont fournies à titre indicatif.
       </p>
     </div>
@@ -1036,6 +640,7 @@ function PricingPage({ plan, setPlan }) {
 }
 
 function Sidebar({ view, setView, profile, plan, setPlan }) {
+  const T = useT();
   const items = [
     { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "finances",    label: "Finances",           icon: ListTree },
@@ -1057,15 +662,15 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   return (
     <aside
       className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
-      style={{ width: 270, borderRight: `1px solid ${C.border}`, borderRadius: 0 }}
+      style={{ width: 270, borderRight: `1px solid ${T.border}`, borderRadius: 0 }}
     >
       <div className="flex items-center gap-3 px-3 py-5 mb-1">
         <div className="rounded-lg p-1.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-          <BarChart3 size={18} style={{ color: C.blue }} />
+          <BarChart3 size={18} style={{ color: T.blue }} />
         </div>
         <div>
-          <span className="text-base font-semibold tracking-tight" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
-          <div className="text-xs" style={{ color: C.muted }}>Gestion patrimoniale</div>
+          <span className="text-base font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+          <div className="text-xs" style={{ color: T.muted }}>Gestion patrimoniale</div>
         </div>
       </div>
       {items.map((it) => {
@@ -1078,20 +683,20 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             onClick={() => setView(it.id)}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition"
             style={{
-              background: active ? C.gradientPrimary : "transparent",
-              boxShadow: active ? glow(C.violet, 24, "33") : "none",
-              color: active ? "#fff" : locked ? C.muted + "88" : C.muted,
+              background: active ? T.gradientPrimary : "transparent",
+              boxShadow: active ? glow(T.violet, 24, "33") : "none",
+              color: active ? "#fff" : locked ? T.muted + "88" : T.muted,
               fontWeight: active ? 600 : 500,
             }}
           >
             <Icon size={20} />
             <span style={{ flex: 1 }}>{it.label}</span>
-            {locked && <Lock size={12} style={{ color: C.muted, opacity: 0.5 }} />}
+            {locked && <Lock size={12} style={{ color: T.muted, opacity: 0.5 }} />}
           </button>
         );
       })}
 
-      <div className="mt-auto border-t" style={{ borderColor: C.border }}>
+      <div className="mt-auto border-t" style={{ borderColor: T.border }}>
         {/* Upgrade CTA */}
         {plan !== "couple" && (
           <button
@@ -1106,11 +711,11 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         )}
         <div className="px-3 py-4 flex items-center gap-3">
           <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
-            style={{ background: "rgba(91,141,239,0.12)", color: C.blue, border: `1px solid ${C.blue}22` }}>
+            style={{ background: "rgba(91,141,239,0.12)", color: T.blue, border: `1px solid ${T.blue}22` }}>
             {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "—"}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium truncate" style={{ color: C.text }}>
+            <div className="text-sm font-medium truncate" style={{ color: T.text }}>
               {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Mon compte"}
             </div>
             <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
@@ -1119,7 +724,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           </div>
         </div>
         <div className="px-3 pb-4">
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
             <Shield size={11} />
             <span>Données locales par défaut</span>
           </div>
@@ -1133,8 +738,9 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 /*  ÉCRAN : TABLEAU DE BORD                                            */
 /* ------------------------------------------------------------------ */
 function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile }) {
+  const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
-  const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? C.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? C.amber : C.red;
+  const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
   const [active, setActive] = useState({});
   const [shareOpen, setShareOpen] = useState(false);
@@ -1175,15 +781,15 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       celebrate({
         cardEl: streakRef.current, ringEl: streakRingRef.current,
         confettiEl: streakConfettiRef.current,
-        color: newRecord ? C.amber : C.green,
-        confettiColors: newRecord ? [C.amber, C.green, "#ffd166"] : CONFETTI_COLORS,
+        color: newRecord ? T.amber : T.green,
+        confettiColors: newRecord ? [T.amber, T.green, "#ffd166"] : CONFETTI_COLORS,
       });
       if (newRecord) {
         triggerStreakToast({
-          icon: <Trophy size={18} style={{ color: C.amber }} />,
+          icon: <Trophy size={18} style={{ color: T.amber }} />,
           title: `Nouveau record : ${savingsStreak} mois d'épargne consécutifs !`,
           subtitle: "Votre meilleure série jusqu'ici.",
-          color: C.amber,
+          color: T.amber,
         });
       }
     }
@@ -1206,15 +812,15 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Tableau de bord</h1>
-        <p style={{ color: C.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
+        <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Tableau de bord</h1>
+        <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
       </div>
 
       <div className="flex gap-4 flex-wrap">
-        <Stat label="Revenus" value={eur(revenus)} color={C.green} icon={ArrowUpRight} />
-        <Stat label="Charges fixes" value={eur(chargesFixes)} color={C.red} icon={ArrowDownRight} />
-        <Stat label="Dépenses variables" value={eur(depensesVar)} color={C.amber} icon={ArrowDownRight} />
-        <Stat label="Investissements" value={eur(invest)} color={C.cyan} icon={PiggyBank} />
+        <Stat label="Revenus" value={eur(revenus)} color={T.green} icon={ArrowUpRight} />
+        <Stat label="Charges fixes" value={eur(chargesFixes)} color={T.red} icon={ArrowDownRight} />
+        <Stat label="Dépenses variables" value={eur(depensesVar)} color={T.amber} icon={ArrowDownRight} />
+        <Stat label="Investissements" value={eur(invest)} color={T.cyan} icon={PiggyBank} />
       </div>
 
       {/* Score de santé gamifié */}
@@ -1229,7 +835,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                   <div className="w-3 h-3 rounded-full" style={{ background: badge.color }} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
+                  <h2 className="text-xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
                   <span className="text-xs font-medium px-2 py-0.5 rounded"
                     style={{ background: badge.color + "18", color: badge.color }}>
                     {badge.level}
@@ -1241,34 +847,34 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                 <div ref={streakRef} style={{
                   position: "relative", display: "flex", alignItems: "center", gap: 6,
                   padding: "6px 12px", borderRadius: 999,
-                  background: "rgba(240,168,72,0.12)", border: `1px solid ${C.amber}44`,
+                  background: "rgba(240,168,72,0.12)", border: `1px solid ${T.amber}44`,
                 }}>
                   <div ref={streakConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
                   <div ref={streakRingRef} style={{
                     position: "absolute", inset: -3, borderRadius: 999,
-                    border: `2px solid ${C.amber}`, opacity: 0, pointerEvents: "none",
+                    border: `2px solid ${T.amber}`, opacity: 0, pointerEvents: "none",
                   }} />
-                  <Flame size={14} style={{ color: C.amber }} />
-                  <span style={{ color: C.amber, fontWeight: 800, fontSize: 13 }}>
+                  <Flame size={14} style={{ color: T.amber }} />
+                  <span style={{ color: T.amber, fontWeight: 800, fontSize: 13 }}>
                     <AnimatedNumber value={savingsStreak} />
                   </span>
-                  <span style={{ color: C.muted, fontSize: 11 }}>
-                    mois d'épargne {isNewStreakRecord && <b style={{ color: C.amber }}>· record !</b>}
+                  <span style={{ color: T.muted, fontSize: 11 }}>
+                    mois d'épargne {isNewStreakRecord && <b style={{ color: T.amber }}>· record !</b>}
                   </span>
                 </div>
               )}
             </div>
             <div className="mb-4">
               <span className="font-black" style={{ fontSize: 52, color: badge.color }}>{healthScore.overall}</span>
-              <span className="text-2xl font-normal" style={{ color: C.muted }}>/100</span>
+              <span className="text-2xl font-normal" style={{ color: T.muted }}>/100</span>
             </div>
-            <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>
               DÉTAIL PAR CRITÈRE
             </div>
             {Object.values(healthScore.breakdown).map((b) => (
               <div key={b.label} className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: C.text }}>{b.label}</span>
+                  <span style={{ color: T.text }}>{b.label}</span>
                   <span style={{ color: badge.color }}>{b.score}/{b.max} pts</span>
                 </div>
                 <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -1290,7 +896,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
               <button
                 onClick={() => generatePDFReport(totals, patrimoine, healthScore, badge, profile, simParams)}
                 className="rounded-xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2"
-                style={{ background: "rgba(91,141,239,0.1)", color: C.blue, border: `1px solid ${C.blue}33` }}>
+                style={{ background: "rgba(91,141,239,0.1)", color: T.blue, border: `1px solid ${T.blue}33` }}>
                 <FileText size={14} /> Bilan PDF patrimonial
               </button>
             ) : (
@@ -1301,9 +907,9 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                 <Lock size={14} /> Bilan PDF — Pro
               </button>
             )}
-            <div className="rounded-xl p-3 text-xs flex-1" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-              <div className="font-semibold mb-2" style={{ color: C.text }}>Pour progresser :</div>
-              <ul style={{ color: C.muted, paddingLeft: 14, lineHeight: 1.8, margin: 0 }}>
+            <div className="rounded-xl p-3 text-xs flex-1" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+              <div className="font-semibold mb-2" style={{ color: T.text }}>Pour progresser :</div>
+              <ul style={{ color: T.muted, paddingLeft: 14, lineHeight: 1.8, margin: 0 }}>
                 {tauxEpargne < SAVINGS_RATE_TARGET && <li>Épargner {(SAVINGS_RATE_TARGET - tauxEpargne).toFixed(0)} % de plus</li>}
                 {healthScore.breakdown.diversification.score < 25 && <li>Diversifier vos placements</li>}
                 {healthScore.breakdown.investment.score < 15 && <li>Investir ≥ 10 % de vos revenus</li>}
@@ -1319,15 +925,15 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card style={{ background: "rgba(34,199,154,0.06)", borderColor: "rgba(34,199,154,0.25)" }}>
           <div className="flex justify-between items-start">
-            <span style={{ color: C.muted }}>Restant à vivre</span>
-            <Wallet size={28} style={{ color: C.green, opacity: 0.5 }} />
+            <span style={{ color: T.muted }}>Restant à vivre</span>
+            <Wallet size={28} style={{ color: T.green, opacity: 0.5 }} />
           </div>
-          <div className="text-4xl font-bold mt-3" style={{ color: C.green }}>{eur(restant)}</div>
+          <div className="text-4xl font-bold mt-3" style={{ color: T.green }}>{eur(restant)}</div>
         </Card>
         <Card style={{ background: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.25)" }}>
           <div className="flex justify-between items-start">
-            <span style={{ color: C.muted }}>Taux d'épargne</span>
-            <ArrowUpRight size={28} style={{ color: C.blue, opacity: 0.6 }} />
+            <span style={{ color: T.muted }}>Taux d'épargne</span>
+            <ArrowUpRight size={28} style={{ color: T.blue, opacity: 0.6 }} />
           </div>
           <div className="text-4xl font-bold mt-3" style={{ color: savingsRateColor }}>{pct(tauxEpargne)}</div>
           <div className="text-sm mt-1" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
@@ -1337,10 +943,10 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       {/* Et si ? */}
       <Card>
         <div className="flex items-center gap-2 mb-1">
-          <Zap size={18} style={{ color: C.amber }} />
-          <h2 className="text-xl font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>Scénarios d'optimisation</h2>
+          <Zap size={18} style={{ color: T.amber }} />
+          <h2 className="text-xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Scénarios d'optimisation</h2>
         </div>
-        <p className="text-sm mb-4" style={{ color: C.muted }}>
+        <p className="text-sm mb-4" style={{ color: T.muted }}>
           Activez un scénario pour mesurer son impact sur votre capacité d'épargne mensuelle.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1352,41 +958,41 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                 className="text-left rounded-xl p-4 flex items-start gap-3 transition"
                 style={{
                   background: on ? "rgba(39,163,122,0.06)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${on ? C.green : C.border}`,
+                  border: `1px solid ${on ? T.green : T.border}`,
                 }}>
                 <div className="flex-1">
-                  <div className="text-sm font-medium" style={{ color: C.text }}>{w.label}</div>
+                  <div className="text-sm font-medium" style={{ color: T.text }}>{w.label}</div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-sm font-semibold" style={{ color: C.green }}>+{w.gain} €/mois</span>
-                    <span style={{ color: C.muted, fontSize: 11 }}>·</span>
-                    <span className="text-xs flex items-center gap-1" style={{ color: C.muted }}>
+                    <span className="text-sm font-semibold" style={{ color: T.green }}>+{w.gain} €/mois</span>
+                    <span style={{ color: T.muted, fontSize: 11 }}>·</span>
+                    <span className="text-xs flex items-center gap-1" style={{ color: T.muted }}>
                       <TrendingUp size={10} /> 20 ans : +{eur(longTermGain(w.gain))}
                     </span>
                   </div>
                 </div>
                 <div className="w-4 h-4 rounded-full mt-0.5 shrink-0"
-                  style={{ border: `1.5px solid ${on ? C.green : C.muted}`, background: on ? C.green : "transparent" }} />
+                  style={{ border: `1.5px solid ${on ? T.green : T.muted}`, background: on ? T.green : "transparent" }} />
               </button>
             );
           })}
         </div>
         {gainTotal > 0 && (
           <div className="mt-4 rounded-xl p-4"
-            style={{ background: "rgba(34,199,154,0.08)", border: `1px solid ${C.green}` }}>
+            style={{ background: "rgba(34,199,154,0.08)", border: `1px solid ${T.green}` }}>
             <div className="flex flex-wrap gap-6 justify-between items-center">
               <div>
-                <div className="text-xs font-semibold mb-1" style={{ color: C.muted, letterSpacing: 0.5 }}>IMPACT MENSUEL COMBINÉ</div>
-                <div className="text-2xl font-bold" style={{ color: C.green }}>+{gainTotal} €/mois</div>
-                <div className="text-sm mt-1" style={{ color: C.muted }}>soit +{eur(gainTotal * 12)} par an</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: T.muted, letterSpacing: 0.5 }}>IMPACT MENSUEL COMBINÉ</div>
+                <div className="text-2xl font-bold" style={{ color: T.green }}>+{gainTotal} €/mois</div>
+                <div className="text-sm mt-1" style={{ color: T.muted }}>soit +{eur(gainTotal * 12)} par an</div>
               </div>
               <div className="text-right">
-                <div className="text-xs font-semibold mb-1" style={{ color: C.muted, letterSpacing: 0.5 }}>SI INVESTI 20 ANS · MSCI WORLD 10,5%</div>
-                <div className="text-2xl font-bold" style={{ color: C.cyan }}>+{eur(ltGainTotal)}</div>
-                <div className="text-sm mt-1" style={{ color: C.muted }}>de gain généré par intérêts composés</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: T.muted, letterSpacing: 0.5 }}>SI INVESTI 20 ANS · MSCI WORLD 10,5%</div>
+                <div className="text-2xl font-bold" style={{ color: T.cyan }}>+{eur(ltGainTotal)}</div>
+                <div className="text-sm mt-1" style={{ color: T.muted }}>de gain généré par intérêts composés</div>
               </div>
             </div>
-            <div className="text-xs mt-3 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}` }}>
-              ⚠ {RATE_DISCLAIMER}
+            <div className="text-xs mt-3 pt-3 flex items-start gap-1.5" style={{ color: T.muted, borderTop: `1px solid ${T.border}` }}>
+              <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span>
             </div>
           </div>
         )}
@@ -1395,9 +1001,9 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       {/* Historique mensuel */}
       <Card>
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <h2 className="text-xl font-bold" style={{ color: C.text }}>Historique mensuel</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Historique mensuel</h2>
           <select value={histoRange} onChange={(e) => setHistoRange(+e.target.value)}
-            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 9999, padding: "6px 14px", fontSize: 12, outline: "none", cursor: "pointer" }}>
+            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 9999, padding: "6px 14px", fontSize: 12, outline: "none", cursor: "pointer" }}>
             <option value={6}>6 derniers mois</option>
             <option value={12}>12 derniers mois</option>
             <option value={24}>2 ans</option>
@@ -1407,9 +1013,9 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
         <FinTechBarChart
           data={histo.slice(-histoRange)}
           bars={[
-            { dataKey: "rev", fill: C.green, name: "Revenus" },
-            { dataKey: "dep", fill: C.red, name: "Dépenses" },
-            { dataKey: "inv", fill: C.cyan, name: "Investissements" },
+            { dataKey: "rev", fill: T.green, name: "Revenus" },
+            { dataKey: "dep", fill: T.red, name: "Dépenses" },
+            { dataKey: "inv", fill: T.cyan, name: "Investissements" },
           ]}
           format={(v) => (v >= 1000 ? (v / 1000).toFixed(0) + "k" : eur(v))}
           ariaLabel="Monthly revenue, expenses, and investments"
@@ -1419,17 +1025,17 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       {/* Répartition + catégories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <h2 className="text-xl font-bold mb-2" style={{ color: C.text }}>Répartition dépenses</h2>
+          <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Répartition dépenses</h2>
           <div className="relative">
             <FinTechPieChart
               data={breakdown.map((b) => ({ name: b.cat, value: b.amount }))}
-              colors={breakdown.map((b) => CAT_COLORS[b.cat] || C.muted)}
+              colors={breakdown.map((b) => CAT_COLORS[b.cat] || T.muted)}
               innerRadius={60}
               ariaLabel="Expense breakdown by category"
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-sm" style={{ color: C.muted }}>Total</span>
-              <span className="text-2xl font-bold" style={{ color: C.text }}>
+              <span className="text-sm" style={{ color: T.muted }}>Total</span>
+              <span className="text-2xl font-bold" style={{ color: T.text }}>
                 {eur(breakdown.reduce((s, b) => s + b.amount, 0))}
               </span>
             </div>
@@ -1437,19 +1043,19 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
         </Card>
 
         <Card>
-          <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Détail par catégorie</h2>
+          <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
           {breakdown.map((b) => {
             const total = breakdown.reduce((s, x) => s + x.amount, 0);
             const p = (b.amount / total) * 100;
             return (
               <div key={b.cat} className="mb-3">
                 <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="flex items-center gap-2" style={{ color: C.text }}>
+                  <span className="flex items-center gap-2" style={{ color: T.text }}>
                     <span className="w-2 h-2 rounded-full" style={{ background: CAT_COLORS[b.cat] }} />
                     {b.cat}
                   </span>
-                  <span><b style={{ color: C.text }}>{eur(b.amount)}</b>
-                    <span style={{ color: C.muted }}> &nbsp;{Math.round(p)}%</span></span>
+                  <span><b style={{ color: T.text }}>{eur(b.amount)}</b>
+                    <span style={{ color: T.muted }}> &nbsp;{Math.round(p)}%</span></span>
                 </div>
                 <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div className="h-1.5 rounded-full" style={{ width: `${p}%`, background: CAT_COLORS[b.cat] }} />
@@ -1469,12 +1075,12 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       {/* Évolution taux épargne */}
       <Card>
         <div className="mb-4">
-          <h2 className="text-xl font-bold" style={{ color: C.text }}>Évolution du taux d'épargne</h2>
-          <p className="text-sm" style={{ color: C.muted }}>Calculé à partir de votre historique mensuel — période sélectionnée ci-dessus</p>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution du taux d'épargne</h2>
+          <p className="text-sm" style={{ color: T.muted }}>Calculé à partir de votre historique mensuel — période sélectionnée ci-dessus</p>
         </div>
         <FinTechAreaChart
           data={savingHisto.slice(-histoRange)}
-          areas={[{ dataKey: "v", fill: C.cyan, stroke: C.cyan }]}
+          areas={[{ dataKey: "v", fill: T.cyan, stroke: T.cyan }]}
           format={(v) => v.toFixed(1) + "%"}
           stacked={false}
           ariaLabel="Savings rate evolution over time"
@@ -1500,6 +1106,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
 /*  PREMIUM TEASER — affiché en Free dans le Dashboard                */
 /* ------------------------------------------------------------------ */
 function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, setView }) {
+  const T = useT();
   const netWorth = useMemo(() => {
     const a = (patrimoine?.actifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
     const p = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
@@ -1528,13 +1135,13 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
   // Points d'attention personnalisés
   const alerts = [];
-  if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL) alerts.push({ icon: "🔴", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL} %`, feature: "simulations" });
-  else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ icon: "🟡", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
-  if (healthScore.breakdown.diversification.score < 20) alerts.push({ icon: "🔴", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
-  if (healthScore.breakdown.investment.score < 15) alerts.push({ icon: "🟡", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
-  if (totals.chargesFixes > totals.revenus * 0.55) alerts.push({ icon: "🔴", msg: `Charges fixes élevées (${((totals.chargesFixes / totals.revenus) * 100).toFixed(0)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
-  if (netWorth < 0) alerts.push({ icon: "🔴", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
-  if (alerts.length < 2) alerts.push({ icon: "💡", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
+  if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL) alerts.push({ level: "red", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL} %`, feature: "simulations" });
+  else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ level: "amber", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
+  if (healthScore.breakdown.diversification.score < 20) alerts.push({ level: "red", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
+  if (healthScore.breakdown.investment.score < 15) alerts.push({ level: "amber", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
+  if (totals.chargesFixes > totals.revenus * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${((totals.chargesFixes / totals.revenus) * 100).toFixed(0)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
+  if (netWorth < 0) alerts.push({ level: "red", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
+  if (alerts.length < 2) alerts.push({ level: "info", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
 
   const topAlerts = alerts.slice(0, 3);
 
@@ -1543,16 +1150,16 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
       {/* Header */}
       <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <Crown size={18} style={{ color: "#f59e0b" }} />
-        <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Aperçu Pro — basé sur vos données</span>
-        <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>Dès 5,99 €/mois · Essai gratuit 7 jours</span>
+        <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Aperçu Pro — basé sur vos données</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: T.muted }}>Dès 5,99 €/mois · Essai gratuit 7 jours</span>
       </div>
 
       <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {/* Metric 1 — IF teaser */}
         <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
+          <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#f59e0b", filter: "blur(6px)", userSelect: "none" }}>{ifAgeStr}</div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             dans {ifYears != null ? `${ifYears} ans` : "plus de 80 ans"} — scénario base 7%/an
           </div>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
@@ -1564,11 +1171,11 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
         {/* Metric 2 — Patrimoine projeté 10 ans */}
         <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
+          <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#22c55e", filter: "blur(6px)", userSelect: "none" }}>
             {fv10 >= 1e6 ? (fv10 / 1e6).toFixed(1) + " M€" : Math.round(fv10 / 1e3) + " k€"}
           </div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             scénario base — pessimiste et optimiste inclus
           </div>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
@@ -1581,13 +1188,13 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
       {/* Points d'attention personnalisés */}
       <div style={{ padding: "0 22px 18px" }}>
-        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          {topAlerts.filter(a => a.icon !== "💡").length} point{topAlerts.filter(a => a.icon !== "💡").length > 1 ? "s" : ""} d'attention détecté{topAlerts.filter(a => a.icon !== "💡").length > 1 ? "s" : ""} sur votre profil
+        <div style={{ fontSize: 12, color: T.muted, fontWeight: 600, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {topAlerts.filter(a => a.level !== "info").length} point{topAlerts.filter(a => a.level !== "info").length > 1 ? "s" : ""} d'attention détecté{topAlerts.filter(a => a.level !== "info").length > 1 ? "s" : ""} sur votre profil
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {topAlerts.map((a, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", padding: "10px 14px" }}>
-              <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
+              <span style={{ flexShrink: 0, marginTop: 1 }}><AlertLevelIcon level={a.level} size={14} /></span>
               <span style={{ fontSize: 13, color: "#8a97b0", lineHeight: 1.5, flex: 1 }}>{a.msg}</span>
               <button onClick={() => setView("pricing")} style={{ background: "none", border: "none", color: "#f59e0b", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", padding: "2px 0", flexShrink: 0 }}>
                 Corriger →
@@ -2326,6 +1933,7 @@ async function generatePDFReport(totals, patrimoine, healthScore, badge, profile
 /*  SHARE MODAL                                                        */
 /* ------------------------------------------------------------------ */
 function ShareScoreModal({ score, badge, onClose }) {
+  const T = useT();
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -2354,17 +1962,17 @@ function ShareScoreModal({ score, badge, onClose }) {
         className="rounded-2xl p-6 wt-scale-in wt-glass"
         style={{ maxWidth: 400, width: "90%" }}
       >
-        <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Partager votre score</h2>
-        <div className="rounded-xl p-4 mb-4 text-center" style={{ background: C.bg }}>
+        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Partager votre score</h2>
+        <div className="rounded-xl p-4 mb-4 text-center" style={{ background: T.bg }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
             <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
               <div className="w-4 h-4 rounded-full" style={{ background: badge.color }} />
             </div>
           </div>
           <div className="text-4xl font-black mb-1" style={{ color: badge.color }}>{score}/100</div>
-          <div className="text-sm" style={{ color: C.muted }}>Niveau {badge.level}</div>
+          <div className="text-sm" style={{ color: T.muted }}>Niveau {badge.level}</div>
         </div>
-        <p className="text-sm mb-4" style={{ color: C.muted }}>"{shareText}"</p>
+        <p className="text-sm mb-4" style={{ color: T.muted }}>"{shareText}"</p>
         <div className="flex flex-col gap-3">
           <button onClick={copy} className="rounded-xl py-3 font-bold"
             style={{ background: badge.color, color: "#0a0f1e" }}>
@@ -2373,17 +1981,17 @@ function ShareScoreModal({ score, badge, onClose }) {
           <button
             onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`)}
             className="rounded-xl py-3 font-semibold"
-            style={{ background: "rgba(255,255,255,0.05)", color: C.text, border: `1px solid ${C.border}` }}>
+            style={{ background: "rgba(255,255,255,0.05)", color: T.text, border: `1px solid ${T.border}` }}>
             Partager sur Twitter
           </button>
           <button
             onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`)}
             className="rounded-xl py-3 font-semibold"
-            style={{ background: "rgba(255,255,255,0.05)", color: C.text, border: `1px solid ${C.border}` }}>
+            style={{ background: "rgba(255,255,255,0.05)", color: T.text, border: `1px solid ${T.border}` }}>
             Partager sur LinkedIn
           </button>
           <button onClick={onClose} className="rounded-xl py-2 text-sm"
-            style={{ background: "transparent", color: C.muted, border: `1px solid ${C.border}` }}>
+            style={{ background: "transparent", color: T.muted, border: `1px solid ${T.border}` }}>
             Fermer
           </button>
         </div>
@@ -2393,6 +2001,7 @@ function ShareScoreModal({ score, badge, onClose }) {
 }
 
 function TrialPopup({ onDiscover, onClose }) {
+  const T = useT();
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -2417,8 +2026,8 @@ function TrialPopup({ onDiscover, onClose }) {
           style={{ background: "rgba(245,158,11,0.12)" }}>
           <Gift size={26} style={{ color: "#f59e0b" }} />
         </div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: C.text }}>Essayez Pro gratuitement</h2>
-        <p className="text-sm mb-4" style={{ color: C.muted }}>
+        <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Essayez Pro gratuitement</h2>
+        <p className="text-sm mb-4" style={{ color: T.muted }}>
           7 jours d'accès complet aux simulations avancées, à la fiscalité, au suivi crypto et à l'assistant IA. Carte bancaire requise (pré-autorisation), débit automatique à l'issue de l'essai sauf annulation.
         </p>
         <div className="flex flex-col gap-3">
@@ -2427,7 +2036,7 @@ function TrialPopup({ onDiscover, onClose }) {
             <Crown size={16} /> Découvrir Pro
           </button>
           <button onClick={onClose} className="rounded-xl py-2 text-sm"
-            style={{ background: "transparent", color: C.muted, border: `1px solid ${C.border}` }}>
+            style={{ background: "transparent", color: T.muted, border: `1px solid ${T.border}` }}>
             Plus tard
           </button>
         </div>
@@ -2440,14 +2049,15 @@ function TrialPopup({ onDiscover, onClose }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : FINANCES                                                   */
 /* ------------------------------------------------------------------ */
-const TYPE_META = {
-  revenu: { label: "Revenu", color: C.green },
-  charge_fixe: { label: "Charge fixe", color: C.red },
-  depense_variable: { label: "Dépense variable", color: C.amber },
-  investissement: { label: "Investissement", color: C.cyan },
-};
-
 function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, setBudgets, plan }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const TYPE_META = {
+    revenu: { label: "Revenu", color: T.green },
+    charge_fixe: { label: "Charge fixe", color: T.red },
+    depense_variable: { label: "Dépense variable", color: T.amber },
+    investissement: { label: "Investissement", color: T.cyan },
+  };
   const [mainTab, setMainTab]  = useState("transactions");
   const [filter, setFilter]    = useState("tout");
   const [showAdd, setShowAdd]  = useState(false);
@@ -2495,12 +2105,12 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Finances</h1>
-          <p style={{ color: C.muted }}>Transactions, budgets et récurrences</p>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Finances</h1>
+          <p style={{ color: T.muted }}>Transactions, budgets et récurrences</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <button onClick={() => setView("importer")} className="flex items-center gap-2 px-4 py-3 rounded-xl"
-            style={{ border: `1px solid ${C.border}`, color: C.text }}>
+            style={{ border: `1px solid ${T.border}`, color: T.text }}>
             <Upload size={18} /> Importer
           </button>
           <button className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
@@ -2510,15 +2120,15 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
               style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", fontSize: 9, letterSpacing: 0.5 }}>PREMIUM</span>}
           </button>
           <button onClick={() => setShowAdd((s) => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
-            style={{ background: C.blue, color: "#fff" }}>
+            style={{ background: T.blue, color: "#fff" }}>
             <Plus size={18} /> Ajouter
           </button>
         </div>
       </div>
 
       {showAdd && (
-        <Card style={{ borderColor: `${C.blue}44` }}>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: C.muted }}>NOUVELLE TRANSACTION</h2>
+        <Card style={{ borderColor: `${T.blue}44` }}>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: T.muted }}>NOUVELLE TRANSACTION</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Field label="Libellé">
               <input value={newTx.label} placeholder="Ex : Courses Lidl" style={inputStyle}
@@ -2540,37 +2150,37 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             </Field>
           </div>
           <div className="flex items-center gap-4 mt-3">
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: C.muted, fontSize: 13 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13 }}>
               <input type="checkbox" checked={!!newTx.recurring} onChange={e => setNewTx(t => ({ ...t, recurring: e.target.checked }))}
-                style={{ accentColor: C.blue, width: 15, height: 15 }} />
+                style={{ accentColor: T.blue, width: 15, height: 15 }} />
               <Repeat size={13} /> Récurrente (mensuelle)
             </label>
             <button onClick={handleAdd} className="px-5 py-2.5 rounded-xl font-semibold text-sm"
-              style={{ background: C.blue, color: "#fff" }}>
+              style={{ background: T.blue, color: "#fff" }}>
               <Check size={14} className="inline mr-1.5" />Confirmer
             </button>
             <button onClick={() => setShowAdd(false)} className="px-4 py-2.5 rounded-xl text-sm"
-              style={{ border: `1px solid ${C.border}`, color: C.muted }}>Annuler</button>
+              style={{ border: `1px solid ${T.border}`, color: T.muted }}>Annuler</button>
           </div>
         </Card>
       )}
 
       <div className="flex gap-4 flex-wrap">
-        <Stat label="Revenu" value={eur(totals.revenus)} color={C.green} icon={TrendingUp} />
-        <Stat label="Charge fixe" value={eur(totals.chargesFixes)} color={C.text} icon={Home} />
-        <Stat label="Dépense variable" value={eur(totals.depensesVar)} color={C.text} icon={ArrowDownRight} />
-        <Stat label="Investissement" value={eur(totals.invest)} color={C.text} icon={PiggyBank} />
+        <Stat label="Revenu" value={eur(totals.revenus)} color={T.green} icon={TrendingUp} />
+        <Stat label="Charge fixe" value={eur(totals.chargesFixes)} color={T.text} icon={Home} />
+        <Stat label="Dépense variable" value={eur(totals.depensesVar)} color={T.text} icon={ArrowDownRight} />
+        <Stat label="Investissement" value={eur(totals.invest)} color={T.text} icon={PiggyBank} />
       </div>
 
       {highInterestDebts.length > 0 && (
-        <Card style={{ borderColor: `${C.amber}44`, background: "rgba(240,168,72,0.06)" }}>
+        <Card style={{ borderColor: `${T.amber}44`, background: "rgba(240,168,72,0.06)" }}>
           <div className="flex items-start gap-3">
-            <Lightbulb size={18} style={{ color: C.amber, flexShrink: 0, marginTop: 2 }} />
+            <Lightbulb size={18} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} />
             <div>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
                 {highInterestDebts.length === 1 ? "Crédit à taux potentiellement élevé détecté" : `${highInterestDebts.length} crédits à taux potentiellement élevé détectés`}
               </div>
-              <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
+              <div style={{ color: T.muted, fontSize: 12.5, lineHeight: 1.6 }}>
                 {highInterestDebts.map(t => t.label).join(", ")} — ce type de financement (LOA, crédit conso, crédit renouvelable...) dépasse souvent 15 à 20 % de TAEG.
                 Vérifiez le taux de votre contrat et envisagez un remboursement anticipé avant d'investir davantage.
               </div>
@@ -2598,15 +2208,15 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
           </div>
 
           <Card>
-            <h2 className="text-lg font-bold mb-4" style={{ color: C.text }}>
+            <h2 className="text-lg font-bold mb-4" style={{ color: T.text }}>
               Transactions ({list.length})
             </h2>
-            {list.length === 0 && <p style={{ color: C.muted, fontSize: 13 }}>Aucune transaction dans ce filtre.</p>}
+            {list.length === 0 && <p style={{ color: T.muted, fontSize: 13 }}>Aucune transaction dans ce filtre.</p>}
             {list.map((t) => {
-              const meta = TYPE_META[t.type] || { label: t.type, color: C.muted };
+              const meta = TYPE_META[t.type] || { label: t.type, color: T.muted };
               const isEditing = editId === t.id;
               return (
-                <div key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                <div key={t.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                   {isEditing ? (
                     <div className="py-3 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                       <input value={editBuf.label} style={inpSt} onChange={e => setEditBuf(b => ({ ...b, label: e.target.value }))} />
@@ -2618,42 +2228,42 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                       </select>
                       <div className="flex gap-2 items-center">
                         <input type="number" value={editBuf.amount} style={{ ...inpSt, width: 90 }} onChange={e => setEditBuf(b => ({ ...b, amount: e.target.value }))} />
-                        <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: C.muted, fontSize: 12 }}>
-                          <input type="checkbox" checked={!!editBuf.recurring} onChange={e => setEditBuf(b => ({ ...b, recurring: e.target.checked }))} style={{ accentColor: C.blue }} />
+                        <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: T.muted, fontSize: 12 }}>
+                          <input type="checkbox" checked={!!editBuf.recurring} onChange={e => setEditBuf(b => ({ ...b, recurring: e.target.checked }))} style={{ accentColor: T.blue }} />
                           <Repeat size={11} />
                         </label>
-                        <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>OK</button>
-                        <button onClick={() => setEditId(null)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: C.muted, fontSize: 12 }}>✕</button>
+                        <button onClick={saveEdit} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>OK</button>
+                        <button onClick={() => setEditId(null)} aria-label="Annuler l'édition" style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: T.muted, fontSize: 12, display: "inline-flex", alignItems: "center" }}><X size={12} /></button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 py-3">
                       <div className="rounded-xl w-10 h-10 flex items-center justify-center shrink-0"
                         style={{ background: "rgba(139,92,246,0.08)" }}>
-                        {t.type === "revenu" ? <TrendingUp size={18} style={{ color: C.green }} />
-                          : t.type === "investissement" ? <PiggyBank size={18} style={{ color: C.cyan }} />
-                          : <Home size={18} style={{ color: C.muted }} />}
+                        {t.type === "revenu" ? <TrendingUp size={18} style={{ color: T.green }} />
+                          : t.type === "investissement" ? <PiggyBank size={18} style={{ color: T.cyan }} />
+                          : <Home size={18} style={{ color: T.muted }} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold truncate text-sm" style={{ color: C.text }}>
+                        <div className="font-semibold truncate text-sm" style={{ color: T.text }}>
                           {t.label}
-                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 10, color: C.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
+                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 10, color: T.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
                         </div>
-                        <div className="text-xs" style={{ color: C.muted }}>{t.cat}</div>
+                        <div className="text-xs" style={{ color: T.muted }}>{t.cat}</div>
                       </div>
                       <span className="px-2.5 py-1 rounded-lg text-xs font-medium shrink-0"
                         style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>
                       <span className="font-bold text-base shrink-0 w-24 text-right"
-                        style={{ color: t.amount >= 0 ? C.green : C.text }}>
+                        style={{ color: t.amount >= 0 ? T.green : T.text }}>
                         {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
                       </span>
                       <div className="flex gap-1 shrink-0">
                         <button onClick={() => startEdit(t)}
-                          style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: C.muted }}>
+                          style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: T.muted }}>
                           <Pencil size={13} />
                         </button>
-                        <button onClick={() => onDelete?.(t.id)}
-                          style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: C.red }}>
+                        <button onClick={() => onDelete?.(t.id)} aria-label="Supprimer la transaction"
+                          style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: T.red }}>
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -2668,30 +2278,30 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 
       {mainTab === "budgets" && (
         <Card>
-          <h2 className="text-lg font-bold mb-1" style={{ color: C.text }}>Budgets par catégorie</h2>
-          <p className="text-sm mb-5" style={{ color: C.muted }}>Fixez un plafond mensuel par catégorie de dépense. Laissez vide = pas de limite.</p>
+          <h2 className="text-lg font-bold mb-1" style={{ color: T.text }}>Budgets par catégorie</h2>
+          <p className="text-sm mb-5" style={{ color: T.muted }}>Fixez un plafond mensuel par catégorie de dépense. Laissez vide = pas de limite.</p>
           <div className="flex flex-col gap-4">
             {allCats.map(cat => {
               const spent   = spentByCat[cat] || 0;
               const limit   = budgets?.[cat] || 0;
               const pctUsed = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
-              const color   = pctUsed >= 100 ? C.red : pctUsed >= 80 ? C.amber : C.green;
-              const catCol  = CAT_COLORS[cat] || C.muted;
+              const color   = pctUsed >= 100 ? T.red : pctUsed >= 80 ? T.amber : T.green;
+              const catCol  = CAT_COLORS[cat] || T.muted;
               return (
                 <div key={cat}>
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: catCol }} />
-                    <span className="text-sm font-semibold flex-1" style={{ color: C.text }}>{cat}</span>
-                    <span className="text-sm font-bold" style={{ color: spent > 0 ? C.text : C.muted }}>{eur(spent)}</span>
-                    <span style={{ color: C.muted, fontSize: 12 }}>/</span>
+                    <span className="text-sm font-semibold flex-1" style={{ color: T.text }}>{cat}</span>
+                    <span className="text-sm font-bold" style={{ color: spent > 0 ? T.text : T.muted }}>{eur(spent)}</span>
+                    <span style={{ color: T.muted, fontSize: 12 }}>/</span>
                     <input
                       type="number"
                       placeholder="illimité"
                       value={budgets?.[cat] || ""}
                       onChange={e => setBudgets(b => ({ ...b, [cat]: +e.target.value || 0 }))}
-                      style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: "rgba(255,255,255,0.04)", color: C.text, fontSize: 13, outline: "none" }}
+                      style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.04)", color: T.text, fontSize: 13, outline: "none" }}
                     />
-                    <span style={{ color: C.muted, fontSize: 12 }}>€ max</span>
+                    <span style={{ color: T.muted, fontSize: 12 }}>€ max</span>
                   </div>
                   {limit > 0 && (
                     <div>
@@ -2699,10 +2309,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                         <div className="h-1.5 rounded-full transition-all" style={{ width: `${pctUsed}%`, background: color }} />
                       </div>
                       <div className="flex justify-between mt-1">
-                        <span style={{ fontSize: 11, color: C.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
+                        <span style={{ fontSize: 11, color: T.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
                         {pctUsed >= 100
-                          ? <span style={{ fontSize: 11, color: C.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
-                          : <span style={{ fontSize: 11, color: C.muted }}>Reste {eur(limit - spent)}</span>}
+                          ? <span style={{ fontSize: 11, color: T.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
+                          : <span style={{ fontSize: 11, color: T.muted }}>Reste {eur(limit - spent)}</span>}
                       </div>
                     </div>
                   )}
@@ -2720,6 +2330,9 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 /*  ÉCRAN : SIMULATIONS                                                */
 /* ------------------------------------------------------------------ */
 function Simulations({ totals, simParams, setSimParams, age, transactions }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const chartTip = makeChartTip(T);
   const { monthly, initial, price, horizon } = simParams;
   const setMonthly = (v) => setSimParams((p) => ({ ...p, monthly: v }));
   const setInitial = (v) => setSimParams((p) => ({ ...p, initial: v }));
@@ -2776,34 +2389,30 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
   const hideCryptoTip = () => { tipTimer.current = setTimeout(() => setCryptoTip(null), 200); };
   const keepCryptoTip = () => clearTimeout(tipTimer.current);
 
-  // Valeur d'un bien immobilier acheté avec 10 % d'apport : la valeur du
-  // bien s'apprécie à RATE_IMMO_APPRECIATION/an, et la part détenue par
-  // l'acheteur (equity) passe de 10 % (apport) à 100 % (prêt soldé) sur 25 ans.
-  // Formule unique réutilisée par le graphique (detailedB) et le comparatif
-  // (compare[]) pour éviter deux chiffres différents pour le même concept.
-  const immoEquityAt = (y) => {
-    const propValue  = price * Math.pow(1 + RATE_IMMO_APPRECIATION, y);
-    const equityFrac = 0.1 + 0.9 * Math.min(y / 25, 1);
-    return Math.round(propValue * equityFrac);
-  };
+  // Immobilier : amortissement RÉEL d'un achat à crédit (apport + frais de
+  // notaire + crédit amorti). L'equity = valeur du bien − capital restant dû.
+  // Série unique réutilisée par le graphique et le comparatif.
+  const immoSeries = useMemo(
+    () => immoDetailedSeries(price, horizon, SIM_START_YEAR),
+    [price, horizon]
+  );
+  const immoEquityAt = (y) => immoSeries[Math.min(y, immoSeries.length - 1)]?.capital ?? 0;
 
   const sim = useMemo(() => {
     const apports = initial + monthly * 12 * horizon;
     const capA = fv(initial, monthly, RATE_A, horizon);
     const capC = fv(initial, monthly, RATE_C, horizon);
-    const capB = immoEquityAt(horizon);
-    const apportB = price * 0.1 + monthly * 12 * horizon;
-    const detailedA = fvDetailedSeries(initial, monthly, RATE_A, horizon, SIM_START_YEAR);
-    const detailedC = fvDetailedSeries(initial, monthly, RATE_C, horizon, SIM_START_YEAR);
-    const detailedB = Array.from({ length: horizon + 1 }, (_, y) => {
-      const capital = immoEquityAt(y);
-      const ap = Math.round(price * 0.1 + monthly * 12 * y);
-      return { year: SIM_START_YEAR + y, capital, apports: ap, gains: Math.max(0, capital - ap) };
-    });
-    const capBTC = fv(initial, monthly, RATE_BTC, horizon);
-    const capETH = fv(initial, monthly, RATE_ETH, horizon);
-    const detailedBTC = fvDetailedSeries(initial, monthly, RATE_BTC, horizon, SIM_START_YEAR);
-    const detailedETH = fvDetailedSeries(initial, monthly, RATE_ETH, horizon, SIM_START_YEAR);
+    const detailedB = immoSeries;
+    const lastB = detailedB[detailedB.length - 1];
+    const capB = lastB.capital;
+    const apportB = lastB.apports;            // cash réellement sorti (apport + notaire + mensualités)
+    const capBTC = fv(initial, monthly, RATE_SCENARIOS.btc.base, horizon);
+    const capETH = fv(initial, monthly, RATE_SCENARIOS.eth.base, horizon);
+    // Bandes d'incertitude pess/base/opt (l'historique crypto = borne HAUTE, pas la base).
+    const detailedA   = fvBandSeries(initial, monthly, RATE_SCENARIOS.etf,    horizon, SIM_START_YEAR);
+    const detailedC   = fvBandSeries(initial, monthly, RATE_SCENARIOS.livret, horizon, SIM_START_YEAR);
+    const detailedBTC = fvBandSeries(initial, monthly, RATE_SCENARIOS.btc,    horizon, SIM_START_YEAR);
+    const detailedETH = fvBandSeries(initial, monthly, RATE_SCENARIOS.eth,    horizon, SIM_START_YEAR);
     return {
       apports,
       A: { cap: capA, gain: capA - apports },
@@ -2813,7 +2422,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       ETH: { cap: capETH, gain: capETH - apports },
       detailedA, detailedB, detailedC, detailedBTC, detailedETH,
     };
-  }, [monthly, initial, price, horizon]);
+  }, [monthly, initial, price, horizon, immoSeries]);
 
   // Détecteur de frais cachés
   const fees = useMemo(() => {
@@ -2873,38 +2482,38 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
   }, [initial, sim]);
 
   const compare = useMemo(() => [
-    { name: "ETF PEA",    tab: "etf",      rate: "10,5 %", color: "#22c55e", risk: "Faible",        vol: "15 %",  drawdown: "−35 %", y10: fv(initial, monthly, RATE_A, 10),   yN: sim.A.cap },
-    { name: "Immobilier", tab: "immo",     rate: "≈2 %/an", color: "#f59e0b", risk: "Faible",        vol: "20 %",  drawdown: "−40 %", y10: immoEquityAt(10), yN: sim.B.cap },
-    { name: "Livret A",   tab: "defensif", rate: "1,5 %",  color: "#94a3b8", risk: "Très faible",   vol: "5 %",   drawdown: "−5 %",  y10: fv(initial, monthly, RATE_C, 10),   yN: sim.C.cap },
-    { name: "Bitcoin",    tab: "btc",      rate: "30 %",   color: "#ef4444", risk: "Extrême",       vol: "65 %",  drawdown: "−80 %", y10: fv(initial, monthly, RATE_BTC, 10), yN: sim.BTC.cap },
-    { name: "Ethereum",   tab: "eth",      rate: "25 %",   color: "#a855f7", risk: "Extrême+",      vol: "75 %",  drawdown: "−85 %", y10: fv(initial, monthly, RATE_ETH, 10), yN: sim.ETH.cap },
+    { name: "ETF PEA",    tab: "etf",      rate: "10,5 %", color: ASSET.etf, risk: "Faible",        vol: "15 %",  drawdown: "−35 %", y10: fv(initial, monthly, RATE_A, 10),   yN: sim.A.cap },
+    { name: "Immobilier", tab: "immo",     rate: "≈2 %/an", color: ASSET.immo, risk: "Faible",        vol: "20 %",  drawdown: "−40 %", y10: immoEquityAt(10), yN: sim.B.cap },
+    { name: "Livret A",   tab: "defensif", rate: "1,5 %",  color: ASSET.livret, risk: "Très faible",   vol: "5 %",   drawdown: "−5 %",  y10: fv(initial, monthly, RATE_C, 10),   yN: sim.C.cap },
+    { name: "Bitcoin",    tab: "btc",      rate: "12 % méd.",   color: ASSET.btc, risk: "Extrême",       vol: "65 %",  drawdown: "−80 %", y10: fv(initial, monthly, RATE_SCENARIOS.btc.base, 10), yN: sim.BTC.cap },
+    { name: "Ethereum",   tab: "eth",      rate: "10 % méd.",   color: ASSET.eth, risk: "Extrême+",      vol: "75 %",  drawdown: "−85 %", y10: fv(initial, monthly, RATE_SCENARIOS.eth.base, 10), yN: sim.ETH.cap },
   ], [initial, monthly, price, sim]);
 
   const TABS = [
-    { id: "etf",      label: "ETF World",  color: "#22c55e" },
-    { id: "immo",     label: "Immobilier", color: "#f59e0b" },
-    { id: "defensif", label: "Livret A",   color: "#94a3b8" },
-    { id: "btc",      label: "Bitcoin",    color: "#ef4444" },
-    { id: "eth",      label: "Ethereum",   color: "#a855f7" },
-    { id: "compare",  label: "Comparatif", color: C.blue },
+    { id: "etf",      label: "ETF World",  color: ASSET.etf },
+    { id: "immo",     label: "Immobilier", color: ASSET.immo },
+    { id: "defensif", label: "Livret A",   color: ASSET.livret },
+    { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
+    { id: "eth",      label: "Ethereum",   color: ASSET.eth },
+    { id: "compare",  label: "Comparatif", color: T.blue },
   ];
-  const activeColor = TABS.find((t) => t.id === activeTab)?.color || C.blue;
+  const activeColor = TABS.find((t) => t.id === activeTab)?.color || T.blue;
 
   const allocs = useMemo(() => age >= 55
-    ? { label: "Conservateur · 55+ ans", pcts: [{ n: "ETF World", p: 60, c: C.cyan }, { n: "Immobilier", p: 25, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 5, c: "#f7931a" }, { n: "Ethereum", p: 0, c: "#627eea" }] }
+    ? { label: "Conservateur · 55+ ans", pcts: [{ n: "ETF World", p: 60, c: ASSET.etf }, { n: "Immobilier", p: 25, c: ASSET.immo }, { n: "Livret A", p: 10, c: ASSET.livret }, { n: "Bitcoin", p: 5, c: ASSET.btc }, { n: "Ethereum", p: 0, c: ASSET.eth }] }
     : age >= 40
-    ? { label: "Équilibré · 40–54 ans", pcts: [{ n: "ETF World", p: 50, c: C.cyan }, { n: "Immobilier", p: 30, c: C.amber }, { n: "Livret A", p: 5, c: "#8a97b1" }, { n: "Bitcoin", p: 10, c: "#f7931a" }, { n: "Ethereum", p: 5, c: "#627eea" }] }
+    ? { label: "Équilibré · 40–54 ans", pcts: [{ n: "ETF World", p: 50, c: ASSET.etf }, { n: "Immobilier", p: 30, c: ASSET.immo }, { n: "Livret A", p: 5, c: ASSET.livret }, { n: "Bitcoin", p: 10, c: ASSET.btc }, { n: "Ethereum", p: 5, c: ASSET.eth }] }
     : age >= 30
-    ? { label: "Dynamique · 30–39 ans", pcts: [{ n: "ETF World", p: 40, c: C.cyan }, { n: "Immobilier", p: 25, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 15, c: "#f7931a" }, { n: "Ethereum", p: 10, c: "#627eea" }] }
-    : { label: "Agressif · −30 ans", pcts: [{ n: "ETF World", p: 30, c: C.cyan }, { n: "Immobilier", p: 15, c: C.amber }, { n: "Livret A", p: 10, c: "#8a97b1" }, { n: "Bitcoin", p: 20, c: "#f7931a" }, { n: "Ethereum", p: 25, c: "#627eea" }] }
+    ? { label: "Dynamique · 30–39 ans", pcts: [{ n: "ETF World", p: 40, c: ASSET.etf }, { n: "Immobilier", p: 25, c: ASSET.immo }, { n: "Livret A", p: 10, c: ASSET.livret }, { n: "Bitcoin", p: 15, c: ASSET.btc }, { n: "Ethereum", p: 10, c: ASSET.eth }] }
+    : { label: "Agressif · −30 ans", pcts: [{ n: "ETF World", p: 30, c: ASSET.etf }, { n: "Immobilier", p: 15, c: ASSET.immo }, { n: "Livret A", p: 10, c: ASSET.livret }, { n: "Bitcoin", p: 20, c: ASSET.btc }, { n: "Ethereum", p: 25, c: ASSET.eth }] }
   , [age]);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center flex-wrap gap-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Simulations</h1>
-          <p style={{ color: C.muted }}>Projetez la croissance de votre capital sur le long terme.</p>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Simulations</h1>
+          <p style={{ color: T.muted }}>Projetez la croissance de votre capital sur le long terme.</p>
         </div>
         <button
           onClick={() => setLiveOpen(true)}
@@ -2928,7 +2537,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
 
       {/* Paramètres communs */}
       <Card>
-        <h2 className="text-lg font-bold mb-4" style={{ color: C.text }}>Paramètres</h2>
+        <h2 className="text-lg font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Investissement mensuel (€)">
             <input type="number" value={monthly} style={inputStyle}
@@ -2950,15 +2559,15 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           </Field>
           <div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm" style={{ color: C.muted }}>Inflation</span>
-              <span className="font-bold text-sm" style={{ color: inflationRate > 0 ? C.amber : C.muted }}>
+              <span className="text-sm" style={{ color: T.muted }}>Inflation</span>
+              <span className="font-bold text-sm" style={{ color: inflationRate > 0 ? T.amber : T.muted }}>
                 {(inflationRate * 100).toFixed(1).replace(".", ",")} % / an
               </span>
             </div>
             <input type="range" min={0} max={0.05} step={0.001} value={inflationRate}
               onChange={(e) => setInflationRate(+e.target.value)}
-              className="w-full" style={{ accentColor: C.amber }} />
-            <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+              className="w-full" style={{ accentColor: T.amber }} />
+            <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
               <span>0 %</span><span>2,5 %</span><span>5 %</span>
             </div>
           </div>
@@ -2977,8 +2586,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{
                 background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)",
-                border: `1.5px solid ${activeTab === t.id ? t.color : C.border}`,
-                color: activeTab === t.id ? t.color : C.muted,
+                border: `1.5px solid ${activeTab === t.id ? t.color : T.border}`,
+                color: activeTab === t.id ? t.color : T.muted,
                 cursor: hasHoverChart ? "help" : "pointer",
               }}>
               {t.label}
@@ -2992,14 +2601,14 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       {activeTab === "etf" && <>
         <ScenarioCard
           title="ETF PEA — MSCI World"
-          rate="10,5 % / an · intérêts composés mensuels" accent={C.cyan}
+          rate="médian 10,5 %/an" accent={ASSET.etf}
           stats={[
-            { label: "Capital final", value: eur(sim.A.cap), color: C.cyan },
-            { label: "Apports totaux", value: eur(sim.apports), color: C.text },
-            { label: "Intérêts générés", value: eur(sim.A.gain), color: C.green },
-            { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: C.amber },
+            { label: "Capital final", value: eur(sim.A.cap), color: ASSET.etf },
+            { label: "Apports totaux", value: eur(sim.apports), color: T.text },
+            { label: "Intérêts générés", value: eur(sim.A.gain), color: T.green },
+            { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: T.amber },
           ]}
-          detailedData={sim.detailedA} lineColor={C.cyan} chartKey="A" inflationRate={inflationRate}
+          detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" inflationRate={inflationRate} showBand={false}
           note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
         />
 
@@ -3007,9 +2616,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
         <Card style={{ borderColor: "rgba(255,90,95,0.3)" }}>
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold" style={{ color: C.text }}>Analyse des frais</h2>
+              <h2 className="text-xl font-bold" style={{ color: T.text }}>Analyse des frais</h2>
             </div>
-            <span className="text-sm" style={{ color: C.muted }}>vs WPEA sur {horizon} ans</span>
+            <span className="text-sm" style={{ color: T.muted }}>vs WPEA sur {horizon} ans</span>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
@@ -3019,31 +2628,31 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
               </Field>
               <div className="mt-5">
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm" style={{ color: C.muted }}>Frais annuels de votre banque</span>
-                  <span className="font-bold" style={{ color: C.red }}>{fee.toFixed(1).replace(".", ",")} %</span>
+                  <span className="text-sm" style={{ color: T.muted }}>Frais annuels de votre banque</span>
+                  <span className="font-bold" style={{ color: T.red }}>{fee.toFixed(1).replace(".", ",")} %</span>
                 </div>
                 <input type="range" min={0} max={3} step={0.1} value={fee}
                   onChange={(e) => setFee(+e.target.value)}
-                  className="w-full" style={{ accentColor: C.blue }} />
-                <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+                  className="w-full" style={{ accentColor: T.blue }} />
+                <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
                   <span>0 %</span><span>1,5 %</span><span>3 %</span>
                 </div>
               </div>
             </div>
             <div className="rounded-xl p-5"
               style={{ background: "rgba(255,90,95,0.06)", border: "1px solid rgba(255,90,95,0.3)" }}>
-              <div className="text-sm font-semibold mb-1" style={{ color: C.red }}>
+              <div className="text-sm font-semibold mb-1" style={{ color: T.red }}>
                 MANQUE À GAGNER SUR {horizon} ANS
               </div>
-              <div className="text-4xl font-bold mb-4" style={{ color: C.red }}>− {eur(fees.manque)}</div>
+              <div className="text-4xl font-bold mb-4" style={{ color: T.red }}>− {eur(fees.manque)}</div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
-                  <div className="text-xs" style={{ color: C.muted }}>Avec votre banque</div>
-                  <div className="font-bold" style={{ color: C.text }}>{eur(fees.bank)}</div>
+                  <div className="text-xs" style={{ color: T.muted }}>Avec votre banque</div>
+                  <div className="font-bold" style={{ color: T.text }}>{eur(fees.bank)}</div>
                 </div>
                 <div className="rounded-lg p-3" style={{ background: "rgba(34,199,154,0.08)" }}>
-                  <div className="text-xs" style={{ color: C.green }}>Avec le WPEA</div>
-                  <div className="font-bold" style={{ color: C.green }}>{eur(fees.wpea)}</div>
+                  <div className="text-xs" style={{ color: T.green }}>Avec le WPEA</div>
+                  <div className="font-bold" style={{ color: T.green }}>{eur(fees.wpea)}</div>
                 </div>
               </div>
             </div>
@@ -3059,14 +2668,14 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       {activeTab === "defensif" && (
         <ScenarioCard
           title="Livret A — Livret A & Épargne Sécurisée"
-          rate="1,5 % / an net · capital garanti" accent="#8a97b1"
+          rate="médian 1,5 %/an · capital garanti" accent={ASSET.livret}
           stats={[
-            { label: "Capital final", value: eur(sim.C.cap), color: "#8a97b1" },
-            { label: "Apports totaux", value: eur(sim.apports), color: C.text },
-            { label: "Intérêts générés", value: eur(sim.C.gain), color: C.green },
-            { label: "Revenu passif/mois", value: eur(sim.C.passif), color: C.text },
+            { label: "Capital final", value: eur(sim.C.cap), color: ASSET.livret },
+            { label: "Apports totaux", value: eur(sim.apports), color: T.text },
+            { label: "Intérêts générés", value: eur(sim.C.gain), color: T.green },
+            { label: "Revenu passif/mois", value: eur(sim.C.passif), color: T.text },
           ]}
-          detailedData={sim.detailedC} lineColor="#8a97b1" chartKey="C" inflationRate={inflationRate}
+          detailedData={sim.detailedC} lineColor={ASSET.livret} chartKey="C" inflationRate={inflationRate} showBand={false}
           note="Intérêts composés sur Livret A, LDDS ou épargne de précaution — capital garanti et disponible à tout moment."
         />
       )}
@@ -3075,8 +2684,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       {activeTab === "btc" && (
         <ScenarioCard
           title="Bitcoin"
-          rate="30 % / an · historique long terme · EXTRÊME" accent="#f7931a"
-          lineColor="#f7931a" chartKey="BTC" inflationRate={inflationRate} logScale
+          rate="médian 12 %/an · EXTRÊME" accent={ASSET.btc}
+          lineColor={ASSET.btc} chartKey="BTC" inflationRate={inflationRate} logScale showBand={false}
           warning={{
             title: "VOLATILITÉ EXTRÊME — LIRE AVANT D'INVESTIR",
             points: [
@@ -3093,10 +2702,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
             { label: "Horizon 5 ans min",      color: "#f97316", bg: "rgba(249,115,22,0.08)" },
           ]}
           stats={[
-            { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: "#f7931a" },
-            { label: "Apports totaux",     value: eur(sim.apports),                       color: C.text },
-            { label: "Gains potentiels",   value: eur(sim.BTC.gain),                      color: C.green },
-            { label: "Multiple",           value: (sim.BTC.cap / sim.apports).toFixed(1) + "×", color: "#f7931a" },
+            { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: ASSET.btc },
+            { label: "Apports totaux",     value: eur(sim.apports),                       color: T.text },
+            { label: "Gains potentiels",   value: eur(sim.BTC.gain),                      color: T.green },
+            { label: "Multiple",           value: (sim.BTC.cap / sim.apports).toFixed(1) + "×", color: ASSET.btc },
           ]}
           detailedData={sim.detailedBTC}
           note="Rendement annualisé moyen de Bitcoin sur 10 ans. N'intègre pas les cycles de −80 %. Purement indicatif — les performances passées ne préjugent pas de l'avenir."
@@ -3107,8 +2716,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       {activeTab === "eth" && (
         <ScenarioCard
           title="Ethereum"
-          rate="25 % / an · historique long terme · EXTRÊME+" accent="#627eea"
-          lineColor="#627eea" chartKey="ETH" inflationRate={inflationRate} logScale
+          rate="médian 10 %/an · EXTRÊME+" accent={ASSET.eth}
+          lineColor={ASSET.eth} chartKey="ETH" inflationRate={inflationRate} logScale showBand={false}
           warning={{
             title: "RISQUE EXTRÊME — RÉSERVÉ AUX UTILISATEURS AVERTIS",
             points: [
@@ -3125,10 +2734,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
             { label: "Risque technologique", color: "#eab308", bg: "rgba(234,179,8,0.08)" },
           ]}
           stats={[
-            { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: "#627eea" },
-            { label: "Apports totaux",   value: eur(sim.apports),                       color: C.text },
-            { label: "Gains potentiels", value: eur(sim.ETH.gain),                      color: C.green },
-            { label: "Multiple",         value: (sim.ETH.cap / sim.apports).toFixed(1) + "×", color: "#627eea" },
+            { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: ASSET.eth },
+            { label: "Apports totaux",   value: eur(sim.apports),                       color: T.text },
+            { label: "Gains potentiels", value: eur(sim.ETH.gain),                      color: T.green },
+            { label: "Multiple",         value: (sim.ETH.cap / sim.apports).toFixed(1) + "×", color: ASSET.eth },
           ]}
           detailedData={sim.detailedETH}
           note="Rendement annualisé moyen d'Ethereum sur 8 ans. Plus volatil que Bitcoin, moins de recul historique. Purement indicatif."
@@ -3140,10 +2749,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
         <Card>
           {/* En-tête */}
           <div className="flex items-center flex-wrap gap-3 mb-2">
-            <TrendingUp size={20} style={{ color: C.blue }} />
-            <h2 className="text-xl font-bold" style={{ color: C.text }}>Comparatif — 5 scénarios</h2>
+            <TrendingUp size={20} style={{ color: T.blue }} />
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparatif — 5 scénarios</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: C.muted }}>
+          <p className="text-xs mb-4" style={{ color: T.muted }}>
             Axe gauche · scénarios sûrs (échelle linéaire) &nbsp;|&nbsp; Axe droit · crypto (échelle logarithmique, ×10 par graduation) — même horizon, deux échelles pour tout lire d'un coup.
           </p>
 
@@ -3163,8 +2772,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                     ? `repeating-linear-gradient(to right,${l.color} 0,${l.color} 5px,transparent 5px,transparent 9px)`
                     : l.color,
                 }} />
-                <span style={{ color: C.muted }}>{l.label}</span>
-                <span style={{ color: C.muted, opacity: 0.45, fontSize: 10 }}>{l.axis}</span>
+                <span style={{ color: T.muted }}>{l.label}</span>
+                <span style={{ color: T.muted, opacity: 0.45, fontSize: 10 }}>{l.axis}</span>
               </span>
             ))}
           </div>
@@ -3173,7 +2782,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           <ResponsiveContainer width="100%" height={340}>
             <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
 
               {/* Axe gauche — scénarios sûrs */}
               <YAxis
@@ -3181,7 +2790,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 orientation="left"
                 domain={[0, nonCryptoDomMax]}
                 ticks={nonCryptoTicks}
-                stroke={C.muted}
+                stroke={T.muted}
                 tick={{ fontSize: 10 }}
                 tickFormatter={simsYFmt}
                 width={54}
@@ -3193,8 +2802,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 orientation="right"
                 domain={[logDomMin, logDomMax]}
                 ticks={logTicks}
-                stroke="#f7931a44"
-                tick={{ fontSize: 10, fill: "#f7931a99" }}
+                stroke={`${ASSET.btc}44`}
+                tick={{ fontSize: 10, fill: `${ASSET.btc}99` }}
                 tickFormatter={logFmt}
                 width={58}
               />
@@ -3211,13 +2820,13 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
               />
 
               {/* Courbes sûres — axe gauche, échelle linéaire */}
-              <Line yAxisId="safe" type="monotone" dataKey="A" name="ETF World"    stroke="#22c55e"   strokeWidth={2.5} dot={false} />
-              <Line yAxisId="safe" type="monotone" dataKey="B" name="Immobilier"   stroke="#f59e0b"   strokeWidth={2.5} dot={false} />
-              <Line yAxisId="safe" type="monotone" dataKey="C" name="Livret A"     stroke="#94a3b8"   strokeWidth={2}   dot={false} />
+              <Line yAxisId="safe" type="monotone" dataKey="A" name="ETF World"  stroke={ASSET.etf}    strokeWidth={3}   dot={false} />
+              <Line yAxisId="safe" type="monotone" dataKey="B" name="Immobilier" stroke={ASSET.immo}   strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
+              <Line yAxisId="safe" type="monotone" dataKey="C" name="Livret A"   stroke={ASSET.livret} strokeWidth={1.5} dot={false} strokeDasharray="3 3" />
 
               {/* Courbes crypto — axe droit, échelle log */}
-              <Line yAxisId="crypto" type="monotone" dataKey="logBTC" name="Bitcoin"  stroke="#ef4444"   strokeWidth={2.5} dot={false} strokeDasharray="7 4" />
-              <Line yAxisId="crypto" type="monotone" dataKey="logETH" name="Ethereum" stroke="#a855f7"   strokeWidth={2.5} dot={false} strokeDasharray="7 4" />
+              <Line yAxisId="crypto" type="monotone" dataKey="logBTC" name="Bitcoin"  stroke={ASSET.btc} strokeWidth={2.5} dot={false} strokeDasharray="10 4" />
+              <Line yAxisId="crypto" type="monotone" dataKey="logETH" name="Ethereum" stroke={ASSET.eth} strokeWidth={2}   dot={false} strokeDasharray="3 4" />
             </LineChart>
           </ResponsiveContainer>
 
@@ -3225,15 +2834,15 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           <div className="overflow-x-auto mt-6">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
                   {["Scénario", "Rendement", "À 10 ans", `À ${horizon} ans`, "Multiple", "Risque"].map((h) => (
-                    <th key={h} className="py-2 px-3 text-left text-xs font-semibold" style={{ color: C.muted }}>{h}</th>
+                    <th key={h} className="py-2 px-3 text-left text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {compare.map((c) => (
-                  <tr key={c.name} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <tr key={c.name} style={{ borderBottom: `1px solid ${T.border}` }}>
                     <td className="py-3 px-3">
                       <button
                         onClick={() => setActiveTab(c.tab)}
@@ -3245,13 +2854,13 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                     <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.y10)}</td>
                     <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.yN)}</td>
                     <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{(c.yN / sim.apports).toFixed(1)}×</td>
-                    <td className="py-3 px-3 text-xs" style={{ color: C.muted }}>{c.risk}</td>
+                    <td className="py-3 px-3 text-xs" style={{ color: T.muted }}>{c.risk}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="text-xs mt-3" style={{ color: C.muted }}>
+          <p className="text-xs mt-3" style={{ color: T.muted }}>
             Rendements basés sur les performances historiques annualisées de chaque actif. Les performances passées ne garantissent pas les rendements futurs. Cliquez sur un scénario pour accéder à son analyse détaillée.
           </p>
         </Card>
@@ -3272,24 +2881,24 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <TrendingUp size={20} style={{ color: C.blue }} />
-                <span className="text-lg font-bold" style={{ color: C.text }}>Cours en temps réel</span>
+                <TrendingUp size={20} style={{ color: T.blue }} />
+                <span className="text-lg font-bold" style={{ color: T.text }}>Cours en temps réel</span>
               </div>
-              <button onClick={() => setLiveOpen(false)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: C.muted, borderRadius: 8, padding: "6px 8px", cursor: "pointer", display: "flex" }}><X size={16} /></button>
+              <button onClick={() => setLiveOpen(false)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 8, padding: "6px 8px", cursor: "pointer", display: "flex" }}><X size={16} /></button>
             </div>
 
             {liveLoading && !liveData && (
-              <div className="flex items-center justify-center gap-3 py-8" style={{ color: C.muted }}>
+              <div className="flex items-center justify-center gap-3 py-8" style={{ color: T.muted }}>
                 <RefreshCw size={18} className="animate-spin" />
                 <span>Chargement des prix en direct…</span>
               </div>
             )}
             {!liveLoading && !liveData && liveError && (
               <div className="flex flex-col items-center gap-3 py-8">
-                <AlertTriangle size={28} style={{ color: C.red }} />
-                <span className="text-sm text-center" style={{ color: C.red }}>{liveError}</span>
+                <AlertTriangle size={28} style={{ color: T.red }} />
+                <span className="text-sm text-center" style={{ color: T.red }}>{liveError}</span>
                 <button onClick={fetchLivePrices} className="px-4 py-2 rounded-xl text-sm"
-                  style={{ background: "rgba(255,255,255,0.05)", color: C.muted, border: `1px solid ${C.border}` }}>
+                  style={{ background: "rgba(255,255,255,0.05)", color: T.muted, border: `1px solid ${T.border}` }}>
                   Réessayer
                 </button>
               </div>
@@ -3310,7 +2919,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                     return (
                       <div key={coin.key} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${coin.color}33` }}>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold" style={{ color: C.text }}>{coin.label}</span>
+                          <span className="font-bold" style={{ color: T.text }}>{coin.label}</span>
                           <span className="text-sm font-bold px-2 py-0.5 rounded-lg"
                             style={{ color: up ? "#22c55e" : "#ef4444", background: up ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)" }}>
                             {up ? "↑" : "↓"} {Math.abs(chg).toFixed(2)} %
@@ -3318,14 +2927,14 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="rounded-lg p-3" style={{ background: `${coin.color}0d` }}>
-                            <div className="text-xs mb-1" style={{ color: C.muted }}>EUR</div>
+                            <div className="text-xs mb-1" style={{ color: T.muted }}>EUR</div>
                             <div className="text-2xl font-bold" style={{ color: coin.color }}>
                               {d.eur >= 1000 ? "€" + d.eur.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) : "€" + d.eur.toFixed(2)}
                             </div>
                           </div>
                           <div className="rounded-lg p-3" style={{ background: "rgba(139,92,246,0.08)" }}>
-                            <div className="text-xs mb-1" style={{ color: C.muted }}>USD</div>
-                            <div className="text-2xl font-bold" style={{ color: C.blue }}>
+                            <div className="text-xs mb-1" style={{ color: T.muted }}>USD</div>
+                            <div className="text-2xl font-bold" style={{ color: T.blue }}>
                               {d.usd >= 1000 ? "$" + d.usd.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "$" + d.usd.toFixed(2)}
                             </div>
                           </div>
@@ -3335,10 +2944,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                   })}
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-                    <div className="text-xs" style={{ color: C.muted }}>
-                      Mis à jour : <span style={{ color: C.text }}>{liveTs}</span>
-                      <span className="ml-3" style={{ color: C.muted }}>· Prochain dans {liveCountdown}s</span>
+                  <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+                    <div className="text-xs" style={{ color: T.muted }}>
+                      Mis à jour : <span style={{ color: T.text }}>{liveTs}</span>
+                      <span className="ml-3" style={{ color: T.muted }}>· Prochain dans {liveCountdown}s</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs" style={{ color: "#22c55e" }}>
                       <span className="w-2 h-2 rounded-full bg-green-500 inline-block" style={{ animation: "pulse 2s infinite" }} />
@@ -3347,11 +2956,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                   </div>
                   <button onClick={fetchLivePrices} disabled={liveLoading}
                     className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-sm font-medium"
-                    style={{ border: `1px solid ${C.border}`, color: C.muted, background: "rgba(255,255,255,0.02)", cursor: liveLoading ? "default" : "pointer" }}>
+                    style={{ border: `1px solid ${T.border}`, color: T.muted, background: "rgba(255,255,255,0.02)", cursor: liveLoading ? "default" : "pointer" }}>
                     <RefreshCw size={13} className={liveLoading ? "animate-spin" : ""} />
                     Actualiser maintenant
                   </button>
-                  <p className="text-xs text-center" style={{ color: C.muted }}>
+                  <p className="text-xs text-center" style={{ color: T.muted }}>
                     Source : CoinGecko (gratuit · aucune clé API)
                   </p>
                 </div>
@@ -3373,7 +2982,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
             width: 500,
             zIndex: 1000,
             background: "#111827",
-            border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : C.cyan}`,
+            border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : T.cyan}`,
             borderRadius: 12,
             boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
             padding: 20,
@@ -3394,42 +3003,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
 /* ------------------------------------------------------------------ */
 /*  CRYPTO HISTORY TOOLTIP                                             */
 /* ------------------------------------------------------------------ */
-const MSCI_HISTORY = [
-  { label: "2000", price: 1420, event: "Peak dot-com",      type: "peak"    },
-  { label: "2003", price: 580,  event: "Creux −59 %",       type: "bottom"  },
-  { label: "2007", price: 1260, event: "Peak pré-crise",    type: "peak"    },
-  { label: "2009", price: 595,  event: "Creux GFC −53 %",   type: "bottom"  },
-  { label: "2015", price: 1850, event: "Reprise",            type: "neutral" },
-  { label: "2020", price: 1580, event: "Creux COVID −33 %", type: "bottom"  },
-  { label: "2021", price: 2780, event: "Pic post-COVID",    type: "peak"    },
-  { label: "2022", price: 2080, event: "Correction −25 %",  type: "bottom"  },
-  { label: "2024", price: 3290, event: "Bull market",       type: "peak"    },
-  { label: "2026", price: 3640, event: "Aujourd'hui",       type: "current" },
-];
-const BTC_HISTORY = [
-  { label: "2010", price: 0.30,  event: "Naissance",    type: "bottom"  },
-  { label: "2013", price: 1100,  event: "Peak 2",        type: "peak"    },
-  { label: "2017", price: 13800, event: "Peak 3",        type: "peak"    },
-  { label: "2018", price: 3600,  event: "Crash −80 %",  type: "bottom"  },
-  { label: "2021", price: 69000, event: "Peak 4",        type: "peak"    },
-  { label: "2022", price: 16500, event: "FTX − Creux",   type: "bottom"  },
-  { label: "2024", price: 62000, event: "Halving",       type: "neutral" },
-  { label: "2025", price: 75000, event: "Bull / Crash",  type: "peak"    },
-  { label: "2026", price: 73469, event: "Aujourd'hui",   type: "current" },
-];
-const ETH_HISTORY = [
-  { label: "2015", price: 1,    event: "Naissance",      type: "bottom"  },
-  { label: "2017", price: 730,  event: "Peak 1",          type: "peak"    },
-  { label: "2018", price: 130,  event: "Crash −85 %",    type: "bottom"  },
-  { label: "2021", price: 4800, event: "Peak ATH",        type: "peak"    },
-  { label: "2022", price: 1000, event: "The Merge",       type: "bottom"  },
-  { label: "2024", price: 3700, event: "ETF approbation", type: "peak"    },
-  { label: "2025", price: 2300, event: "Sous-perf.",      type: "neutral" },
-  { label: "2026", price: 1964, event: "Aujourd'hui",     type: "current" },
-];
 
 function ETFHistoryTooltip() {
-  const color = C.cyan;
+  const T = useT();
+  const color = T.cyan;
   const currentPrice = 3640;
   const bottomPrice  = 580;
   const gainPct = Math.round((currentPrice / bottomPrice - 1) * 100);
@@ -3450,17 +3027,17 @@ function ETFHistoryTooltip() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-lg font-bold" style={{ color }}>MSCI World — Historique de l'indice</div>
-          <div className="text-xs" style={{ color: C.muted }}>WPEA (ETF PEA) · Depuis 2000 · En points d'indice (EUR)</div>
+          <div className="text-xs" style={{ color: T.muted }}>WPEA (ETF PEA) · Depuis 2000 · En points d'indice (EUR)</div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
-          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Indice actuel</div>
+          <div className="text-xs mb-0.5" style={{ color: T.muted }}>Indice actuel</div>
           <div className="font-bold text-sm" style={{ color }}>{currentPrice.toLocaleString("fr-FR")} pts</div>
         </div>
         <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
-          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Depuis le creux 2003</div>
+          <div className="text-xs mb-0.5" style={{ color: T.muted }}>Depuis le creux 2003</div>
           <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
         </div>
       </div>
@@ -3468,9 +3045,9 @@ function ETFHistoryTooltip() {
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={MSCI_HISTORY} margin={{ top: 5, right: 10, bottom: 5, left: 52 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="label" stroke={C.muted} tick={{ fontSize: 10 }} />
+          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} />
           <YAxis
-            domain={[0, 4000]} stroke={C.muted} tick={{ fontSize: 10 }}
+            domain={[0, 4000]} stroke={T.muted} tick={{ fontSize: 10 }}
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
           />
           <Tooltip
@@ -3484,7 +3061,7 @@ function ETFHistoryTooltip() {
       </ResponsiveContainer>
 
       <div className="mt-3 mb-3">
-        <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
+        <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
         <div className="grid grid-cols-4 gap-1">
           {milestones.map((d) => (
             <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
@@ -3497,29 +3074,29 @@ function ETFHistoryTooltip() {
                 style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
                 {d.label}
               </div>
-              <div className="font-semibold" style={{ color: C.text, fontSize: 10 }}>{d.price.toLocaleString("fr-FR")} pts</div>
-              <div style={{ color: C.muted, fontSize: 9 }}>{d.event}</div>
+              <div className="font-semibold" style={{ color: T.text, fontSize: 10 }}>{d.price.toLocaleString("fr-FR")} pts</div>
+              <div style={{ color: T.muted, fontSize: 9 }}>{d.event}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: C.muted }}>
+      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: T.muted }}>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Peak</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Creux</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: color }} /> Aujourd'hui</span>
       </div>
 
       {/* Description */}
-      <div className="rounded-lg p-3 mb-3 text-xs" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}` }}>
+      <div className="rounded-lg p-3 mb-3 text-xs" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
         <div className="font-bold mb-1.5" style={{ color }}>C'est quoi le MSCI World ?</div>
-        <p style={{ color: C.muted, lineHeight: 1.6 }}>
-          Le <span style={{ color: C.text, fontWeight: 600 }}>MSCI World</span> est un indice boursier qui regroupe{" "}
-          <span style={{ color: C.text, fontWeight: 600 }}>~1 500 grandes entreprises</span> dans 23 pays développés
+        <p style={{ color: T.muted, lineHeight: 1.6 }}>
+          Le <span style={{ color: T.text, fontWeight: 600 }}>MSCI World</span> est un indice boursier qui regroupe{" "}
+          <span style={{ color: T.text, fontWeight: 600 }}>~1 500 grandes entreprises</span> dans 23 pays développés
           (États-Unis, Europe, Japon…). Investi via un{" "}
-          <span style={{ color: C.text, fontWeight: 600 }}>ETF PEA</span>, il réplique passivement cet indice
+          <span style={{ color: T.text, fontWeight: 600 }}>ETF PEA</span>, il réplique passivement cet indice
           à très faibles frais (TER ≈ 0,12–0,20 % / an) et bénéficie de la fiscalité avantageuse du PEA après 5 ans.
-          Les États-Unis représentent environ <span style={{ color: C.text, fontWeight: 600 }}>70 %</span> du portefeuille,
+          Les États-Unis représentent environ <span style={{ color: T.text, fontWeight: 600 }}>70 %</span> du portefeuille,
           dominé par Apple, Microsoft, Nvidia, Amazon et Google.
         </p>
       </div>
@@ -3533,6 +3110,7 @@ function ETFHistoryTooltip() {
 }
 
 function CryptoHistoryTooltip({ coin }) {
+  const T = useT();
   const isBTC = coin === "btc";
   const raw    = isBTC ? BTC_HISTORY : ETH_HISTORY;
   const color  = isBTC ? "#f7931a" : "#627eea";
@@ -3566,18 +3144,18 @@ function CryptoHistoryTooltip({ coin }) {
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-lg font-bold" style={{ color }}>{name} — Historique des cours</div>
-          <div className="text-xs" style={{ color: C.muted }}>Depuis la création jusqu'au 8 juin 2026 · Échelle log</div>
+          <div className="text-xs" style={{ color: T.muted }}>Depuis la création jusqu'au 8 juin 2026 · Échelle log</div>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
-          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Prix actuel</div>
+          <div className="text-xs mb-0.5" style={{ color: T.muted }}>Prix actuel</div>
           <div className="font-bold text-sm" style={{ color }}>{eur(currentPrice)}</div>
         </div>
         <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
-          <div className="text-xs mb-0.5" style={{ color: C.muted }}>Gain depuis création</div>
+          <div className="text-xs mb-0.5" style={{ color: T.muted }}>Gain depuis création</div>
           <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
         </div>
       </div>
@@ -3586,10 +3164,10 @@ function CryptoHistoryTooltip({ coin }) {
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={logData} margin={{ top: 5, right: 10, bottom: 5, left: 48 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="label" stroke={C.muted} tick={{ fontSize: 10 }} />
+          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} />
           <YAxis
             domain={[yMin, yMax]} ticks={yTicks}
-            stroke={C.muted} tick={{ fontSize: 10 }}
+            stroke={T.muted} tick={{ fontSize: 10 }}
             tickFormatter={(v) => {
               const val = Math.pow(10, v);
               if (val < 1)    return "€" + val.toFixed(1);
@@ -3609,7 +3187,7 @@ function CryptoHistoryTooltip({ coin }) {
 
       {/* Milestones grid */}
       <div className="mt-3 mb-3">
-        <div className="text-xs font-semibold mb-2" style={{ color: C.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
+        <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
         <div className="grid grid-cols-4 gap-1">
           {milestones.map((d) => (
             <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
@@ -3622,15 +3200,15 @@ function CryptoHistoryTooltip({ coin }) {
                 style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
                 {d.label}
               </div>
-              <div className="font-semibold" style={{ color: C.text, fontSize: 10 }}>{eur(d.price)}</div>
-              <div style={{ color: C.muted, fontSize: 9 }}>{d.event}</div>
+              <div className="font-semibold" style={{ color: T.text, fontSize: 10 }}>{eur(d.price)}</div>
+              <div style={{ color: T.muted, fontSize: 9 }}>{d.event}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: C.muted }}>
+      <div className="flex items-center gap-4 mb-3 text-xs" style={{ color: T.muted }}>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Peak</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Creux</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: color }} /> Aujourd'hui</span>
@@ -3647,44 +3225,36 @@ function CryptoHistoryTooltip({ coin }) {
 }
 
 function Field({ label, children }) {
+  const T = useT();
   return (
     <div>
-      <label className="block text-sm mb-2" style={{ color: C.muted }}>{label}</label>
+      <label className="block text-sm mb-2" style={{ color: T.muted }}>{label}</label>
       {children}
     </div>
   );
 }
 function MiniStat({ label, value, color }) {
+  const T = useT();
   return (
-    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-      <div className="text-sm" style={{ color: C.muted }}>{label}</div>
-      <div className="text-xl font-bold mt-1" style={{ color: color || C.text }}>{value}</div>
+    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+      <div className="text-sm" style={{ color: T.muted }}>{label}</div>
+      <div className="text-xl font-bold mt-1" style={{ color: color || T.text }}>{value}</div>
     </div>
   );
 }
 function ImmoCard({ price, setPrice, horizon }) {
-  const RATE_LOAN = 0.035;
-  const DURATION = 25;
-  const apport = Math.round(price * 0.10);
-  const loan   = price - apport;
-  const i      = RATE_LOAN / 12;
-  const n      = DURATION * 12;
-  const monthlyPayment = loan > 0 ? Math.round(loan * i / (1 - Math.pow(1 + i, -n))) : 0;
-
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const DURATION = IMMO_LOAN_YEARS;
+  const apport = Math.round(price * IMMO_DOWN_FRAC);
+  const notary = Math.round(price * IMMO_NOTARY_FRAC);
+  const monthlyPayment = Math.round(loanPayment(price - apport, IMMO_LOAN_RATE, DURATION));
   const years = Math.min(horizon, DURATION);
-  const data = Array.from({ length: years + 1 }, (_, y) => {
-    const propValue     = Math.round(price * Math.pow(1 + RATE_IMMO_APPRECIATION, y));
-    const monthsPaid    = y * 12;
-    const loanRemaining = monthsPaid >= n ? 0
-      : Math.round(loan * (Math.pow(1 + i, n) - Math.pow(1 + i, monthsPaid)) / (Math.pow(1 + i, n) - 1));
-    const equity = propValue - loanRemaining;
-    return { year: 2026 + y, propValue, loanRemaining, equity };
-  });
+  const data = immoDetailedSeries(price, years, 2026);
 
   const last          = data[data.length - 1];
-  const totalReimb    = Math.round(monthlyPayment * years * 12);
-  const totalInvested = apport + Math.min(totalReimb, monthlyPayment * n);
-  const gain          = last.equity - apport;
+  const totalInvested = last.apports;        // apport + notaire + mensualités versées (cash réel)
+  const gain          = last.gains;          // equity − cash réellement investi
 
   const fmt = (v) => v >= 1000000 ? `${(v/1000000).toFixed(2)} M€` : `${Math.round(v/1000)}k€`;
 
@@ -3693,19 +3263,19 @@ function ImmoCard({ price, setPrice, horizon }) {
     const d = payload[0]?.payload;
     if (!d) return null;
     return (
-      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", fontSize: 12, minWidth: 220 }}>
-        <div style={{ color: C.muted, fontWeight: 700, marginBottom: 8 }}>En {d.year}</div>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 16px", fontSize: 12, minWidth: 220 }}>
+        <div style={{ color: T.muted, fontWeight: 700, marginBottom: 8 }}>En {d.year}</div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
-          <span style={{ color: C.amber }}>Valeur du bien</span>
-          <span style={{ color: C.text, fontWeight: 700 }}>{eur(d.propValue)}</span>
+          <span style={{ color: ASSET.immo }}>Valeur du bien</span>
+          <span style={{ color: T.text, fontWeight: 700 }}>{eur(d.propValue)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
           <span style={{ color: "#ef4444" }}>Crédit restant</span>
-          <span style={{ color: C.text, fontWeight: 700 }}>{eur(d.loanRemaining)}</span>
+          <span style={{ color: T.text, fontWeight: 700 }}>{eur(d.loanRemaining)}</span>
         </div>
-        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", gap: 20 }}>
-          <span style={{ color: C.green, fontWeight: 700 }}>Votre capital</span>
-          <span style={{ color: C.green, fontWeight: 800 }}>{eur(d.equity)}</span>
+        <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", gap: 20 }}>
+          <span style={{ color: T.green, fontWeight: 700 }}>Votre capital</span>
+          <span style={{ color: T.green, fontWeight: 800 }}>{eur(d.equity)}</span>
         </div>
       </div>
     );
@@ -3726,9 +3296,9 @@ function ImmoCard({ price, setPrice, horizon }) {
             {[150000, 200000, 300000, 400000].map(p => (
               <button key={p} onClick={() => setPrice(p)}
                 style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: price === p ? C.amber + "22" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${price === p ? C.amber : C.border}`,
-                  color: price === p ? C.amber : C.muted }}>
+                  background: price === p ? T.amber + "22" : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${price === p ? T.amber : T.border}`,
+                  color: price === p ? T.amber : T.muted }}>
                 {p/1000}k€
               </button>
             ))}
@@ -3739,72 +3309,72 @@ function ImmoCard({ price, setPrice, horizon }) {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
         {[
-          { label: "Votre apport (10 %)",       value: eur(apport),         sub: "à sortir de poche",          color: C.text  },
-          { label: "Mensualité crédit",           value: eur(monthlyPayment), sub: `sur ${DURATION} ans à 3,5 %`, color: C.amber },
-          { label: `Bien vaut dans ${years} ans`, value: eur(last.propValue), sub: "+2 % / an de valorisation",   color: C.amber },
-          { label: "Votre capital final",         value: eur(last.equity),    sub: `gain net : +${eur(gain)}`,   color: C.green },
+          { label: "Apport + notaire",            value: eur(apport + notary), sub: `dont ${eur(notary)} de frais de notaire`, color: T.text  },
+          { label: "Mensualité crédit",           value: eur(monthlyPayment), sub: `sur ${DURATION} ans à 3,5 %`, color: T.amber },
+          { label: `Bien vaut dans ${years} ans`, value: eur(last.propValue), sub: "+2 % / an de valorisation",   color: ASSET.immo },
+          { label: "Gain net réel",               value: eur(gain),           sub: `capital ${eur(last.equity)} − cash investi`, color: gain >= 0 ? T.green : T.red },
         ].map(k => (
-          <div key={k.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ color: C.muted, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
+          <div key={k.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
             <div style={{ color: k.color, fontSize: 22, fontWeight: 800 }}>{k.value}</div>
-            <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{k.sub}</div>
+            <div style={{ color: T.muted, fontSize: 11, marginTop: 4 }}>{k.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Graphique */}
-      <Card style={{ borderColor: C.amber + "33" }}>
-        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Comment votre capital se constitue</h2>
-        <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-          Le bien prend de la valeur chaque année (+2 %), pendant que votre crédit fond. La différence entre les deux, c'est <strong style={{ color: C.green }}>votre capital</strong>.
+      <Card style={{ borderColor: T.amber + "33" }}>
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Comment votre capital se constitue</h2>
+        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>
+          Le bien prend de la valeur chaque année (+2 %), pendant que votre crédit fond. La différence entre les deux, c'est <strong style={{ color: T.green }}>votre capital</strong>.
         </p>
 
         {/* Légende */}
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 16, fontSize: 12 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 28, height: 3, background: C.amber, borderRadius: 2, display: "inline-block" }} />
-            <span style={{ color: C.muted }}>Valeur du bien</span>
+            <span style={{ width: 28, height: 3, background: ASSET.immo, borderRadius: 2, display: "inline-block" }} />
+            <span style={{ color: T.muted }}>Valeur du bien</span>
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 28, height: 3, background: "#ef4444", borderRadius: 2, display: "inline-block" }} />
-            <span style={{ color: C.muted }}>Crédit restant à rembourser</span>
+            <span style={{ color: T.muted }}>Crédit restant à rembourser</span>
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 28, height: 3, background: C.green, borderRadius: 2, display: "inline-block" }} />
-            <span style={{ color: C.muted }}>Votre capital (ce que vous possédez vraiment)</span>
+            <span style={{ width: 28, height: 3, background: T.green, borderRadius: 2, display: "inline-block" }} />
+            <span style={{ color: T.muted }}>Votre capital (ce que vous possédez vraiment)</span>
           </span>
         </div>
 
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={fmt} width={58} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="propValue"     name="Valeur du bien"    stroke={C.amber}   strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="propValue"     name="Valeur du bien"    stroke={ASSET.immo} strokeWidth={2.5} dot={false} />
             <Line type="monotone" dataKey="loanRemaining" name="Crédit restant"    stroke="#ef4444"   strokeWidth={2}   dot={false} strokeDasharray="5 3" />
-            <Line type="monotone" dataKey="equity"        name="Votre capital"     stroke={C.green}   strokeWidth={3}   dot={false} />
+            <Line type="monotone" dataKey="equity"        name="Votre capital"     stroke={T.green}   strokeWidth={3}   dot={false} />
           </LineChart>
         </ResponsiveContainer>
 
         {/* Explication simple */}
         <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
           {[
-            { icon: "🏠", title: "Vous achetez", text: `Un bien à ${eur(price)} avec ${eur(apport)} d'apport. La banque prête le reste.` },
-            { icon: "📉", title: "Le crédit fond", text: `Chaque mois vous remboursez ${eur(monthlyPayment)}. Le capital dû diminue progressivement.` },
-            { icon: "📈", title: "Le bien prend de la valeur", text: `+2 % par an en moyenne. Dans ${years} ans il vaut ${eur(last.propValue)}.` },
-            { icon: "💰", title: "Votre capital croît", text: `Valeur − crédit = ${eur(last.equity)} dans ${years} ans. C'est votre enrichissement réel.` },
+            { Icon: Home,         color: ASSET.immo, title: "Vous achetez", text: `Un bien à ${eur(price)} avec ${eur(apport)} d'apport. La banque prête le reste.` },
+            { Icon: TrendingDown, color: "#ef4444",  title: "Le crédit fond", text: `Chaque mois vous remboursez ${eur(monthlyPayment)}. Le capital dû diminue progressivement.` },
+            { Icon: TrendingUp,   color: ASSET.immo, title: "Le bien prend de la valeur", text: `+2 % par an en moyenne. Dans ${years} ans il vaut ${eur(last.propValue)}.` },
+            { Icon: PiggyBank,    color: T.green,    title: "Votre capital croît", text: `Valeur − crédit = ${eur(last.equity)} dans ${years} ans. C'est votre enrichissement réel.` },
           ].map(b => (
-            <div key={b.title} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px" }}>
-              <div style={{ fontSize: 20, marginBottom: 6 }}>{b.icon}</div>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{b.title}</div>
-              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>{b.text}</div>
+            <div key={b.title} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ marginBottom: 6 }}><b.Icon size={20} style={{ color: b.color }} /></div>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{b.title}</div>
+              <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>{b.text}</div>
             </div>
           ))}
         </div>
       </Card>
 
-      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+      <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
         Modèle simplifié · Taux fixe 3,5 % · Valorisation +2 %/an · Apport 10 % · Hors frais de notaire (~8 %), taxe foncière, charges de copropriété et fiscalité des loyers.
         À affiner avec un courtier pour votre situation réelle.
       </div>
@@ -3812,7 +3382,9 @@ function ImmoCard({ price, setPrice, horizon }) {
   );
 }
 
-function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, inflationRate = 0, warning = null, riskBadges = null, logScale = false }) {
+function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, inflationRate = 0, warning = null, riskBadges = null, logScale = false, showBand = true }) {
+  const T = useT();
+  const chartTip = makeChartTip(T);
   const [showTable, setShowTable] = useState(true);
   const startYear = detailedData[0]?.year || 2026;
   const augmentedData = detailedData.map((row) => ({
@@ -3827,14 +3399,20 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
   // à 0. En log, chaque graduation = capital ×10, et la courbe reste lisible
   // sur toute la période (cf. Math.log10, déjà utilisé pour l'historique BTC/ETH).
   let logData, logYMin, logYMax, logYTicks;
+  // Bande d'incertitude pess/opt présente ? (séries fvBandSeries)
+  const hasBand = showBand && augmentedData.length > 0 && augmentedData[0].capPess != null;
+  const lg = (v) => (v > 1 ? +Math.log10(v).toFixed(3) : 0);
+
   if (logScale) {
     logData = augmentedData.map((row) => ({
       ...row,
       logCapital: row.capital > 1 ? +Math.log10(row.capital).toFixed(3) : 0,
       logApports: row.apports > 1 ? +Math.log10(row.apports).toFixed(3) : 0,
       logReal: row.realCapital > 1 ? +Math.log10(row.realCapital).toFixed(3) : undefined,
+      logRange: hasBand ? [lg(row.capPess), lg(row.capOpt)] : undefined,
     }));
-    const allPositive = augmentedData.flatMap((r) => [r.capital, r.apports]).filter((v) => v > 1);
+    const allPositive = augmentedData.flatMap((r) => [r.capital, r.apports, r.capPess, r.capOpt])
+      .filter((v) => v != null && v > 1);
     logYMin = Math.floor(Math.log10(Math.min(...allPositive)));
     logYMax = Math.ceil(Math.log10(Math.max(...allPositive)));
     logYTicks = Array.from({ length: logYMax - logYMin + 1 }, (_, i) => logYMin + i);
@@ -3862,14 +3440,14 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         </div>
       )}
       <div className="flex flex-wrap items-baseline gap-3 mb-5">
-        <h2 className="text-xl font-bold" style={{ color: C.text }}>{title}</h2>
-        <span className="text-sm" style={{ color: C.muted }}>{rate}</span>
+        <h2 className="text-xl font-bold" style={{ color: T.text }}>{title}</h2>
+        <span className="text-sm" style={{ color: T.muted }}>{rate}</span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl p-4"
-            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm" style={{ color: C.muted }}>{s.label}</div>
+            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm" style={{ color: T.muted }}>{s.label}</div>
             <div className="text-2xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
           </div>
         ))}
@@ -3878,17 +3456,23 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       <div className="flex items-center gap-5 mb-3 flex-wrap">
         {logScale ? (
           <>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
               <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
-              Capital total
+              Scénario médian
             </span>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: lineColor, opacity: 0.55 }} />
+            {hasBand && (
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+                <span className="inline-block w-7 h-3 rounded-sm" style={{ background: lineColor, opacity: 0.18 }} />
+                Fourchette pessimiste → optimiste
+              </span>
+            )}
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: "#3b82f6" }} />
               Apports cumulés
             </span>
             {inflationRate > 0 && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #cbd5e1", opacity: 0.6 }} />
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #ef4444" }} />
                 Valeur réelle
               </span>
             )}
@@ -3896,21 +3480,27 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
           </>
         ) : (
           <>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: lineColor, opacity: 0.55 }} />
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: "#3b82f6" }} />
               Apports cumulés
             </span>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
               <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
               Gains composés
             </span>
+            {hasBand && (
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+                <span className="inline-block w-7 h-3 rounded-sm" style={{ background: lineColor, opacity: 0.18 }} />
+                Fourchette pess. → opt.
+              </span>
+            )}
             {inflationRate > 0 && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
-                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #cbd5e1", opacity: 0.6 }} />
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #ef4444" }} />
                 Valeur réelle
               </span>
             )}
-            <span className="text-xs" style={{ color: C.muted }}>— Hauteur totale = Capital</span>
+            <span className="text-xs" style={{ color: T.muted }}>— Hauteur totale = Capital médian</span>
           </>
         )}
       </div>
@@ -3925,8 +3515,8 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={C.muted} tick={{ fontSize: 11 }}
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 11 }}
               tickFormatter={logFmt} width={64} />
             <Tooltip {...chartTip}
               formatter={(v, name, props) => {
@@ -3937,14 +3527,18 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 return [eur(raw), name];
               }}
               labelFormatter={(y) => `Année ${y}`} />
+            {hasBand && (
+              <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
+                stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+            )}
             <Area type="monotone" dataKey="logCapital" name="Capital total"
               stroke={lineColor} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
             <Line type="monotone" dataKey="logApports" name="Apports cumulés"
-              stroke={lineColor} strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+              stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
             {inflationRate > 0 && (
               <Line type="monotone" dataKey="logReal"
                 name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
-                stroke="#cbd5e1" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+                stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
             )}
           </ComposedChart>
         ) : (
@@ -3960,12 +3554,16 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={C.muted} tick={{ fontSize: 11 }}
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} labelFormatter={(y) => `Année ${y}`} />
+            {hasBand && (
+              <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
+                stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+            )}
             <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
-              stroke={lineColor} strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 3"
+              stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3"
               fill={`url(#gA${chartKey})`} />
             <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
               stroke={lineColor} strokeWidth={2.5}
@@ -3973,7 +3571,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             {inflationRate > 0 && (
               <Line type="monotone" dataKey="realCapital"
                 name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
-                stroke="#cbd5e1" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+                stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
             )}
           </ComposedChart>
         )}
@@ -3982,18 +3580,18 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       <button
         onClick={() => setShowTable((s) => !s)}
         className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-        style={{ border: `1px solid ${C.border}`, color: C.muted, background: "rgba(255,255,255,0.02)" }}>
+        style={{ border: `1px solid ${T.border}`, color: T.muted, background: "rgba(255,255,255,0.02)" }}>
         <Activity size={14} />
         {showTable ? "Masquer" : "Voir"} la timeline année par année
       </button>
 
       {showTable && (
-        <div className="mt-3 overflow-y-auto rounded-xl" style={{ maxHeight: 320, border: `1px solid ${C.border}` }}>
+        <div className="mt-3 overflow-y-auto rounded-xl" style={{ maxHeight: 320, border: `1px solid ${T.border}` }}>
           <table className="w-full text-xs">
-            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: C.panel }}>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: T.panel }}>
+              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
                 {["Année", "Apports cumulés", "Capital total", "Gains générés", "Variation ann."].map((h) => (
-                  <th key={h} className="py-2 px-3 text-left font-semibold" style={{ color: C.muted }}>{h}</th>
+                  <th key={h} className="py-2 px-3 text-left font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -4006,18 +3604,18 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 return (
                   <tr key={row.year}
                     style={{
-                      borderBottom: `1px solid ${C.border}`,
+                      borderBottom: `1px solid ${T.border}`,
                       background: isMilestone ? `${lineColor}14` : "transparent",
                     }}>
-                    <td className="py-2 px-3 font-semibold" style={{ color: isMilestone ? lineColor : C.text }}>
+                    <td className="py-2 px-3 font-semibold" style={{ color: isMilestone ? lineColor : T.text }}>
                       {row.year}{isMilestone && idx > 0 ? " ★" : ""}
                     </td>
-                    <td className="py-2 px-3" style={{ color: C.muted }}>{eur(row.apports)}</td>
+                    <td className="py-2 px-3" style={{ color: T.muted }}>{eur(row.apports)}</td>
                     <td className="py-2 px-3 font-bold" style={{ color: lineColor }}>{eur(row.capital)}</td>
-                    <td className="py-2 px-3" style={{ color: row.gains >= 0 ? C.green : C.red }}>
+                    <td className="py-2 px-3" style={{ color: row.gains >= 0 ? T.green : T.red }}>
                       {row.gains >= 0 ? "+" : ""}{eur(row.gains)}
                     </td>
-                    <td className="py-2 px-3" style={{ color: idx === 0 ? C.muted : varPct >= 0 ? C.green : C.red }}>
+                    <td className="py-2 px-3" style={{ color: idx === 0 ? T.muted : varPct >= 0 ? T.green : T.red }}>
                       {idx === 0 ? "—" : (varPct > 0 ? "+" : "") + varPct.toFixed(1).replace(".", ",") + " %"}
                     </td>
                   </tr>
@@ -4042,12 +3640,12 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <div className="grid grid-cols-3 gap-3">
               {[
                 { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
-                { label: "Vos apports", value: eur(last.apports), color: C.muted },
-                { label: "Gains générés", value: "+" + eur(last.gains), color: C.green },
+                { label: "Vos apports", value: eur(last.apports), color: T.muted },
+                { label: "Gains générés", value: "+" + eur(last.gains), color: T.green },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl p-3 text-center"
-                  style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-                  <div className="text-xs mb-1" style={{ color: C.muted }}>{s.label}</div>
+                  style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                  <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
                   <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
                 </div>
               ))}
@@ -4084,7 +3682,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         );
       })()}
 
-      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(139,92,246,0.04)", color: C.muted }}>
+      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(139,92,246,0.04)", color: T.muted }}>
         {note}
       </div>
     </Card>
@@ -4095,6 +3693,9 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
 /*  FEATURE 1: MODE COUPLE / FAMILLE                                   */
 /* ------------------------------------------------------------------ */
 function Couple({ transactions, simParams, patrimoine, profile }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const chartTip = makeChartTip(T);
   const [partnerId, setPartnerId] = useState(null);
   const [goalTarget, setGoalTarget] = useState(500000);
   const [sharedMonthly, setSharedMonthly] = useState(1000);
@@ -4155,46 +3756,46 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Mode Couple / Famille</h1>
-        <p style={{ color: C.muted }}>Fusionnez vos patrimoines et planifiez ensemble.</p>
+        <h1 className="text-3xl font-bold" style={{ color: T.text }}>Mode Couple / Famille</h1>
+        <p style={{ color: T.muted }}>Fusionnez vos patrimoines et planifiez ensemble.</p>
       </div>
 
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Users size={18} style={{ color: C.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Choisir un partenaire</h2>
+          <Users size={18} style={{ color: T.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Choisir un partenaire</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TEST_PROFILES.map((p) => (
             <button key={p.id} onClick={() => setPartnerId(partnerId === p.id ? null : p.id)}
               className="flex items-center gap-3 p-4 rounded-xl text-left transition"
-              style={{ border: `1px solid ${partnerId === p.id ? C.blue : C.border}`, background: partnerId === p.id ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.02)" }}>
+              style={{ border: `1px solid ${partnerId === p.id ? T.blue : T.border}`, background: partnerId === p.id ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.02)" }}>
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(91,141,239,0.15)", color: C.blue }}>
+                style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
                 {p.profile.firstName[0]}
               </div>
               <div className="min-w-0">
-                <div className="font-semibold text-sm truncate" style={{ color: C.text }}>{p.profile.firstName}</div>
-                <div className="text-xs truncate" style={{ color: C.muted }}>{p.label}</div>
+                <div className="font-semibold text-sm truncate" style={{ color: T.text }}>{p.profile.firstName}</div>
+                <div className="text-xs truncate" style={{ color: T.muted }}>{p.label}</div>
               </div>
-              {partnerId === p.id && <Check size={14} className="ml-auto shrink-0" style={{ color: C.blue }} />}
+              {partnerId === p.id && <Check size={14} className="ml-auto shrink-0" style={{ color: T.blue }} />}
             </button>
           ))}
         </div>
       </Card>
 
       <Card>
-        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>PATRIMOINES COMBINÉS</div>
+        <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>PATRIMOINES COMBINÉS</div>
         <div className="space-y-2 mb-5">
-          <div className="flex justify-between"><span className="text-sm" style={{ color: C.muted }}>{myName}</span><span className="font-bold" style={{ color: C.cyan }}>{eur(myNetWorth)}</span></div>
-          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: C.muted }}>{partner.profile.firstName}</span><span className="font-bold" style={{ color: C.green }}>{eur(partnerNetWorth)}</span></div>}
-          <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-            <span className="font-semibold" style={{ color: C.text }}>Total combiné</span>
-            <span className="text-2xl font-bold" style={{ color: C.blue }}>{eur(combinedNW)}</span>
+          <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{myName}</span><span className="font-bold" style={{ color: T.cyan }}>{eur(myNetWorth)}</span></div>
+          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{partner.profile.firstName}</span><span className="font-bold" style={{ color: T.green }}>{eur(partnerNetWorth)}</span></div>}
+          <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span className="font-semibold" style={{ color: T.text }}>Total combiné</span>
+            <span className="text-2xl font-bold" style={{ color: T.blue }}>{eur(combinedNW)}</span>
           </div>
         </div>
 
-        <div className="text-xs font-semibold mb-3 mt-5" style={{ color: C.muted, letterSpacing: 1 }}>OBJECTIF COMMUN</div>
+        <div className="text-xs font-semibold mb-3 mt-5" style={{ color: T.muted, letterSpacing: 1 }}>OBJECTIF COMMUN</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <Field label="Capital cible (€)">
             <input type="number" value={goalTarget} style={inputStyle} onChange={(e) => setGoalTarget(+e.target.value || 0)} />
@@ -4205,35 +3806,35 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
         </div>
 
         <div className="flex justify-between items-center mb-1 text-sm">
-          <span style={{ color: C.muted }}>Progression</span>
-          <span className="font-bold" style={{ color: C.blue }}>{progressPct} %</span>
+          <span style={{ color: T.muted }}>Progression</span>
+          <span className="font-bold" style={{ color: T.blue }}>{progressPct} %</span>
         </div>
         <div className="rounded-full h-3 mb-1" style={{ background: "rgba(255,255,255,0.07)" }}>
-          <div className="rounded-full h-3 transition-all" style={{ width: progressPct + "%", background: `linear-gradient(90deg,${C.blue},${C.cyan})` }} />
+          <div className="rounded-full h-3 transition-all" style={{ width: progressPct + "%", background: `linear-gradient(90deg,${T.blue},${T.cyan})` }} />
         </div>
-        <div className="flex justify-between text-xs mb-4" style={{ color: C.muted }}><span>{eur(combinedNW)}</span><span>{eur(goalTarget)}</span></div>
+        <div className="flex justify-between text-xs mb-4" style={{ color: T.muted }}><span>{eur(combinedNW)}</span><span>{eur(goalTarget)}</span></div>
 
         {yearsToGoal !== null && (
-          <div className="rounded-xl p-4 text-center" style={{ background: "rgba(139,92,246,0.08)", border: `1px solid ${C.blue}44` }}>
-            <div className="text-sm mb-1" style={{ color: C.muted }}>Objectif atteint en</div>
-            <div className="text-4xl font-bold" style={{ color: C.blue }}>{yearsToGoal} ans</div>
-            <div className="text-xs mt-1" style={{ color: C.muted }}>À l'horizon {2026 + yearsToGoal} · {eur(goalTarget)}</div>
+          <div className="rounded-xl p-4 text-center" style={{ background: "rgba(139,92,246,0.08)", border: `1px solid ${T.blue}44` }}>
+            <div className="text-sm mb-1" style={{ color: T.muted }}>Objectif atteint en</div>
+            <div className="text-4xl font-bold" style={{ color: T.blue }}>{yearsToGoal} ans</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>À l'horizon {2026 + yearsToGoal} · {eur(goalTarget)}</div>
           </div>
         )}
       </Card>
 
       <Card>
-        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>MILESTONES</div>
+        <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>MILESTONES</div>
         <div className="space-y-2">
           {milestones.map((m) => (
             <div key={m.target} className="flex items-center gap-3 p-3 rounded-xl"
-              style={{ background: m.status === "done" ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+              style={{ background: m.status === "done" ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
               <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: m.status === "done" ? "rgba(39,163,122,0.2)" : "rgba(255,255,255,0.05)", border: `1.5px solid ${m.status === "done" ? C.green : C.muted}` }}>
-                {m.status === "done" && <Check size={10} style={{ color: C.green }} />}
+                style={{ background: m.status === "done" ? "rgba(39,163,122,0.2)" : "rgba(255,255,255,0.05)", border: `1.5px solid ${m.status === "done" ? T.green : T.muted}` }}>
+                {m.status === "done" && <Check size={10} style={{ color: T.green }} />}
               </div>
-              <span className="font-bold text-sm" style={{ color: C.text }}>{eur(m.target)}</span>
-              <span className="ml-auto text-sm" style={{ color: m.status === "done" ? C.green : C.muted }}>
+              <span className="font-bold text-sm" style={{ color: T.text }}>{eur(m.target)}</span>
+              <span className="ml-auto text-sm" style={{ color: m.status === "done" ? T.green : T.muted }}>
                 {m.status === "done" ? "Déjà atteint" : m.years ? `dans ${m.years} ans · ${2026 + m.years}` : "50+ ans"}
               </span>
             </div>
@@ -4244,27 +3845,27 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
       {partner && (
         <Card>
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} style={{ color: C.blue }} />
-            <h2 className="text-lg font-bold" style={{ color: C.text }}>Simulation à {horizonY} ans</h2>
+            <TrendingUp size={18} style={{ color: T.blue }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Simulation à {horizonY} ans</h2>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={projSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
-              <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+              <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-              <Line type="monotone" dataKey="Ensemble" stroke={C.blue} strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="Séparément" stroke={C.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+              <Line type="monotone" dataKey="Ensemble" stroke={T.blue} strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="Séparément" stroke={T.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
             </LineChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-3 gap-3 mt-4">
             {[
-              { label: "Ensemble", value: eur(last.Ensemble || 0), color: C.blue },
-              { label: "Séparément", value: eur(last.Séparément || 0), color: C.muted },
-              { label: "Bonus synergie", value: "+" + eur(synergyBonus), color: C.green },
+              { label: "Ensemble", value: eur(last.Ensemble || 0), color: T.blue },
+              { label: "Séparément", value: eur(last.Séparément || 0), color: T.muted },
+              { label: "Bonus synergie", value: "+" + eur(synergyBonus), color: T.green },
             ].map((s) => (
-              <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-                <div className="text-xs mb-1" style={{ color: C.muted }}>{s.label}</div>
+              <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
                 <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
@@ -4274,12 +3875,12 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
 
       <Card style={{ background: "transparent" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Shield size={15} style={{ color: C.muted }} />
-          <span className="text-sm font-semibold" style={{ color: C.muted }}>Planification successorale (bientôt disponible)</span>
+          <Shield size={15} style={{ color: T.muted }} />
+          <span className="text-sm font-semibold" style={{ color: T.muted }}>Planification successorale (bientôt disponible)</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {["Testament digital", "Donation au conjoint survivant", "Contrat de mariage"].map((l) => (
-            <span key={l} className="px-3 py-1.5 rounded-lg text-xs cursor-default" style={{ border: `1px solid ${C.border}`, color: C.muted }}>{l} →</span>
+            <span key={l} className="px-3 py-1.5 rounded-lg text-xs cursor-default" style={{ border: `1px solid ${T.border}`, color: T.muted }}>{l} →</span>
           ))}
         </div>
       </Card>
@@ -4310,6 +3911,8 @@ const DEFAULT_PORTFOLIO = [
 ];
 
 function Portefeuille() {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
   const [positions, setPositions] = useLocalStorage("wt_portfolio", DEFAULT_PORTFOLIO);
   const [nextId, setNextId] = useLocalStorage("wt_portfolio_next_id", 4);
 
@@ -4336,7 +3939,7 @@ function Portefeuille() {
     }).filter(Boolean);
 
   const totalSavings20y = recommendations.reduce((s, r) => s + r.savings20y, 0);
-  const terColor = (t) => t > 0.40 ? C.red : t > 0.25 ? C.amber : C.green;
+  const terColor = (t) => t > 0.40 ? T.red : t > 0.25 ? T.amber : T.green;
 
   const addPosition = () => {
     setPositions((ps) => [...ps, { id: nextId, name: ETF_DB[0].name, amount: 5000, ter: ETF_DB[0].ter }]);
@@ -4352,39 +3955,39 @@ function Portefeuille() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Comparateur ETF & Frais</h1>
-        <p style={{ color: C.muted }}>Analysez vos TER, comparez au marché et optimisez vos frais sur 20 ans.</p>
+        <h1 className="text-3xl font-bold" style={{ color: T.text }}>Comparateur ETF & Frais</h1>
+        <p style={{ color: T.muted }}>Analysez vos TER, comparez au marché et optimisez vos frais sur 20 ans.</p>
       </div>
 
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Mes positions</h2>
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Mes positions</h2>
           <button onClick={addPosition} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
-            style={{ background: "rgba(139,92,246,0.15)", color: C.blue, border: `1px solid ${C.blue}44` }}>
+            style={{ background: "rgba(139,92,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
             <Plus size={14} /> Ajouter
           </button>
         </div>
         <div className="space-y-3">
           {positions.length === 0 && (
-            <div className="rounded-xl p-8 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px dashed ${C.border}` }}>
-              <p className="text-sm mb-3" style={{ color: C.muted }}>Aucune position. Ajoutez votre premier ETF.</p>
+            <div className="rounded-xl p-8 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px dashed ${T.border}` }}>
+              <p className="text-sm mb-3" style={{ color: T.muted }}>Aucune position. Ajoutez votre premier ETF.</p>
               <button onClick={addPosition} className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: "rgba(139,92,246,0.15)", color: C.blue, border: `1px solid ${C.blue}44` }}>
+                style={{ background: "rgba(139,92,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
                 <Plus size={13} style={{ display: "inline", marginRight: 4 }} />Ajouter une position
               </button>
             </div>
           )}
           {positions.map((pos) => (
-            <div key={pos.id} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+            <div key={pos.id} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 <div>
-                  <label className="text-xs mb-1 block" style={{ color: C.muted }}>ETF</label>
+                  <label className="text-xs mb-1 block" style={{ color: T.muted }}>ETF</label>
                   <select value={pos.name} style={inputStyle} onChange={(e) => updatePos(pos.id, "name", e.target.value)}>
                     {ETF_DB.map((e) => <option key={e.name} value={e.name}>{e.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs mb-1 block" style={{ color: C.muted }}>Montant (€)</label>
+                  <label className="text-xs mb-1 block" style={{ color: T.muted }}>Montant (€)</label>
                   <input type="number" value={pos.amount} style={inputStyle} onChange={(e) => updatePos(pos.id, "amount", +e.target.value || 0)} />
                 </div>
                 <div className="flex items-end gap-2">
@@ -4392,15 +3995,15 @@ function Portefeuille() {
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${terColor(pos.ter)}44`, color: terColor(pos.ter) }}>
                     TER {pos.ter.toFixed(2)} %
                   </div>
-                  <button onClick={() => removePos(pos.id)} className="rounded-lg p-2.5"
-                    style={{ color: C.red, border: `1px solid ${C.border}` }}>
+                  <button onClick={() => removePos(pos.id)} aria-label="Supprimer la position" className="rounded-lg p-2.5"
+                    style={{ color: T.red, border: `1px solid ${T.border}` }}>
                     <X size={14} />
                   </button>
                 </div>
               </div>
-              <div className="flex gap-4 mt-2 text-xs" style={{ color: C.muted }}>
-                <span>Frais/an : <b style={{ color: C.text }}>{eur(Math.round((pos.amount || 0) * pos.ter / 100))}</b></span>
-                <span>Poids : <b style={{ color: C.text }}>{totalAmount > 0 ? Math.round((pos.amount || 0) / totalAmount * 100) : 0} %</b></span>
+              <div className="flex gap-4 mt-2 text-xs" style={{ color: T.muted }}>
+                <span>Frais/an : <b style={{ color: T.text }}>{eur(Math.round((pos.amount || 0) * pos.ter / 100))}</b></span>
+                <span>Poids : <b style={{ color: T.text }}>{totalAmount > 0 ? Math.round((pos.amount || 0) / totalAmount * 100) : 0} %</b></span>
               </div>
             </div>
           ))}
@@ -4408,16 +4011,16 @@ function Portefeuille() {
       </Card>
 
       <Card>
-        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>SYNTHÈSE PORTEFEUILLE</div>
+        <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>SYNTHÈSE PORTEFEUILLE</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <MiniStat label="Actifs totaux" value={eur(totalAmount)} />
           <MiniStat label={<>TER moyen pondéré<InfoTooltip text="TER (Total Expense Ratio) : frais annuels totaux prélevés par le fonds (gestion, dépositaire…), exprimés en % de l'encours. Un TER de 0,20 % = 2 € de frais par an pour 1 000 € investis — ces frais réduisent directement votre rendement net, chaque année, par capitalisation." /></>} value={weightedTER.toFixed(2) + " %"} color={terColor(weightedTER)} />
-          <MiniStat label="Frais annuels" value={eur(annualFees)} color={C.amber} />
-          <MiniStat label="Surcoût vs VWRL" value={surCostEur > 0 ? "+" + eur(surCostEur) + "/an" : "Optimal"} color={surCostEur > 0 ? C.red : C.green} />
+          <MiniStat label="Frais annuels" value={eur(annualFees)} color={T.amber} />
+          <MiniStat label="Surcoût vs VWRL" value={surCostEur > 0 ? "+" + eur(surCostEur) + "/an" : "Optimal"} color={surCostEur > 0 ? T.red : T.green} />
         </div>
-        <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(139,92,246,0.04)", border: `1px solid ${C.border}` }}>
-          <span style={{ color: C.muted }}>Benchmark Vanguard FTSE All-World (0,22 %) · votre TER pondéré est </span>
-          <span style={{ color: weightedTER > BENCHMARK ? C.amber : C.green }}>
+        <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(139,92,246,0.04)", border: `1px solid ${T.border}` }}>
+          <span style={{ color: T.muted }}>Benchmark Vanguard FTSE All-World (0,22 %) · votre TER pondéré est </span>
+          <span style={{ color: weightedTER > BENCHMARK ? T.amber : T.green }}>
             {weightedTER > BENCHMARK ? `+${(weightedTER - BENCHMARK).toFixed(2)} %` : "sous le benchmark"} de plus
           </span>
         </div>
@@ -4426,25 +4029,25 @@ function Portefeuille() {
       {recommendations.length > 0 && (
         <Card style={{ borderColor: "rgba(245,166,35,0.3)" }}>
           <div className="flex items-center gap-2 mb-4">
-            <Zap size={16} style={{ color: C.amber }} />
-            <h2 className="text-lg font-bold" style={{ color: C.text }}>Optimisations recommandées</h2>
+            <Zap size={16} style={{ color: T.amber }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Optimisations recommandées</h2>
           </div>
           <div className="space-y-3 mb-4">
             {recommendations.map((r, i) => (
               <div key={i} className="rounded-xl p-4" style={{ background: "rgba(245,166,35,0.05)", border: "1px solid rgba(245,166,35,0.25)" }}>
                 <div className="flex items-start justify-between flex-wrap gap-2 mb-1">
                   <div>
-                    <span className="text-xs font-bold tracking-wide" style={{ color: C.amber }}>REMPLACER</span>
-                    <div className="font-semibold text-sm mt-0.5" style={{ color: C.text }}>
+                    <span className="text-xs font-bold tracking-wide" style={{ color: T.amber }}>REMPLACER</span>
+                    <div className="font-semibold text-sm mt-0.5" style={{ color: T.text }}>
                       {r.position.name} ({r.position.ter} %) → {r.alt.name} ({r.alt.ter} %)
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xs" style={{ color: C.muted }}>Gain sur 20 ans</div>
-                    <div className="font-bold" style={{ color: C.green }}>+{eur(r.savings20y)}</div>
+                    <div className="text-xs" style={{ color: T.muted }}>Gain sur 20 ans</div>
+                    <div className="font-bold" style={{ color: T.green }}>+{eur(r.savings20y)}</div>
                   </div>
                 </div>
-                <div className="text-xs" style={{ color: C.muted }}>
+                <div className="text-xs" style={{ color: T.muted }}>
                   Montant : {eur(r.position.amount)} · Économies/an : {eur(r.savingsAnnual)}
                 </div>
               </div>
@@ -4452,9 +4055,9 @@ function Portefeuille() {
           </div>
           {totalSavings20y > 0 && (
             <div className="rounded-xl p-4 text-center" style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.3)" }}>
-              <div className="text-sm mb-1" style={{ color: C.muted }}>Impact total des optimisations (20 ans)</div>
-              <div className="text-3xl font-bold" style={{ color: C.green }}>+{eur(totalSavings20y)}</div>
-              <div className="text-xs mt-1" style={{ color: C.muted }}>en capital supplémentaire grâce aux frais réduits</div>
+              <div className="text-sm mb-1" style={{ color: T.muted }}>Impact total des optimisations (20 ans)</div>
+              <div className="text-3xl font-bold" style={{ color: T.green }}>+{eur(totalSavings20y)}</div>
+              <div className="text-xs mt-1" style={{ color: T.muted }}>en capital supplémentaire grâce aux frais réduits</div>
             </div>
           )}
         </Card>
@@ -4463,9 +4066,9 @@ function Portefeuille() {
       {recommendations.length === 0 && (
         <Card style={{ borderColor: "rgba(34,199,154,0.3)" }}>
           <div className="flex items-center gap-2">
-            <Check size={18} style={{ color: C.green }} />
-            <span className="font-semibold" style={{ color: C.green }}>Portefeuille optimisé !</span>
-            <span className="text-sm" style={{ color: C.muted }}>Tous vos TER sont en dessous de 0,30 %.</span>
+            <Check size={18} style={{ color: T.green }} />
+            <span className="font-semibold" style={{ color: T.green }}>Portefeuille optimisé !</span>
+            <span className="text-sm" style={{ color: T.muted }}>Tous vos TER sont en dessous de 0,30 %.</span>
           </div>
         </Card>
       )}
@@ -4491,6 +4094,9 @@ const TAUX_TF_DEFAUT = 46; // moyenne nationale indicative pour les département
 /*  FEATURE 5: SIMULATEUR IMMOBILIER AVANCÉ                            */
 /* ------------------------------------------------------------------ */
 function Immobilier({ totals, simParams, patrimoine, transactions }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const chartTip = makeChartTip(T);
   const netWorth = useMemo(() => {
     const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
     const p = patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
@@ -4661,7 +4267,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
   const mensualiteMaxAvecLoyer = mensualiteMax + Math.round(locLoyer * 0.7);
   const locBudgetSearch = Math.round(loanFromPayment(mensualiteMaxAvecLoyer, 0.037, 25));
 
-  const rendementColor = (r) => r >= 6 ? C.green : r >= 3.5 ? C.amber : C.red;
+  const rendementColor = (r) => r >= 6 ? T.green : r >= 3.5 ? T.amber : T.red;
 
   // --- Mise en location d'un bien déjà détenu : charges & cash-flow ---
   const melMoisOccupes         = Math.max(0, 12 - melVacance);
@@ -4734,8 +4340,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Simulateur Immobilier</h1>
-        <p style={{ color: C.muted }}>Analysez un projet d'achat, calculez votre apport et comparez achat vs location.</p>
+        <h1 className="text-3xl font-bold" style={{ color: T.text }}>Simulateur Immobilier</h1>
+        <p style={{ color: T.muted }}>Analysez un projet d'achat, calculez votre apport et comparez achat vs location.</p>
       </div>
 
       {/* Mode : résidence principale vs investissement locatif vs mise en location */}
@@ -4746,13 +4352,13 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           ["location", "Mettre un bien en location", "Un bien que vous possédez déjà"],
         ].map(([val, lbl]) => (
           <button key={val} onClick={() => setMode(val)} style={{
-            padding: "9px 18px", borderRadius: 10, border: `1px solid ${mode === val ? C.blue : C.border}`,
+            padding: "9px 18px", borderRadius: 10, border: `1px solid ${mode === val ? T.blue : T.border}`,
             background: mode === val ? "rgba(91,141,239,0.15)" : "transparent",
-            color: mode === val ? C.blue : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer",
+            color: mode === val ? T.blue : T.muted, fontWeight: 700, fontSize: 13, cursor: "pointer",
           }}>{lbl}</button>
         ))}
       </div>
-      <p className="text-sm -mt-4" style={{ color: C.muted }}>
+      <p className="text-sm -mt-4" style={{ color: T.muted }}>
         {mode === "residence" && "Résidence principale : le logement que vous occuperez vous-même."}
         {mode === "locatif" && "Investissement locatif : un bien acheté pour être loué — rendement, charges et cash-flow sont calculés séparément."}
         {mode === "location" && "Mise en location d'un bien déjà détenu : simulez le cash-flow si vous le louez, charges et imposition incluses."}
@@ -4762,9 +4368,9 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {mode !== "location" && (
       <Card style={{ borderColor: profileType === "salarie_stable" ? "rgba(34,199,154,0.25)" : "rgba(245,166,35,0.25)" }}>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Home size={20} style={{ color: C.green }} />
-          <h2 className="text-xl font-bold" style={{ color: C.text }}>Capacité d'Emprunt Maximale</h2>
-          <span className="text-sm ml-auto" style={{ color: C.muted }}>Règle des 35 % d'endettement</span>
+          <Home size={20} style={{ color: T.green }} />
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Capacité d'Emprunt Maximale</h2>
+          <span className="text-sm ml-auto" style={{ color: T.muted }}>Règle des 35 % d'endettement</span>
         </div>
         <div className="flex items-center flex-wrap gap-3 rounded-xl px-4 py-3 mb-4"
           style={{
@@ -4774,14 +4380,14 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           <span className="text-sm font-semibold" style={{ color: bCfg.color }}>
             Profil détecté : {bCfg.label}
           </span>
-          <span className="ml-auto text-xs" style={{ color: C.muted }}>
-            Revenu retenu :&nbsp;<b style={{ color: C.text }}>{eur(revenueForBank)}</b>
+          <span className="ml-auto text-xs" style={{ color: T.muted }}>
+            Revenu retenu :&nbsp;<b style={{ color: T.text }}>{eur(revenueForBank)}</b>
             {bCfg.revenueRatio < 1 && <span> · {Math.round(bCfg.revenueRatio * 100)} % du brut</span>}
           </span>
         </div>
         {bCfg.note && (
           <div className="rounded-xl px-4 py-3 mb-4 text-sm"
-            style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)", color: C.amber }}>
+            style={{ background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)", color: T.amber }}>
             {bCfg.note}
           </div>
         )}
@@ -4789,8 +4395,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         {/* Formule & inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <MiniStat label="Revenus nets mensuels" value={eur(revenueForBank)} />
-          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}` }}>
-            <div className="text-xs mb-1.5" style={{ color: C.muted }}>
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
+            <div className="text-xs mb-1.5" style={{ color: T.muted }}>
               Crédits existants hors immo (auto-détectés)
             </div>
             <div className="flex items-center gap-2">
@@ -4799,57 +4405,57 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
                 min={0}
                 value={creditsExistants}
                 onChange={e => setCreditsManual(+e.target.value || 0)}
-                style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: C.amber, width: "100%" }}
+                style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: T.amber, width: "100%" }}
               />
-              <span className="text-xs shrink-0" style={{ color: C.muted }}>€/mois</span>
+              <span className="text-xs shrink-0" style={{ color: T.muted }}>€/mois</span>
             </div>
             {creditsManual === null && autoCredits > 0 && (
-              <div className="text-xs mt-1" style={{ color: C.muted }}>Détectés depuis vos transactions</div>
+              <div className="text-xs mt-1" style={{ color: T.muted }}>Détectés depuis vos transactions</div>
             )}
             {creditsManual !== null && (
-              <button className="text-xs mt-1 underline" style={{ color: C.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              <button className="text-xs mt-1 underline" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 onClick={() => setCreditsManual(null)}>
                 Remettre auto ({eur(autoCredits)})
               </button>
             )}
           </div>
-          <MiniStat label="Mensualité disponible" value={eur(mensualiteMax)} color={mensualiteMax > 0 ? C.green : C.red} />
+          <MiniStat label="Mensualité disponible" value={eur(mensualiteMax)} color={mensualiteMax > 0 ? T.green : T.red} />
         </div>
 
         {/* Formule affichée */}
         <div className="rounded-xl px-4 py-3 mb-4 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
-          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
-          <span style={{ color: C.text }}>Mensualité max</span>
+          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
+          <span style={{ color: T.text }}>Mensualité max</span>
           <span>=</span>
-          <span style={{ color: C.green }}>{eur(revenueForBank)} × 35%{bCfg.capacityMult < 1 ? ` × ${Math.round(bCfg.capacityMult * 100)}%` : ""}</span>
-          {creditsExistants > 0 && <><span>−</span><span style={{ color: C.amber }}>{eur(creditsExistants)} crédits existants</span></>}
+          <span style={{ color: T.green }}>{eur(revenueForBank)} × 35%{bCfg.capacityMult < 1 ? ` × ${Math.round(bCfg.capacityMult * 100)}%` : ""}</span>
+          {creditsExistants > 0 && <><span>−</span><span style={{ color: T.amber }}>{eur(creditsExistants)} crédits existants</span></>}
           <span>=</span>
-          <span style={{ color: mensualiteMax > 0 ? C.cyan : C.red, fontWeight: 700 }}>{eur(mensualiteMax)}</span>
+          <span style={{ color: mensualiteMax > 0 ? T.cyan : T.red, fontWeight: 700 }}>{eur(mensualiteMax)}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Card style={{ background: "rgba(139,92,246,0.05)" }}>
-            <div className="text-sm" style={{ color: C.muted }}>Sur <b>20 ans</b> à 3,5 %</div>
-            <div className="text-3xl font-bold my-1" style={{ color: loan20 > 0 ? C.cyan : C.muted }}>{eur(loan20)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
+            <div className="text-sm" style={{ color: T.muted }}>Sur <b>20 ans</b> à 3,5 %</div>
+            <div className="text-3xl font-bold my-1" style={{ color: loan20 > 0 ? T.cyan : T.muted }}>{eur(loan20)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
           </Card>
           <Card style={{ background: "rgba(34,199,154,0.05)" }}>
-            <div className="text-sm" style={{ color: C.muted }}>Sur <b>25 ans</b> à 3,7 %</div>
-            <div className="text-3xl font-bold my-1" style={{ color: loan25 > 0 ? C.green : C.muted }}>{eur(loan25)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
+            <div className="text-sm" style={{ color: T.muted }}>Sur <b>25 ans</b> à 3,7 %</div>
+            <div className="text-3xl font-bold my-1" style={{ color: loan25 > 0 ? T.green : T.muted }}>{eur(loan25)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
           </Card>
         </div>
 
         {mode === "locatif" && (
-          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}33` }}>
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33` }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span style={{ color: C.blue, fontWeight: 700 }}>
+              <span style={{ color: T.blue, fontWeight: 700 }}>
                 Capacité d'emprunt avec ce loyer
                 <InfoTooltip text="Les banques intègrent généralement ~70 % du loyer prévisionnel dans le calcul de votre taux d'endettement (35 %), ce qui augmente votre capacité d'emprunt pour un investissement locatif." align="left" />
               </span>
-              <span style={{ color: C.text, fontWeight: 800 }}>{eur(mensualiteMaxAvecLoyer)} / mois</span>
+              <span style={{ color: T.text, fontWeight: 800 }}>{eur(mensualiteMaxAvecLoyer)} / mois</span>
             </div>
-            <div className="text-xs mt-1" style={{ color: C.muted }}>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>
               Soit jusqu'à {eur(locBudgetSearch)} empruntables sur 25 ans (au lieu de {eur(loan25)} sans loyer pris en compte).
             </div>
           </div>
@@ -4862,8 +4468,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <>
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Home size={18} style={{ color: C.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres du projet</h2>
+          <Home size={18} style={{ color: T.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres du projet</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
@@ -4871,7 +4477,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           </Field>
           <Field label={`Apport total, notaire inclus (${apportPct} % = ${eur(totalApport)})`}>
             <input type="range" min={5} max={50} step={1} value={apportPct} onChange={(e) => setApportPct(+e.target.value)}
-              className="w-full" style={{ accentColor: C.blue }} />
+              className="w-full" style={{ accentColor: T.blue }} />
           </Field>
           <Field label="Taux crédit (% / an)">
             <input type="number" value={rate} step={0.1} style={inputStyle} onChange={(e) => setRate(+e.target.value || 0)} />
@@ -4889,42 +4495,42 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 
       {/* Synthèse financement */}
       <Card>
-        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
+        <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <MiniStat label="Votre apport" value={eur(totalApport)} color={C.cyan} />
-          <MiniStat label="Dont frais de notaire" value={eur(notaire)} color={C.muted} />
-          <MiniStat label="Dont sur le bien" value={eur(apportSurBien)} color={C.blue} />
-          <MiniStat label="Montant emprunté" value={eur(credit)} color={C.amber} />
+          <MiniStat label="Votre apport" value={eur(totalApport)} color={T.cyan} />
+          <MiniStat label="Dont frais de notaire" value={eur(notaire)} color={T.muted} />
+          <MiniStat label="Dont sur le bien" value={eur(apportSurBien)} color={T.blue} />
+          <MiniStat label="Montant emprunté" value={eur(credit)} color={T.amber} />
         </div>
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm" style={{ color: C.muted }}>Mensualité crédit</div>
-            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(mensualite)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>sur {duration} ans à {rate} %</div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm" style={{ color: T.muted }}>Mensualité crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: T.text }}>{eur(mensualite)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>sur {duration} ans à {rate} %</div>
           </div>
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm" style={{ color: C.muted }}>Coût total du crédit</div>
-            <div className="text-3xl font-bold my-1" style={{ color: C.amber }}>{eur(credit + totalInterest)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>dont intérêts : {eur(Math.round(totalInterest))}</div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm" style={{ color: T.muted }}>Coût total du crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: T.amber }}>{eur(credit + totalInterest)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>dont intérêts : {eur(Math.round(totalInterest))}</div>
           </div>
         </div>
 
         {/* Affordabilité */}
-        <div className="rounded-xl p-4" style={{ background: canAfford ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${canAfford ? C.green + "44" : C.red + "44"}` }}>
+        <div className="rounded-xl p-4" style={{ background: canAfford ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${canAfford ? T.green + "44" : T.red + "44"}` }}>
           <div className="flex items-start justify-between flex-wrap gap-2 mb-2">
-            <span className="font-semibold text-sm" style={{ color: canAfford ? C.green : C.red }}>
+            <span className="font-semibold text-sm" style={{ color: canAfford ? T.green : T.red }}>
               {canAfford ? "Apport finançable" : "Apport insuffisant"}
             </span>
-            <span className="text-sm font-bold" style={{ color: C.text }}>
+            <span className="text-sm font-bold" style={{ color: T.text }}>
               {canAfford ? `Marge : ${eur(Math.round(-affordGap))}` : `Manque : ${eur(Math.round(affordGap))}`}
             </span>
           </div>
-          <div className="flex justify-between text-xs" style={{ color: C.muted }}>
-            <span>Votre patrimoine liquide estimé : <b style={{ color: C.text }}>{eur(Math.round(liquidNetWorth))}</b></span>
-            <span>Apport requis : <b style={{ color: C.text }}>{eur(totalApport)}</b></span>
+          <div className="flex justify-between text-xs" style={{ color: T.muted }}>
+            <span>Votre patrimoine liquide estimé : <b style={{ color: T.text }}>{eur(Math.round(liquidNetWorth))}</b></span>
+            <span>Apport requis : <b style={{ color: T.text }}>{eur(totalApport)}</b></span>
           </div>
           {!canAfford && (
-            <div className="mt-3 space-y-1 text-xs" style={{ color: C.muted }}>
+            <div className="mt-3 space-y-1 text-xs" style={{ color: T.muted }}>
               <div>• Attendre {Math.ceil(affordGap / simParams.monthly)} mois d'épargne (à {eur(simParams.monthly)}/mois)</div>
               <div>• Réduire l'apport à {Math.max(10, Math.floor((liquidNetWorth / price) * 100))} % (notaire inclus)</div>
               <div>• Rechercher un bien à {eur(Math.round(liquidNetWorth / (apportPct / 100)))} max avec votre apport actuel</div>
@@ -4937,13 +4543,13 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <TrendingUp size={18} style={{ color: C.amber }} />
-            <h2 className="text-lg font-bold" style={{ color: C.text }}>Projection sur {duration} ans</h2>
+            <TrendingUp size={18} style={{ color: T.amber }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection sur {duration} ans</h2>
           </div>
           <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
             <input type="checkbox" checked={showRentVsBuy} onChange={(e) => setShowRentVsBuy(e.target.checked)}
-              style={{ accentColor: C.green, width: 14, height: 14 }} />
-            <span style={{ color: showRentVsBuy ? C.green : C.muted }}>Comparer avec la location</span>
+              style={{ accentColor: T.green, width: 14, height: 14 }} />
+            <span style={{ color: showRentVsBuy ? T.green : T.muted }}>Comparer avec la location</span>
           </label>
         </div>
 
@@ -4958,13 +4564,13 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
             </Field>
           </div>
           <div className="rounded-xl px-4 py-2.5 mb-4 text-xs flex flex-wrap gap-x-2 gap-y-1 items-center"
-            style={{ background: "rgba(34,211,238,0.05)", border: `1px solid ${C.cyan}33`, color: C.muted }}>
+            style={{ background: "rgba(34,211,238,0.05)", border: `1px solid ${T.cyan}33`, color: T.muted }}>
             {investMonthly > 0 ? (
               <>
-                <span>Effort propriétaire</span><span style={{ color: C.text }}>{eur(effortProprietaire)}/mois</span>
-                <span>− loyer</span><span style={{ color: C.text }}>{eur(rentMonthly)}/mois</span>
+                <span>Effort propriétaire</span><span style={{ color: T.text }}>{eur(effortProprietaire)}/mois</span>
+                <span>− loyer</span><span style={{ color: T.text }}>{eur(rentMonthly)}/mois</span>
                 <span>=</span>
-                <span style={{ color: C.cyan, fontWeight: 700 }}>{eur(investMonthly)}/mois investis en ETF par le locataire</span>
+                <span style={{ color: T.cyan, fontWeight: 700 }}>{eur(investMonthly)}/mois investis en ETF par le locataire</span>
                 <span>(comparaison à effort mensuel égal)</span>
               </>
             ) : (
@@ -4977,42 +4583,42 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={ownershipSeries}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={C.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={C.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-            <Line type="monotone" dataKey="Propriété nette" stroke={C.amber} strokeWidth={2.5} dot={false} />
-            <Line type="monotone" dataKey="propValue" name="Valeur du bien" stroke={C.muted} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-            {showRentVsBuy && <Line type="monotone" dataKey="Patrimoine locataire" stroke={C.cyan} strokeWidth={2} strokeDasharray="5 3" dot={false} />}
+            <Line type="monotone" dataKey="Propriété nette" stroke={T.amber} strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="propValue" name="Valeur du bien" stroke={T.muted} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+            {showRentVsBuy && <Line type="monotone" dataKey="Patrimoine locataire" stroke={T.cyan} strokeWidth={2} strokeDasharray="5 3" dot={false} />}
           </LineChart>
         </ResponsiveContainer>
 
         <div className="grid grid-cols-3 gap-3 mt-4">
-          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-xs mb-1" style={{ color: C.muted }}>Valeur du bien à {duration} ans</div>
-            <div className="font-bold text-sm" style={{ color: C.amber }}>{eur(finalPropValue)}</div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-xs mb-1" style={{ color: T.muted }}>Valeur du bien à {duration} ans</div>
+            <div className="font-bold text-sm" style={{ color: T.amber }}>{eur(finalPropValue)}</div>
           </div>
-          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-xs mb-1" style={{ color: C.muted }}>Patrimoine net immobilier</div>
-            <div className="font-bold text-sm" style={{ color: C.text }}>{eur(finalEquity)}</div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-xs mb-1" style={{ color: T.muted }}>Patrimoine net immobilier</div>
+            <div className="font-bold text-sm" style={{ color: T.text }}>{eur(finalEquity)}</div>
           </div>
           {showRentVsBuy && (
             <div className="rounded-xl p-3 text-center" style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.3)" }}>
-              <div className="text-xs mb-1" style={{ color: C.muted }}>Patrimoine locataire</div>
-              <div className="font-bold text-sm" style={{ color: C.cyan }}>{eur(finalRenterFV)}</div>
+              <div className="text-xs mb-1" style={{ color: T.muted }}>Patrimoine locataire</div>
+              <div className="font-bold text-sm" style={{ color: T.cyan }}>{eur(finalRenterFV)}</div>
             </div>
           )}
           {!showRentVsBuy && (
-            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-              <div className="text-xs mb-1" style={{ color: C.muted }}>Intérêts payés</div>
-              <div className="font-bold text-sm" style={{ color: C.red }}>{eur(Math.round(totalInterest))}</div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+              <div className="text-xs mb-1" style={{ color: T.muted }}>Intérêts payés</div>
+              <div className="font-bold text-sm" style={{ color: T.red }}>{eur(Math.round(totalInterest))}</div>
             </div>
           )}
         </div>
 
         {showRentVsBuy && (
           <div className="mt-3 rounded-xl p-3 text-sm"
-            style={{ background: finalEquity > finalRenterFV ? "rgba(34,199,154,0.06)" : "rgba(56,189,248,0.06)", border: `1px solid ${finalEquity > finalRenterFV ? C.green + "44" : C.cyan + "44"}` }}>
-            <span style={{ color: finalEquity > finalRenterFV ? C.green : C.cyan }}>
+            style={{ background: finalEquity > finalRenterFV ? "rgba(34,199,154,0.06)" : "rgba(56,189,248,0.06)", border: `1px solid ${finalEquity > finalRenterFV ? T.green + "44" : T.cyan + "44"}` }}>
+            <span style={{ color: finalEquity > finalRenterFV ? T.green : T.cyan }}>
               {finalEquity > finalRenterFV
                 ? `L'achat génère ${eur(finalEquity - finalRenterFV)} de plus qu'investir en ETF en tant que locataire.`
                 : `La location + investissement ETF génère ${eur(finalRenterFV - finalEquity)} de plus. Les deux stratégies sont proches — choix de mode de vie.`}
@@ -5021,7 +4627,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         )}
 
         {showRentVsBuy && (
-          <p className="mt-2 text-xs" style={{ color: C.muted }}>
+          <p className="mt-2 text-xs" style={{ color: T.muted }}>
             Note fiscale : le capital ETF du locataire est affiché brut (avant flat tax de 30 % en cas de retrait), alors que la plus-value sur une résidence principale est exonérée d'impôt — l'avantage réel de l'achat est donc légèrement sous-estimé ci-dessus.
           </p>
         )}
@@ -5034,8 +4640,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Paramètres du bien locatif */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Building2 size={18} style={{ color: C.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres du bien locatif</h2>
+          <Building2 size={18} style={{ color: T.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres du bien locatif</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
@@ -5043,7 +4649,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           </Field>
           <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
             <input type="range" min={5} max={50} step={1} value={locApportPct} onChange={(e) => setLocApportPct(+e.target.value)}
-              className="w-full" style={{ accentColor: C.blue }} />
+              className="w-full" style={{ accentColor: T.blue }} />
           </Field>
           <Field label="Taux crédit (% / an)">
             <input type="number" value={locRate} step={0.1} style={inputStyle} onChange={(e) => setLocRate(+e.target.value || 0)} />
@@ -5058,7 +4664,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           </Field>
           <Field label={`Vacance locative (${locVacance} mois/an)`}>
             <input type="range" min={0} max={3} step={1} value={locVacance} onChange={(e) => setLocVacance(+e.target.value)}
-              className="w-full" style={{ accentColor: C.amber }} />
+              className="w-full" style={{ accentColor: T.amber }} />
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
             <input type="number" value={locCharges} style={inputStyle} onChange={(e) => setLocCharges(+e.target.value || 0)} />
@@ -5077,23 +4683,23 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 
       {/* Structure du financement locatif */}
       <Card>
-        <div className="text-xs font-semibold mb-4" style={{ color: C.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
+        <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <MiniStat label="Votre apport" value={eur(locTotalApport)} color={C.cyan} />
-          <MiniStat label="Dont frais de notaire" value={eur(locNotaire)} color={C.muted} />
-          <MiniStat label="Dont sur le bien" value={eur(locApportSurBien)} color={C.blue} />
-          <MiniStat label="Montant emprunté" value={eur(locCredit)} color={C.amber} />
+          <MiniStat label="Votre apport" value={eur(locTotalApport)} color={T.cyan} />
+          <MiniStat label="Dont frais de notaire" value={eur(locNotaire)} color={T.muted} />
+          <MiniStat label="Dont sur le bien" value={eur(locApportSurBien)} color={T.blue} />
+          <MiniStat label="Montant emprunté" value={eur(locCredit)} color={T.amber} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm" style={{ color: C.muted }}>Mensualité crédit</div>
-            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(locMensualite)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>sur {locDuration} ans à {locRate} %</div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm" style={{ color: T.muted }}>Mensualité crédit</div>
+            <div className="text-3xl font-bold my-1" style={{ color: T.text }}>{eur(locMensualite)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>sur {locDuration} ans à {locRate} %</div>
           </div>
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm" style={{ color: C.muted }}>Assurance emprunteur</div>
-            <div className="text-3xl font-bold my-1" style={{ color: C.text }}>{eur(locAssuranceEmprunteurMensuelle)}</div>
-            <div className="text-xs" style={{ color: C.muted }}>par mois, sur {eur(locCredit)} emprunté</div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm" style={{ color: T.muted }}>Assurance emprunteur</div>
+            <div className="text-3xl font-bold my-1" style={{ color: T.text }}>{eur(locAssuranceEmprunteurMensuelle)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>par mois, sur {eur(locCredit)} emprunté</div>
           </div>
         </div>
       </Card>
@@ -5101,38 +4707,38 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Rendement locatif */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={18} style={{ color: C.amber }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Rendement locatif</h2>
+          <TrendingUp size={18} style={{ color: T.amber }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Rendement locatif</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm flex items-center" style={{ color: C.muted }}>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm flex items-center" style={{ color: T.muted }}>
               Rendement brut
               <InfoTooltip text="Rendement brut = loyers annuels (hors vacance) ÷ (prix d'achat + frais de notaire). Ne tient compte d'aucune charge — utile pour comparer rapidement des biens entre eux." />
             </div>
             <div className="text-3xl font-bold my-1" style={{ color: rendementColor(rendementBrut) }}>{rendementBrut.toFixed(2)} %</div>
-            <div className="text-xs" style={{ color: C.muted }}>{eur(loyerAnnuelBrut)} / an ÷ {eur(locInvestissementTotal)}</div>
+            <div className="text-xs" style={{ color: T.muted }}>{eur(loyerAnnuelBrut)} / an ÷ {eur(locInvestissementTotal)}</div>
           </div>
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-            <div className="text-sm flex items-center" style={{ color: C.muted }}>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-sm flex items-center" style={{ color: T.muted }}>
               Rendement net
               <InfoTooltip text="Rendement net = (loyers réels après vacance locative − charges de copropriété − taxe foncière − assurance PNO) ÷ (prix d'achat + frais de notaire). Hors crédit et hors fiscalité — c'est le chiffre le plus comparable entre projets." />
             </div>
             <div className="text-3xl font-bold my-1" style={{ color: rendementColor(rendementNet) }}>{rendementNet.toFixed(2)} %</div>
-            <div className="text-xs" style={{ color: C.muted }}>après charges, hors crédit et fiscalité</div>
+            <div className="text-xs" style={{ color: T.muted }}>après charges, hors crédit et fiscalité</div>
           </div>
         </div>
 
         {/* Formule affichée */}
         <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
-          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
-          <span style={{ color: C.text }}>Rendement net</span>
+          style={{ background: "rgba(47,155,255,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
+          <span style={{ color: T.text }}>Rendement net</span>
           <span>=</span>
-          <span style={{ color: C.green }}>({eur(loyerAnnuelEffectif)} loyers</span>
+          <span style={{ color: T.green }}>({eur(loyerAnnuelEffectif)} loyers</span>
           <span>−</span>
-          <span style={{ color: C.amber }}>{eur(locChargesAnnuelles)} charges)</span>
+          <span style={{ color: T.amber }}>{eur(locChargesAnnuelles)} charges)</span>
           <span>÷</span>
-          <span style={{ color: C.cyan }}>{eur(locInvestissementTotal)}</span>
+          <span style={{ color: T.cyan }}>{eur(locInvestissementTotal)}</span>
           <span>=</span>
           <span style={{ color: rendementColor(rendementNet), fontWeight: 700 }}>{rendementNet.toFixed(2)} %</span>
         </div>
@@ -5141,43 +4747,43 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Cash-flow mensuel */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Wallet size={18} style={{ color: C.cyan }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Cash-flow mensuel</h2>
+          <Wallet size={18} style={{ color: T.cyan }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Cash-flow mensuel</h2>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Loyer perçu (vacance déduite)</span>
-            <span style={{ color: C.green, fontWeight: 700 }}>+ {eur(Math.round(loyerMensuelEffectif))}</span>
+            <span style={{ color: T.muted }}>Loyer perçu (vacance déduite)</span>
+            <span style={{ color: T.green, fontWeight: 700 }}>+ {eur(Math.round(loyerMensuelEffectif))}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Mensualité crédit</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locMensualite)}</span>
+            <span style={{ color: T.muted }}>Mensualité crédit</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(locMensualite)}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Assurance emprunteur</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locAssuranceEmprunteurMensuelle)}</span>
+            <span style={{ color: T.muted }}>Assurance emprunteur</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(locAssuranceEmprunteurMensuelle)}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Charges de copropriété</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(locCharges)}</span>
+            <span style={{ color: T.muted }}>Charges de copropriété</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(locCharges)}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Taxe foncière (mensualisée)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(locTaxeFonciere / 12))}</span>
+            <span style={{ color: T.muted }}>Taxe foncière (mensualisée)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(Math.round(locTaxeFonciere / 12))}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Assurance PNO (mensualisée)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(locAssurancePNO / 12))}</span>
+            <span style={{ color: T.muted }}>Assurance PNO (mensualisée)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(Math.round(locAssurancePNO / 12))}</span>
           </div>
-          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
-            <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
-            <span style={{ color: cashflowMensuel >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 16 }}>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span style={{ color: T.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
+            <span style={{ color: cashflowMensuel >= 0 ? T.green : T.red, fontWeight: 800, fontSize: 16 }}>
               {cashflowMensuel >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(cashflowMensuel)))}
             </span>
           </div>
         </div>
-        <div className="text-xs mt-4 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}`, lineHeight: 1.6 }}>
-          ⚠ Ce cash-flow est calculé <b>avant impôt sur les revenus fonciers</b>. Selon votre régime (micro-foncier :
+        <div className="text-xs mt-4 pt-3" style={{ color: T.muted, borderTop: `1px solid ${T.border}`, lineHeight: 1.6 }}>
+          <AlertTriangle size={12} style={{ color: T.amber, display: "inline", verticalAlign: "-2px", marginRight: 4 }} aria-hidden="true" />Ce cash-flow est calculé <b>avant impôt sur les revenus fonciers</b>. Selon votre régime (micro-foncier :
           abattement forfaitaire de 30 % si revenus &lt; 15 000 €/an, ou régime réel avec déduction des charges et
           intérêts d'emprunt — voire déficit foncier si le résultat est négatif), l'impact réel peut différer.
           Consultez l'onglet <b>Fiscalité → Revenus locatifs</b> pour le détail de l'imposition.
@@ -5191,15 +4797,15 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Paramètres de la mise en location */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Key size={18} style={{ color: C.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Paramètres de la mise en location</h2>
+          <Key size={18} style={{ color: T.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres de la mise en location</h2>
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer text-sm select-none mb-4 rounded-xl px-4 py-3"
-          style={{ background: melMeuble ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${melMeuble ? C.green + "44" : C.border}` }}>
+          style={{ background: melMeuble ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${melMeuble ? T.green + "44" : T.border}` }}>
           <input type="checkbox" checked={melMeuble} onChange={(e) => setMelMeuble(e.target.checked)}
-            style={{ accentColor: C.green, width: 16, height: 16 }} />
-          <span style={{ color: melMeuble ? C.green : C.text, fontWeight: 600 }}>Bien loué meublé (LMNP)</span>
+            style={{ accentColor: T.green, width: 16, height: 16 }} />
+          <span style={{ color: melMeuble ? T.green : T.text, fontWeight: 600 }}>Bien loué meublé (LMNP)</span>
           <InfoTooltip text="Cochez si le bien est (ou sera) loué avec mobilier. Cela définit le régime fiscal par défaut : micro-BIC (abattement de 50 %) pour le meublé, micro-foncier (abattement de 30 %) pour la location nue." align="left" />
         </label>
 
@@ -5219,7 +4825,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           </Field>
           <Field label={`Vacance locative (${melVacance} mois/an)`}>
             <input type="range" min={0} max={3} step={1} value={melVacance} onChange={(e) => setMelVacance(+e.target.value)}
-              className="w-full" style={{ accentColor: C.amber }} />
+              className="w-full" style={{ accentColor: T.amber }} />
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
             <input type="number" value={melChargesCopro} style={inputStyle} onChange={(e) => setMelChargesCopro(+e.target.value || 0)} />
@@ -5243,29 +4849,29 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 
         {/* Estimations à partir du code postal */}
         {melCodePostal.length === 5 && (
-          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}33` }}>
-            {melGeoLoading && <span style={{ color: C.muted }}>Recherche de la commune…</span>}
-            {melGeoError && <span style={{ color: C.red }}>{melGeoError}</span>}
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33` }}>
+            {melGeoLoading && <span style={{ color: T.muted }}>Recherche de la commune…</span>}
+            {melGeoError && <span style={{ color: T.red }}>{melGeoError}</span>}
             {melGeoInfo && !melGeoLoading && (
               <div className="flex flex-col gap-2">
-                <div style={{ color: C.blue, fontWeight: 700 }}>
+                <div style={{ color: T.blue, fontWeight: 700 }}>
                   {melGeoInfo.commune} ({melGeoInfo.codeDept}) · {melGeoInfo.departement}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: C.muted }}>
-                  <span>Taxe foncière estimée : <b style={{ color: C.text }}>{eur(melTaxeFonciereEstimee)}/an</b> (taux moyen ~{melTauxTFDept} %)</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: T.muted }}>
+                  <span>Taxe foncière estimée : <b style={{ color: T.text }}>{eur(melTaxeFonciereEstimee)}/an</b> (taux moyen ~{melTauxTFDept} %)</span>
                   <button onClick={() => setMelTaxeFonciere(melTaxeFonciereEstimee)}
-                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${C.blue}55`, background: "rgba(91,141,239,0.12)", color: C.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
                     Utiliser
                   </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: C.muted }}>
-                  <span>Assurance PNO estimée : <b style={{ color: C.text }}>{eur(melPNOEstimee)}/an</b> (selon surface{melGeoInfo.population > 100000 ? " et taille de la ville" : ""})</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: T.muted }}>
+                  <span>Assurance PNO estimée : <b style={{ color: T.text }}>{eur(melPNOEstimee)}/an</b> (selon surface{melGeoInfo.population > 100000 ? " et taille de la ville" : ""})</span>
                   <button onClick={() => setMelPNO(melPNOEstimee)}
-                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${C.blue}55`, background: "rgba(91,141,239,0.12)", color: C.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
                     Utiliser
                   </button>
                 </div>
-                <div className="text-xs" style={{ color: C.muted, fontStyle: "italic" }}>
+                <div className="text-xs" style={{ color: T.muted, fontStyle: "italic" }}>
                   Estimations indicatives basées sur des taux moyens — vérifiez votre avis de taxe foncière et vos devis d'assurance.
                 </div>
               </div>
@@ -5277,8 +4883,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Imposition des revenus locatifs */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Landmark size={18} style={{ color: C.violet }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Imposition des revenus locatifs</h2>
+          <Landmark size={18} style={{ color: T.violet }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Imposition des revenus locatifs</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <Field label={<>Régime fiscal<InfoTooltip text="Déterminé par la case « Bien loué meublé » ci-dessus : micro-foncier (nu, abattement de 30 %) ou micro-BIC (meublé, abattement de 50 %). Le régime réel — déduction des charges réelles (et intérêts d'emprunt) — s'applique quel que soit le mode de location." align="left" /></>}>
@@ -5305,99 +4911,99 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 
         {melRegimeFiscal !== "reel" ? (
           <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
-            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
-            <span style={{ color: C.text }}>Base imposable</span>
+            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
+            <span style={{ color: T.text }}>Base imposable</span>
             <span>=</span>
-            <span style={{ color: C.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers perçus</span>
+            <span style={{ color: T.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers perçus</span>
             <span>×</span>
-            <span style={{ color: C.amber }}>(1 − {melAbattementPct} % abattement)</span>
+            <span style={{ color: T.amber }}>(1 − {melAbattementPct} % abattement)</span>
             <span>=</span>
-            <span style={{ color: C.violet, fontWeight: 700 }}>{eur(Math.round(melBaseImposable))}</span>
+            <span style={{ color: T.violet, fontWeight: 700 }}>{eur(Math.round(melBaseImposable))}</span>
           </div>
         ) : (
           <div className="rounded-xl px-4 py-3 text-xs font-mono flex flex-wrap gap-x-3 gap-y-1 items-center"
-            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${C.border}`, color: C.muted }}>
-            <span style={{ color: C.text }}>Résultat foncier</span>
+            style={{ background: "rgba(106,63,251,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
+            <span style={{ color: T.text }}>Résultat foncier</span>
             <span>=</span>
-            <span style={{ color: C.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers</span>
+            <span style={{ color: T.green }}>{eur(Math.round(melLoyerAnnuelEffectif))} loyers</span>
             <span>−</span>
-            <span style={{ color: C.amber }}>{eur(Math.round(melChargesDeductiblesAnnuelles))} charges déductibles</span>
+            <span style={{ color: T.amber }}>{eur(Math.round(melChargesDeductiblesAnnuelles))} charges déductibles</span>
             <span>=</span>
-            <span style={{ color: melResultatFoncier >= 0 ? C.violet : C.red, fontWeight: 700 }}>{eur(Math.round(melResultatFoncier))}</span>
+            <span style={{ color: melResultatFoncier >= 0 ? T.violet : T.red, fontWeight: 700 }}>{eur(Math.round(melResultatFoncier))}</span>
           </div>
         )}
 
         {melDeficitFoncier > 0 && (
-          <div className="text-xs mt-3" style={{ color: C.cyan, lineHeight: 1.6 }}>
+          <div className="text-xs mt-3" style={{ color: T.cyan, lineHeight: 1.6 }}>
             Déficit foncier de {eur(Math.round(melDeficitFoncier))} : imputable sur votre revenu global dans la limite de 10 700 €/an, le surplus est reportable sur vos revenus fonciers des 10 années suivantes.
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <MiniStat label="Impôt + prélèvements sociaux (annuel)" value={eur(Math.round(melImpotAnnuel))} color={C.red} />
-          <MiniStat label="Soit par mois" value={eur(Math.round(melImpotMensuel))} color={C.red} />
+          <MiniStat label="Impôt + prélèvements sociaux (annuel)" value={eur(Math.round(melImpotAnnuel))} color={T.red} />
+          <MiniStat label="Soit par mois" value={eur(Math.round(melImpotMensuel))} color={T.red} />
         </div>
       </Card>
 
       {/* Cash-flow mensuel */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Wallet size={18} style={{ color: C.cyan }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Cash-flow mensuel de la location</h2>
+          <Wallet size={18} style={{ color: T.cyan }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Cash-flow mensuel de la location</h2>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Loyer perçu (vacance déduite)</span>
-            <span style={{ color: C.green, fontWeight: 700 }}>+ {eur(Math.round(melLoyerMensuelEffectif))}</span>
+            <span style={{ color: T.muted }}>Loyer perçu (vacance déduite)</span>
+            <span style={{ color: T.green, fontWeight: 700 }}>+ {eur(Math.round(melLoyerMensuelEffectif))}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Mensualité crédit (assurances comprises)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melMensualite)}</span>
+            <span style={{ color: T.muted }}>Mensualité crédit (assurances comprises)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(melMensualite)}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Charges de copropriété</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melChargesCopro)}</span>
+            <span style={{ color: T.muted }}>Charges de copropriété</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(melChargesCopro)}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Taxe foncière (mensualisée)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melTaxeFonciereMensuelle))}</span>
+            <span style={{ color: T.muted }}>Taxe foncière (mensualisée)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(Math.round(melTaxeFonciereMensuelle))}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Assurance PNO (mensualisée)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melPNOMensuelle))}</span>
+            <span style={{ color: T.muted }}>Assurance PNO (mensualisée)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(Math.round(melPNOMensuelle))}</span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>GLI (Garantie Loyers Impayés)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melGLIMensuel)}</span>
+            <span style={{ color: T.muted }}>GLI (Garantie Loyers Impayés)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(melGLIMensuel)}</span>
           </div>
           {melGestionMensuel > 0 && (
             <div className="flex justify-between">
-              <span style={{ color: C.muted }}>Frais de gestion locative</span>
-              <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melGestionMensuel)}</span>
+              <span style={{ color: T.muted }}>Frais de gestion locative</span>
+              <span style={{ color: T.red, fontWeight: 700 }}>− {eur(melGestionMensuel)}</span>
             </div>
           )}
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Provision entretien / travaux</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(melEntretienMensuel)}</span>
+            <span style={{ color: T.muted }}>Provision entretien / travaux</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(melEntretienMensuel)}</span>
           </div>
-          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
-            <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
-            <span style={{ color: melCashflowAvantImpot >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 16 }}>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span style={{ color: T.text, fontWeight: 700 }}>Cash-flow net mensuel (avant impôt)</span>
+            <span style={{ color: melCashflowAvantImpot >= 0 ? T.green : T.red, fontWeight: 800, fontSize: 16 }}>
               {melCashflowAvantImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melCashflowAvantImpot)))}
             </span>
           </div>
           <div className="flex justify-between">
-            <span style={{ color: C.muted }}>Impôt + prélèvements sociaux (mensualisé)</span>
-            <span style={{ color: C.red, fontWeight: 700 }}>− {eur(Math.round(melImpotMensuel))}</span>
+            <span style={{ color: T.muted }}>Impôt + prélèvements sociaux (mensualisé)</span>
+            <span style={{ color: T.red, fontWeight: 700 }}>− {eur(Math.round(melImpotMensuel))}</span>
           </div>
-          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${C.border}` }}>
-            <span style={{ color: C.text, fontWeight: 800 }}>Cash-flow net mensuel (après impôt)</span>
-            <span style={{ color: melCashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800, fontSize: 18 }}>
+          <div className="flex justify-between pt-2 mt-1" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span style={{ color: T.text, fontWeight: 800 }}>Cash-flow net mensuel (après impôt)</span>
+            <span style={{ color: melCashflowApresImpot >= 0 ? T.green : T.red, fontWeight: 800, fontSize: 18 }}>
               {melCashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melCashflowApresImpot)))}
             </span>
           </div>
         </div>
-        <div className="text-xs mt-4 pt-3" style={{ color: C.muted, borderTop: `1px solid ${C.border}`, lineHeight: 1.6 }}>
+        <div className="text-xs mt-4 pt-3" style={{ color: T.muted, borderTop: `1px solid ${T.border}`, lineHeight: 1.6 }}>
           Estimation simplifiée — le régime réel ne déduit ici que les charges courantes (hors intérêts d'emprunt et amortissement LMNP), ce qui peut sous-estimer son avantage. Consultez l'onglet <b>Fiscalité → Revenus locatifs</b> ou un expert-comptable pour affiner.
         </div>
       </Card>
@@ -5405,69 +5011,69 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       {/* Location nue vs meublée */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <FileText size={18} style={{ color: C.green }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Location nue vs meublée (LMNP)</h2>
+          <FileText size={18} style={{ color: T.green }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Location nue vs meublée (LMNP)</h2>
         </div>
         <Field label={<>Majoration du loyer en meublé ({melLoyerMeubleMajorationPct} % = {eur(melLoyerMeuble)}/mois)<InfoTooltip text="Un bien loué meublé se loue généralement 10 à 20 % plus cher qu'un bien loué nu, en contrepartie de l'achat et de l'entretien du mobilier." align="left" /></>}>
           <input type="range" min={0} max={30} step={1} value={melLoyerMeubleMajorationPct} onChange={(e) => setMelLoyerMeubleMajorationPct(+e.target.value)}
-            className="w-full" style={{ accentColor: C.green }} />
+            className="w-full" style={{ accentColor: T.green }} />
         </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
             <div className="flex items-center gap-2 mb-1">
-              <div className="text-sm font-semibold" style={{ color: C.text }}>Location nue</div>
+              <div className="text-sm font-semibold" style={{ color: T.text }}>Location nue</div>
               {!melMeuble && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: C.muted + "22", color: C.muted }}>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: T.muted + "22", color: T.muted }}>
                   Configuration actuelle
                 </span>
               )}
             </div>
-            <div className="text-xs mb-3" style={{ color: C.muted }}>{melRegimeNuComparaison === "micro" ? "Micro-foncier — abattement 30 %" : "Régime réel — déduction des charges"}</div>
+            <div className="text-xs mb-3" style={{ color: T.muted }}>{melRegimeNuComparaison === "micro" ? "Micro-foncier — abattement 30 %" : "Régime réel — déduction des charges"}</div>
             <div className="flex justify-between text-xs mb-1">
-              <span style={{ color: C.muted }}>Loyer (vacance déduite)</span>
-              <span style={{ color: C.text }}>{eur(Math.round(melScenarioNu.loyerMensuelEffectif))}/mois</span>
+              <span style={{ color: T.muted }}>Loyer (vacance déduite)</span>
+              <span style={{ color: T.text }}>{eur(Math.round(melScenarioNu.loyerMensuelEffectif))}/mois</span>
             </div>
             <div className="flex justify-between text-xs mb-1">
-              <span style={{ color: C.muted }}>Impôt + prélèvements sociaux</span>
-              <span style={{ color: C.red }}>− {eur(Math.round(melScenarioNu.impotMensuel))}/mois</span>
+              <span style={{ color: T.muted }}>Impôt + prélèvements sociaux</span>
+              <span style={{ color: T.red }}>− {eur(Math.round(melScenarioNu.impotMensuel))}/mois</span>
             </div>
-            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-              <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net</span>
-              <span style={{ color: melScenarioNu.cashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800 }}>
+            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+              <span style={{ color: T.text, fontWeight: 700 }}>Cash-flow net</span>
+              <span style={{ color: melScenarioNu.cashflowApresImpot >= 0 ? T.green : T.red, fontWeight: 800 }}>
                 {melScenarioNu.cashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melScenarioNu.cashflowApresImpot)))}
               </span>
             </div>
           </div>
-          <div className="rounded-xl p-4" style={{ background: "rgba(34,199,154,0.04)", border: `1px solid ${C.green}33` }}>
+          <div className="rounded-xl p-4" style={{ background: "rgba(34,199,154,0.04)", border: `1px solid ${T.green}33` }}>
             <div className="flex items-center gap-2 mb-1">
-              <div className="text-sm font-semibold" style={{ color: C.text }}>Location meublée</div>
+              <div className="text-sm font-semibold" style={{ color: T.text }}>Location meublée</div>
               {melMeuble && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: C.green + "22", color: C.green }}>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: T.green + "22", color: T.green }}>
                   Configuration actuelle
                 </span>
               )}
             </div>
-            <div className="text-xs mb-3" style={{ color: C.muted }}>Micro-BIC — abattement 50 %</div>
+            <div className="text-xs mb-3" style={{ color: T.muted }}>Micro-BIC — abattement 50 %</div>
             <div className="flex justify-between text-xs mb-1">
-              <span style={{ color: C.muted }}>Loyer (vacance déduite)</span>
-              <span style={{ color: C.text }}>{eur(Math.round(melScenarioMeuble.loyerMensuelEffectif))}/mois</span>
+              <span style={{ color: T.muted }}>Loyer (vacance déduite)</span>
+              <span style={{ color: T.text }}>{eur(Math.round(melScenarioMeuble.loyerMensuelEffectif))}/mois</span>
             </div>
             <div className="flex justify-between text-xs mb-1">
-              <span style={{ color: C.muted }}>Impôt + prélèvements sociaux</span>
-              <span style={{ color: C.red }}>− {eur(Math.round(melScenarioMeuble.impotMensuel))}/mois</span>
+              <span style={{ color: T.muted }}>Impôt + prélèvements sociaux</span>
+              <span style={{ color: T.red }}>− {eur(Math.round(melScenarioMeuble.impotMensuel))}/mois</span>
             </div>
-            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-              <span style={{ color: C.text, fontWeight: 700 }}>Cash-flow net</span>
-              <span style={{ color: melScenarioMeuble.cashflowApresImpot >= 0 ? C.green : C.red, fontWeight: 800 }}>
+            <div className="flex justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+              <span style={{ color: T.text, fontWeight: 700 }}>Cash-flow net</span>
+              <span style={{ color: melScenarioMeuble.cashflowApresImpot >= 0 ? T.green : T.red, fontWeight: 800 }}>
                 {melScenarioMeuble.cashflowApresImpot >= 0 ? "+ " : "− "}{eur(Math.abs(Math.round(melScenarioMeuble.cashflowApresImpot)))}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: melDeltaMeuble >= 0 ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${melDeltaMeuble >= 0 ? C.green + "44" : C.red + "44"}` }}>
-          <span style={{ color: melDeltaMeuble >= 0 ? C.green : C.red }}>
+        <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: melDeltaMeuble >= 0 ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${melDeltaMeuble >= 0 ? T.green + "44" : T.red + "44"}` }}>
+          <span style={{ color: melDeltaMeuble >= 0 ? T.green : T.red }}>
             {melDeltaMeuble >= 0
               ? `La location meublée améliore le cash-flow net de ${eur(Math.round(melDeltaMeuble))}/mois grâce à l'abattement de 50 % (vs 30 % en nu).`
               : `Avec cette majoration de loyer, la location nue reste plus avantageuse de ${eur(Math.round(-melDeltaMeuble))}/mois.`}
@@ -5476,29 +5082,29 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: C.text }}>Meublé</div>
-            <ul className="text-xs flex flex-col gap-1" style={{ color: C.muted }}>
-              <li><span style={{ color: C.green }}>+</span> Loyer plus élevé (+10 à 20 %)</li>
-              <li><span style={{ color: C.green }}>+</span> Fiscalité plus douce (micro-BIC 50 %, amortissement en réel LMNP)</li>
-              <li><span style={{ color: C.green }}>+</span> Bail court (1 an, 9 mois étudiant) → récupération du bien plus rapide</li>
-              <li><span style={{ color: C.red }}>−</span> Achat puis renouvellement du mobilier</li>
-              <li><span style={{ color: C.red }}>−</span> Turnover locataire plus fréquent (vacance, états des lieux)</li>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.text }}>Meublé</div>
+            <ul className="text-xs flex flex-col gap-1" style={{ color: T.muted }}>
+              <li><span style={{ color: T.green }}>+</span> Loyer plus élevé (+10 à 20 %)</li>
+              <li><span style={{ color: T.green }}>+</span> Fiscalité plus douce (micro-BIC 50 %, amortissement en réel LMNP)</li>
+              <li><span style={{ color: T.green }}>+</span> Bail court (1 an, 9 mois étudiant) → récupération du bien plus rapide</li>
+              <li><span style={{ color: T.red }}>−</span> Achat puis renouvellement du mobilier</li>
+              <li><span style={{ color: T.red }}>−</span> Turnover locataire plus fréquent (vacance, états des lieux)</li>
             </ul>
           </div>
           <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: C.text }}>Nu</div>
-            <ul className="text-xs flex flex-col gap-1" style={{ color: C.muted }}>
-              <li><span style={{ color: C.green }}>+</span> Locataire plus stable (bail 3 ans)</li>
-              <li><span style={{ color: C.green }}>+</span> Aucun investissement ni renouvellement de mobilier</li>
-              <li><span style={{ color: C.green }}>+</span> Gestion plus légère au quotidien</li>
-              <li><span style={{ color: C.red }}>−</span> Loyer généralement plus faible</li>
-              <li><span style={{ color: C.red }}>−</span> Fiscalité moins favorable (abattement 30 % seulement)</li>
-              <li><span style={{ color: C.red }}>−</span> Préavis et bail long (3 ans) → récupération du bien plus lente</li>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.text }}>Nu</div>
+            <ul className="text-xs flex flex-col gap-1" style={{ color: T.muted }}>
+              <li><span style={{ color: T.green }}>+</span> Locataire plus stable (bail 3 ans)</li>
+              <li><span style={{ color: T.green }}>+</span> Aucun investissement ni renouvellement de mobilier</li>
+              <li><span style={{ color: T.green }}>+</span> Gestion plus légère au quotidien</li>
+              <li><span style={{ color: T.red }}>−</span> Loyer généralement plus faible</li>
+              <li><span style={{ color: T.red }}>−</span> Fiscalité moins favorable (abattement 30 % seulement)</li>
+              <li><span style={{ color: T.red }}>−</span> Préavis et bail long (3 ans) → récupération du bien plus lente</li>
             </ul>
           </div>
         </div>
 
-        <div className="text-xs mt-3" style={{ color: C.muted, lineHeight: 1.6 }}>
+        <div className="text-xs mt-3" style={{ color: T.muted, lineHeight: 1.6 }}>
           Le statut LMNP au régime réel permet en plus d'amortir le bien et le mobilier, ce qui réduit encore l'impôt — non modélisé ici par souci de simplicité. Le micro-BIC (abattement 50 %) suppose des recettes locatives annuelles inférieures à 77 700 €.
         </div>
       </Card>
@@ -5606,6 +5212,7 @@ const IMMO_PLATFORMS = [
 ];
 
 function ImmobilierSearch({ budget: defaultBudget }) {
+  const T = useT();
   const [searchBudget, setSearchBudget] = useState(defaultBudget || 250000);
   const [city, setCity]         = useState("");
   const [type, setType]         = useState("tous");
@@ -5618,15 +5225,15 @@ function ImmobilierSearch({ budget: defaultBudget }) {
             : 3200;
   const m2Est = Math.round(searchBudget / moy);
 
-  const inputSt = { width: "100%", padding: "8px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: "#181e2c", color: C.text, fontSize: 13, outline: "none" };
-  const labelSt = { fontSize: 11, color: C.muted, fontWeight: 600, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" };
+  const inputSt = { width: "100%", padding: "8px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: "#181e2c", color: T.text, fontSize: 13, outline: "none" };
+  const labelSt = { fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" };
 
   return (
     <Card>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <Search size={18} style={{ color: C.blue }} />
-        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>Rechercher des annonces</h2>
-        <span style={{ fontSize: 11, borderRadius: 20, padding: "3px 10px", background: "rgba(91,141,239,0.1)", color: C.blue, fontWeight: 600 }}>
+        <Search size={18} style={{ color: T.blue }} />
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 18, margin: 0 }}>Rechercher des annonces</h2>
+        <span style={{ fontSize: 11, borderRadius: 20, padding: "3px 10px", background: "rgba(91,141,239,0.1)", color: T.blue, fontWeight: 600 }}>
           Budget auto depuis votre capacite
         </span>
       </div>
@@ -5683,16 +5290,16 @@ function ImmobilierSearch({ budget: defaultBudget }) {
       </div>
 
       {/* Indicateur budgetaire */}
-      <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.06)", border: `1px solid ${C.blue}22`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <Home size={16} style={{ color: C.blue, flexShrink: 0 }} />
-        <span style={{ color: C.muted, fontSize: 13 }}>
-          Avec <strong style={{ color: C.text }}>{eur(searchBudget)}</strong>,
+      <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}22`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <Home size={16} style={{ color: T.blue, flexShrink: 0 }} />
+        <span style={{ color: T.muted, fontSize: 13 }}>
+          Avec <strong style={{ color: T.text }}>{eur(searchBudget)}</strong>,
           vous visez environ{" "}
-          <strong style={{ color: C.blue }}>{m2Est} m2</strong>{" "}
+          <strong style={{ color: T.blue }}>{m2Est} m2</strong>{" "}
           {city ? `a ${city}` : "en province"}
           {city.toLowerCase().includes("paris") ? " (marche tres tendu)" : city.toLowerCase().includes("lyon") || city.toLowerCase().includes("bordeaux") ? " (marche dynamique)" : " (prix median ~3 200 EUR/m2)"}.
           {surface > 0 && m2Est < surface && (
-            <span style={{ color: C.amber }}>{" "}Attention : votre budget semble insuffisant pour {surface} m2 dans cette zone.</span>
+            <span style={{ color: T.amber }}>{" "}Attention : votre budget semble insuffisant pour {surface} m2 dans cette zone.</span>
           )}
         </span>
       </div>
@@ -5725,16 +5332,16 @@ function ImmobilierSearch({ budget: defaultBudget }) {
                     {p.name.slice(0, 2).toUpperCase()}
                   </span>
                 </span>
-                <span style={{ color: C.text, fontWeight: 600, fontSize: 13 }}>{p.name}</span>
+                <span style={{ color: T.text, fontWeight: 600, fontSize: 13 }}>{p.name}</span>
               </span>
-              <ExternalLink size={13} style={{ color: C.muted, flexShrink: 0 }} />
+              <ExternalLink size={13} style={{ color: T.muted, flexShrink: 0 }} />
             </a>
           );
         })}
       </div>
 
-      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-        <span style={{ fontSize: 11, color: C.muted }}>
+      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+        <span style={{ fontSize: 11, color: T.muted }}>
           Les liens ouvrent les plateformes avec vos filtres pre-remplis. Les annonces sont en temps reel sur chaque site.
         </span>
       </div>
@@ -5747,26 +5354,28 @@ function ImmobilierSearch({ budget: defaultBudget }) {
 /* ------------------------------------------------------------------ */
 
 function Profil({ profile, setProfile, onInject, setTransactions }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
   const [profileSaved, setProfileSaved] = useState(false);
   const initials = ((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "?";
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <h1 className="text-3xl font-bold" style={{ color: C.text }}>Profil</h1>
+      <h1 className="text-3xl font-bold" style={{ color: T.text }}>Profil</h1>
 
       <Card>
         <div className="flex items-center gap-4 mb-6">
           <div className="rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold"
-            style={{ background: "rgba(139,92,246,0.15)", color: C.blue }}>{initials}</div>
+            style={{ background: "rgba(139,92,246,0.15)", color: T.blue }}>{initials}</div>
           <div>
-            <div className="text-lg font-bold" style={{ color: C.text }}>{profile.email || "—"}</div>
+            <div className="text-lg font-bold" style={{ color: T.text }}>{profile.email || "—"}</div>
             <div className="flex gap-2 mt-2">
               <span className="px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
-                style={{ background: "rgba(139,92,246,0.15)", color: C.violet }}>
+                style={{ background: "rgba(139,92,246,0.15)", color: T.violet }}>
                 <Shield size={12} /> Admin</span>
               <span className="px-3 py-1 rounded-lg text-xs font-semibold"
-                style={{ background: "rgba(245,166,35,0.15)", color: C.amber }}>Premium</span>
-              <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+                style={{ background: "rgba(245,166,35,0.15)", color: T.amber }}>Premium</span>
+              <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
                 {profile.age} ans</span>
             </div>
           </div>
@@ -5785,12 +5394,12 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           <input type="number" value={profile.age}
             onChange={(e) => setProfile((p) => ({ ...p, age: +e.target.value || 0 }))} style={inputStyle} />
         </Field>
-        <p className="text-sm mt-2" style={{ color: C.muted }}>
+        <p className="text-sm mt-2" style={{ color: T.muted }}>
           Utilisé pour calculer votre âge FIRE estimé dans les simulations.
         </p>
         <button
           className="mt-4 px-5 py-3 rounded-xl font-semibold"
-          style={{ background: profileSaved ? C.green : C.blue, color: "#fff", transition: "background 0.3s" }}
+          style={{ background: profileSaved ? T.green : T.blue, color: "#fff", transition: "background 0.3s" }}
           onClick={() => { setProfileSaved(true); setTimeout(() => setProfileSaved(false), 2000); }}
         >
           {profileSaved ? "✓ Sauvegardé" : "Enregistrer les modifications"}
@@ -5800,13 +5409,13 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
       {/* Préférences de l'app */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Users size={18} style={{ color: C.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Préférences de l'app</h2>
+          <Users size={18} style={{ color: T.blue }} />
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Préférences de l'app</h2>
         </div>
-        <div className="flex items-center justify-between py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+        <div className="flex items-center justify-between py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
-            <div className="font-medium text-sm" style={{ color: C.text }}>Mode Couple / Famille</div>
-            <div className="text-xs mt-1" style={{ color: C.muted }}>
+            <div className="font-medium text-sm" style={{ color: T.text }}>Mode Couple / Famille</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>
               Affiche l'onglet de gestion patrimoniale commune dans la navigation
             </div>
           </div>
@@ -5815,7 +5424,7 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
             style={{
               position: "relative", flexShrink: 0,
               width: 44, height: 24, borderRadius: 12,
-              background: profile.coupleMode ? C.blue : "rgba(255,255,255,0.12)",
+              background: profile.coupleMode ? T.blue : "rgba(255,255,255,0.12)",
               border: "none", cursor: "pointer", transition: "background 0.25s",
             }}
           >
@@ -5832,14 +5441,14 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
 
       <Card style={{ borderColor: "rgba(139,92,246,0.3)" }}>
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-lg font-bold" style={{ color: C.text }}>Données de test</h2>
+          <h2 className="text-lg font-bold" style={{ color: T.text }}>Données de test</h2>
           <span className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: "rgba(139,92,246,0.15)", color: C.violet }}>Admin Only</span>
+            style={{ background: "rgba(139,92,246,0.15)", color: T.violet }}>Admin Only</span>
         </div>
-        <p className="text-sm mb-5" style={{ color: C.muted }}>
+        <p className="text-sm mb-5" style={{ color: T.muted }}>
           Charge un profil fictif complet — remplace le profil, les transactions et les paramètres de simulation,
           puis redirige vers le tableau de bord.
-          <span style={{ color: C.amber }}> Écrase les données actuelles.</span>
+          <span style={{ color: T.amber }}> Écrase les données actuelles.</span>
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TEST_PROFILES.map((p) => (
@@ -5847,17 +5456,17 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
               key={p.id}
               onClick={() => onInject(p)}
               className="text-left rounded-xl p-4 flex flex-col gap-2 transition"
-              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, cursor: "pointer" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.violet; e.currentTarget.style.background = "rgba(139,92,246,0.06)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.violet; e.currentTarget.style.background = "rgba(139,92,246,0.06)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
             >
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(91,141,239,0.15)", color: C.blue }}>
+                style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
                 {p.profile.firstName[0]}
               </div>
-              <span className="font-semibold text-sm" style={{ color: C.text }}>{p.label}</span>
-              <span className="text-xs leading-relaxed" style={{ color: C.muted }}>{p.description}</span>
-              <span className="text-xs mt-1 font-medium" style={{ color: C.violet }}>
+              <span className="font-semibold text-sm" style={{ color: T.text }}>{p.label}</span>
+              <span className="text-xs leading-relaxed" style={{ color: T.muted }}>{p.description}</span>
+              <span className="text-xs mt-1 font-medium" style={{ color: T.violet }}>
                 {p.profile.firstName} {p.profile.lastName}, {p.profile.age} ans →
               </span>
             </button>
@@ -5873,10 +5482,12 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
 /*  ÉCRAN : PATRIMOINE                                                 */
 /* ------------------------------------------------------------------ */
 function Patrimoine({ patrimoine, setPatrimoine }) {
+  const T = useT();
+  const chartTip = makeChartTip(T);
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
   const [histRange, setHistRange] = useState(12);
-  const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, outline: "none" };
+  const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, outline: "none" };
   const netWorthFlashRef = useRef(null);
 
   const totalActifs = patrimoine.actifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
@@ -5889,7 +5500,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
 
   // Endettement = passifs / actifs
   const debtRatio = totalActifs > 0 ? (totalPassifs / totalActifs) * 100 : 0;
-  const debtColor = debtRatio > 50 ? C.red : debtRatio > 30 ? C.amber : C.green;
+  const debtColor = debtRatio > 50 ? T.red : debtRatio > 30 ? T.amber : T.green;
 
   // Catégorie d'actif dominante
   const actifCatTotals = patrimoine.actifs.map((c) => ({ ...c, total: c.items.reduce((s, i) => s + i.value, 0) }));
@@ -5903,7 +5514,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
 
   // "Investissements" toujours en cyan (cohérent avec le reste de l'app),
   // même si une ancienne couleur est restée enregistrée en local.
-  const catColor = (cat) => cat.id === "investissements" ? C.cyan : cat.color;
+  const catColor = (cat) => cat.id === "investissements" ? T.cyan : cat.color;
 
   const allSlices = [
     ...patrimoine.actifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
@@ -5953,27 +5564,27 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
     const total = cat.items.reduce((s, i) => s + (i.value || 0), 0);
     const isOpen = !!openCats[cat.id];
     return (
-      <div key={cat.id} className="mb-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+      <div key={cat.id} className="mb-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
         <button className="w-full flex items-center justify-between px-4 py-3"
           style={{ background: "rgba(255,255,255,0.02)" }} onClick={() => toggle(cat.id)}>
-          <span className="flex items-center gap-2 font-semibold text-sm" style={{ color: C.text }}>
+          <span className="flex items-center gap-2 font-semibold text-sm" style={{ color: T.text }}>
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: catColor(cat) }} />
             {cat.label}
           </span>
           <span className="flex items-center gap-3">
-            <span className="font-bold text-sm" style={{ color: isPassif ? C.red : catColor(cat) }}>
+            <span className="font-bold text-sm" style={{ color: isPassif ? T.red : catColor(cat) }}>
               {isPassif ? "−" : ""}{eur(total)}
             </span>
-            <span style={{ color: C.muted, fontSize: 11 }}>{isOpen ? "▲" : "▼"}</span>
+            <span style={{ color: T.muted, fontSize: 11 }}>{isOpen ? "▲" : "▼"}</span>
           </span>
         </button>
         {isOpen && (
           <div className="px-4 pb-3 pt-1" style={{ background: "rgba(255,255,255,0.01)" }}>
             {cat.items.length === 0 && (
-              <p className="text-sm py-2" style={{ color: C.muted }}>Aucun élément</p>
+              <p className="text-sm py-2" style={{ color: T.muted }}>Aucun élément</p>
             )}
             {cat.items.map((item, idx) => (
-              <div key={idx} className="py-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+              <div key={idx} className="py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
                 {editMode ? (
                   <div className="flex flex-wrap gap-2 items-center">
                     <input
@@ -6003,22 +5614,22 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                       style={{ ...inp, width: 120, padding: "4px 10px", fontSize: 13 }}
                     />
                     {(item.currency && item.currency !== "EUR") && (
-                      <span style={{ fontSize: 11, color: C.muted }}>= {eur(item.value)}</span>
+                      <span style={{ fontSize: 11, color: T.muted }}>= {eur(item.value)}</span>
                     )}
-                    <button onClick={() => deleteItem(side, cat.id, idx)}
-                      style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: C.red, marginLeft: "auto" }}>
+                    <button onClick={() => deleteItem(side, cat.id, idx)} aria-label="Supprimer la ligne"
+                      style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: T.red, marginLeft: "auto" }}>
                       <Trash2 size={13} />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm" style={{ color: C.muted }}>{item.label}</span>
+                    <span className="text-sm" style={{ color: T.muted }}>{item.label}</span>
                     <div className="text-right">
-                      <span className="font-bold text-sm" style={{ color: C.text }}>
+                      <span className="font-bold text-sm" style={{ color: T.text }}>
                         {isPassif ? "−" : ""}{eur(item.value)}
                       </span>
                       {item.currency && item.currency !== "EUR" && (
-                        <div style={{ fontSize: 10, color: C.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
+                        <div style={{ fontSize: 10, color: T.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
                       )}
                     </div>
                   </div>
@@ -6028,7 +5639,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
             {editMode && (
               <button onClick={() => addItem(side, cat.id)}
                 className="flex items-center gap-2 mt-2 text-sm"
-                style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", padding: "4px 0" }}>
+                style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: "4px 0" }}>
                 <Plus size={14} /> Ajouter un élément
               </button>
             )}
@@ -6043,14 +5654,14 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Patrimoine</h1>
-          <p style={{ color: C.muted }}>Suivi de votre richesse nette — net worth</p>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Patrimoine</h1>
+          <p style={{ color: T.muted }}>Suivi de votre richesse nette — net worth</p>
         </div>
         <button onClick={() => setEditMode((e) => !e)}
           className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium"
           style={{
-            border: `1px solid ${editMode ? C.green : C.border}`,
-            color: editMode ? C.green : C.muted,
+            border: `1px solid ${editMode ? T.green : T.border}`,
+            color: editMode ? T.green : T.muted,
             background: editMode ? "rgba(34,199,154,0.08)" : "rgba(255,255,255,0.03)",
           }}>
           {editMode ? <Lock size={16} /> : <Sun size={16} />}
@@ -6063,49 +5674,49 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
         <KpiCard
           label="Patrimoine net"
           value={<GrowthValue value={netWorth} formatter={eur} flashRef={netWorthFlashRef} />}
-          valueColor={netWorth >= 0 ? C.green : C.red}
+          valueColor={netWorth >= 0 ? T.green : T.red}
           flashRef={netWorthFlashRef}
           sub={<>
             {monthlyChange >= 0
-              ? <ArrowUpRight size={14} style={{ color: C.green }} />
-              : <ArrowDownRight size={14} style={{ color: C.red }} />}
-            <span className="font-semibold" style={{ color: monthlyChange >= 0 ? C.green : C.red }}>
+              ? <ArrowUpRight size={14} style={{ color: T.green }} />
+              : <ArrowDownRight size={14} style={{ color: T.red }} />}
+            <span className="font-semibold" style={{ color: monthlyChange >= 0 ? T.green : T.red }}>
               {monthlyChange >= 0 ? "+" : ""}{eur(monthlyChange)}
             </span>
-            <span style={{ color: C.muted }}>vs mois précédent</span>
+            <span style={{ color: T.muted }}>vs mois précédent</span>
           </>}
         />
         <KpiCard
           label="Total actifs"
           value={eur(totalActifs)}
-          valueColor={C.green}
+          valueColor={T.green}
           sub={topActifCat ? <>
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: topActifCat.color }} />
-            <span style={{ color: C.text }}>{topActifCat.label}</span>
-            <span style={{ color: C.muted }}>· {pct(topActifShare)} du total</span>
-          </> : <span style={{ color: C.muted }}>Aucun actif</span>}
+            <span style={{ color: T.text }}>{topActifCat.label}</span>
+            <span style={{ color: T.muted }}>· {pct(topActifShare)} du total</span>
+          </> : <span style={{ color: T.muted }}>Aucun actif</span>}
         />
         <KpiCard
           label="Total passifs"
           value={"−" + eur(totalPassifs)}
-          valueColor={C.red}
+          valueColor={T.red}
           sub={<>
             <span className="font-semibold" style={{ color: debtColor }}>{pct(debtRatio)}</span>
-            <span style={{ color: C.muted }}>des actifs (endettement)</span>
+            <span style={{ color: T.muted }}>des actifs (endettement)</span>
           </>}
         />
         <KpiCard
           label={`Croissance depuis ${chartHist[0]?.m || ""}`}
           value={(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-          valueColor={growthTotalPct >= 0 ? C.green : C.red}
+          valueColor={growthTotalPct >= 0 ? T.green : T.red}
           sub={<>
             {growthTotalAbs >= 0
-              ? <ArrowUpRight size={14} style={{ color: C.green }} />
-              : <ArrowDownRight size={14} style={{ color: C.red }} />}
-            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? C.green : C.red }}>
+              ? <ArrowUpRight size={14} style={{ color: T.green }} />
+              : <ArrowDownRight size={14} style={{ color: T.red }} />}
+            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
               {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
             </span>
-            <span style={{ color: C.muted }}>net worth</span>
+            <span style={{ color: T.muted }}>net worth</span>
           </>}
         />
       </div>
@@ -6116,12 +5727,12 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold" style={{ color: C.text }}>Évolution du patrimoine</h2>
+                <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution du patrimoine</h2>
                 <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
                   icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
                   label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
               </div>
-              <p className="text-sm" style={{ color: C.muted }}>Net worth sur la période sélectionnée</p>
+              <p className="text-sm" style={{ color: T.muted }}>Net worth sur la période sélectionnée</p>
             </div>
             <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
               style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
@@ -6136,16 +5747,16 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
             <AreaChart data={chartHist}>
               <defs>
                 <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.violet} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={C.violet} stopOpacity={0} />
+                  <stop offset="0%" stopColor={T.violet} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="m" stroke={C.muted} tick={{ fontSize: 11 }} interval={histRange > 12 ? 2 : 0} />
-              <YAxis stroke={C.muted} tick={{ fontSize: 11 }}
+              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} interval={histRange > 12 ? 2 : 0} />
+              <YAxis stroke={T.muted} tick={{ fontSize: 11 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-              <Area type="monotone" dataKey="v" name="Net Worth" stroke={C.violet} strokeWidth={2.5}
+              <Area type="monotone" dataKey="v" name="Net Worth" stroke={T.violet} strokeWidth={2.5}
                 fill="url(#gradNW)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
@@ -6154,10 +5765,10 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
         <Card>
           <div className="mb-2">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-xl font-bold" style={{ color: C.text }}>Répartition</h2>
+              <h2 className="text-xl font-bold" style={{ color: T.text }}>Répartition</h2>
               <Badge tone="neutral" label={`${allSlices.length} catégories`} />
             </div>
-            <p className="text-sm" style={{ color: C.muted }}>Actifs vs passifs par catégorie</p>
+            <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
           </div>
           <div className="relative">
             <ResponsiveContainer width="100%" height={240}>
@@ -6167,20 +5778,20 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                   label={renderDonutPctLabel} labelLine={false}>
                   {allSlices.map((s, i) => <Cell key={i} fill={s.color} />)}
                 </Pie>
-                <Tooltip {...chartTip} itemStyle={{ color: C.text }} formatter={(v) => eur(v)} />
+                <Tooltip {...chartTip} itemStyle={{ color: T.text }} formatter={(v) => eur(v)} />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
-              <span className="text-xs" style={{ color: C.muted }}>Net Worth</span>
-              <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? C.green : C.red }}>{eur(netWorth)}</span>
+              <span className="text-xs" style={{ color: T.muted }}>Net Worth</span>
+              <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-2 mt-3 justify-center">
             {allSlices.map((s, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
+              <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
                 <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
                 {s.name}
-                <span style={{ color: C.text, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                <span style={{ color: T.text, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
               </span>
             ))}
           </div>
@@ -6189,14 +5800,14 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
 
       {/* Détail par catégorie */}
       <Card>
-        <h2 className="text-xl font-bold mb-4" style={{ color: C.text }}>Détail par catégorie</h2>
+        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: C.green, letterSpacing: 1 }}>ACTIFS</div>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.green, letterSpacing: 1 }}>ACTIFS</div>
             {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
           </div>
           <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: C.red, letterSpacing: 1 }}>PASSIFS</div>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.red, letterSpacing: 1 }}>PASSIFS</div>
             {patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))}
           </div>
         </div>
@@ -6205,29 +5816,29 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
       {/* Comparison table */}
       <Card>
         <div className="mb-4">
-          <h2 className="text-xl font-bold" style={{ color: C.text }}>Comparaison mois par mois</h2>
-          <p className="text-sm" style={{ color: C.muted }}>Sur la période sélectionnée ci-dessus</p>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparaison mois par mois</h2>
+          <p className="text-sm" style={{ color: T.muted }}>Sur la période sélectionnée ci-dessus</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
                 {["Mois", "Net Worth", "Variation", "% Croissance"].map((h) => (
-                  <th key={h} className="py-3 px-3 text-left font-semibold" style={{ color: C.muted }}>{h}</th>
+                  <th key={h} className="py-3 px-3 text-left font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tableRows.map((row, idx) => (
-                <tr key={row.m} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td className="py-3 px-3" style={{ color: C.text }}>{row.m}</td>
-                  <td className="py-3 px-3 font-bold" style={{ color: C.text }}>{eur(row.v)}</td>
+                <tr key={row.m} style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <td className="py-3 px-3" style={{ color: T.text }}>{row.m}</td>
+                  <td className="py-3 px-3 font-bold" style={{ color: T.text }}>{eur(row.v)}</td>
                   <td className="py-3 px-3 font-semibold"
-                    style={{ color: idx === 0 ? C.muted : row.variation >= 0 ? C.green : C.red }}>
+                    style={{ color: idx === 0 ? T.muted : row.variation >= 0 ? T.green : T.red }}>
                     {idx === 0 ? "—" : (row.variation > 0 ? "+" : "") + eur(row.variation)}
                   </td>
                   <td className="py-3 px-3 font-semibold"
-                    style={{ color: idx === 0 ? C.muted : row.pct >= 0 ? C.green : C.red }}>
+                    style={{ color: idx === 0 ? T.muted : row.pct >= 0 ? T.green : T.red }}>
                     {idx === 0 ? "—" : (row.pct > 0 ? "+" : "") + pct(row.pct)}
                   </td>
                 </tr>
@@ -6250,15 +5861,15 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
   const alerts = useMemo(() => {
     const out = [];
     if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL)
-      out.push({ id: "critical_savings", level: "red",   icon: "🔴", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL}%. Réduisez une charge fixe ce mois.` });
+      out.push({ id: "critical_savings", level: "red",   msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL}%. Réduisez une charge fixe ce mois.` });
     else if (totals.tauxEpargne < SAVINGS_RATE_TARGET)
-      out.push({ id: "low_savings",      level: "amber", icon: "🟡", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — objectif : ${SAVINGS_RATE_TARGET}%. Chaque % gagné compte sur 20 ans.` });
+      out.push({ id: "low_savings",      level: "amber", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — objectif : ${SAVINGS_RATE_TARGET}%. Chaque % gagné compte sur 20 ans.` });
     if (totals.restant < 0)
-      out.push({ id: "deficit",          level: "red",   icon: "🔴", msg: `Déficit mensuel de ${eur(Math.abs(totals.restant))} — vous dépensez plus que vous ne gagnez ce mois.` });
+      out.push({ id: "deficit",          level: "red",   msg: `Déficit mensuel de ${eur(Math.abs(totals.restant))} — vous dépensez plus que vous ne gagnez ce mois.` });
     if (totalPassifs > totalActifs * 0.5 && totalActifs > 0)
-      out.push({ id: "high_debt",        level: "amber", icon: "⚠️", msg: `Endettement élevé (${Math.round((totalPassifs / totalActifs) * 100)}% de vos actifs) — priorisez le remboursement des crédits.` });
+      out.push({ id: "high_debt",        level: "amber", msg: `Endettement élevé (${Math.round((totalPassifs / totalActifs) * 100)}% de vos actifs) — priorisez le remboursement des crédits.` });
     if (totals.chargesFixes > totals.revenus * 0.6)
-      out.push({ id: "heavy_charges",    level: "amber", icon: "🟡", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — peu de marge de manœuvre.` });
+      out.push({ id: "heavy_charges",    level: "amber", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — peu de marge de manœuvre.` });
     return out.filter(a => !dismissed.includes(a.id));
   }, [totals, totalActifs, totalPassifs, dismissed]);
 
@@ -6272,7 +5883,7 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
           background: a.level === "red" ? "rgba(255,90,95,0.08)" : "rgba(245,158,11,0.08)",
           border: `1px solid ${a.level === "red" ? "rgba(255,90,95,0.25)" : "rgba(245,158,11,0.25)"}`,
         }}>
-          <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><AlertLevelIcon level={a.level} size={15} /></span>
           <div style={{ flex: 1 }}>
             <span style={{ fontSize: 13, color: "#d1d5db", lineHeight: 1.5 }}>{a.msg}</span>
           </div>
@@ -6290,6 +5901,8 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
 /*  ONBOARDING — wizard de première connexion                         */
 /* ------------------------------------------------------------------ */
 function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
   const [step, setStep]         = useState(0);
   const [prenom, setPrenom]     = useState("");
   const [age, setAge]           = useState(30);
@@ -6325,52 +5938,52 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
           <div style={{ display: "flex", gap: 6, flex: 1 }}>
             {steps.map((_, i) => (
-              <div key={i} style={{ height: 4, flex: 1, borderRadius: 4, background: i <= step ? C.blue : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
+              <div key={i} style={{ height: 4, flex: 1, borderRadius: 4, background: i <= step ? T.blue : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
             ))}
           </div>
-          <button onClick={onDone} style={{ fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", padding: "2px 4px" }}>
+          <button onClick={onDone} style={{ fontSize: 11, color: T.muted, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", padding: "2px 4px" }}>
             Passer ›
           </button>
         </div>
-        <h2 style={{ color: C.text, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{steps[step].title}</h2>
-        <p style={{ color: C.muted, fontSize: 14, marginBottom: 28 }}>{steps[step].sub}</p>
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{steps[step].title}</h2>
+        <p style={{ color: T.muted, fontSize: 14, marginBottom: 28 }}>{steps[step].sub}</p>
 
         {step === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Votre prénom</label>
+            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre prénom</label>
               <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
-            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Votre âge</label>
+            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre âge</label>
               <input type="number" value={age} onChange={e => setAge(+e.target.value)} style={inpO} /></div>
           </div>
         )}
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Revenus mensuels nets (€)</label>
+            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Revenus mensuels nets (€)</label>
               <input type="number" value={revenus} onChange={e => setRevenus(+e.target.value)} style={inpO} /></div>
-            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Loyer / charge principale (€/mois)</label>
+            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Loyer / charge principale (€/mois)</label>
               <input type="number" value={loyer} onChange={e => setLoyer(+e.target.value)} style={inpO} /></div>
           </div>
         )}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Épargne / investissement mensuel (€)</label>
+            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Épargne / investissement mensuel (€)</label>
               <input type="number" value={epargne} onChange={e => setEpargne(+e.target.value)} style={inpO} /></div>
-            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${C.blue}22` }}>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: C.blue }}>
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${T.blue}22` }}>
+              <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>
                 {eur(Math.round(fvMonthly(epargne, RATE_A, 20)))}
               </div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>⚠ {RATE_DISCLAIMER}</div>
+              <div style={{ fontSize: 10, color: T.muted, marginTop: 6, display: "flex", alignItems: "flex-start", gap: 5 }}><AlertTriangle size={11} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span></div>
             </div>
           </div>
         )}
 
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 28, gap: 12 }}>
           {step > 0
-            ? <button onClick={() => setStep(s => s - 1)} style={{ padding: "11px 20px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+            ? <button onClick={() => setStep(s => s - 1)} style={{ padding: "11px 20px", borderRadius: 12, border: `1px solid ${T.border}`, background: "none", color: T.muted, cursor: "pointer", fontWeight: 600 }}>Retour</button>
             : <div />}
           {step < steps.length - 1
-            ? <button onClick={() => setStep(s => s + 1)} style={{ padding: "11px 24px", borderRadius: 12, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 700 }}>Continuer →</button>
+            ? <button onClick={() => setStep(s => s + 1)} style={{ padding: "11px 24px", borderRadius: 12, border: "none", background: T.blue, color: "#fff", cursor: "pointer", fontWeight: 700 }}>Continuer →</button>
             : <button onClick={finish} style={{ padding: "11px 24px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#22c79a,#0070f3)", color: "#fff", cursor: "pointer", fontWeight: 700 }}>Démarrer →</button>}
         </div>
       </div>
@@ -6402,6 +6015,8 @@ const GOAL_PRESETS = [
 ];
 
 function ObjectifsView({ goals, setGoals, totals }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
   const [showAdd, setShowAdd] = useState(false);
   const [newGoal, setNewGoal] = useState({ name: "", icon: "autre", target: 10000, saved: 0, monthly: 200, color: "#6366f1" });
 
@@ -6435,18 +6050,18 @@ function ObjectifsView({ goals, setGoals, totals }) {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Objectifs financiers</h1>
-          <p style={{ color: C.muted }}>Suivez vos projets d'épargne et leur progression</p>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Objectifs financiers</h1>
+          <p style={{ color: T.muted }}>Suivez vos projets d'épargne et leur progression</p>
         </div>
         <button onClick={() => setShowAdd(s => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
-          style={{ background: C.blue, color: "#fff" }}>
+          style={{ background: T.blue, color: "#fff" }}>
           <Plus size={18} /> Nouvel objectif
         </button>
       </div>
 
       {showAdd && (
-        <Card style={{ borderColor: `${C.blue}44` }}>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: C.muted }}>NOUVEL OBJECTIF</h2>
+        <Card style={{ borderColor: `${T.blue}44` }}>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: T.muted }}>NOUVEL OBJECTIF</h2>
           {/* Presets */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             {GOAL_PRESETS.map(p => {
@@ -6454,7 +6069,7 @@ function ObjectifsView({ goals, setGoals, totals }) {
               return (
                 <button key={p.type} onClick={() => setNewGoal(g => ({ ...g, name: p.name, icon: p.type, color: p.color }))}
                   className="flex items-center gap-2"
-                  style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${newGoal.name === p.name ? p.color : C.border}`, background: newGoal.name === p.name ? p.color + "22" : "rgba(255,255,255,0.03)", color: C.text, fontSize: 13, cursor: "pointer" }}>
+                  style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${newGoal.name === p.name ? p.color : T.border}`, background: newGoal.name === p.name ? p.color + "22" : "rgba(255,255,255,0.03)", color: T.text, fontSize: 13, cursor: "pointer" }}>
                   <PresetIcon size={14} style={{ color: p.color }} /> {p.name}
                 </button>
               );
@@ -6475,10 +6090,10 @@ function ObjectifsView({ goals, setGoals, totals }) {
             </Field>
           </div>
           <div className="flex gap-3 mt-3">
-            <button onClick={addGoal} style={{ padding: "9px 20px", borderRadius: 12, border: "none", background: C.blue, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
+            <button onClick={addGoal} style={{ padding: "9px 20px", borderRadius: 12, border: "none", background: T.blue, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
               <Check size={14} className="inline mr-1.5" /> Créer l'objectif
             </button>
-            <button onClick={() => setShowAdd(false)} style={{ padding: "9px 16px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontSize: 13 }}>Annuler</button>
+            <button onClick={() => setShowAdd(false)} style={{ padding: "9px 16px", borderRadius: 12, border: `1px solid ${T.border}`, background: "none", color: T.muted, cursor: "pointer", fontSize: 13 }}>Annuler</button>
           </div>
         </Card>
       )}
@@ -6486,9 +6101,9 @@ function ObjectifsView({ goals, setGoals, totals }) {
       {goals.length === 0 && !showAdd && (
         <Card>
           <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <Target size={40} style={{ color: C.muted, margin: "0 auto 12px" }} />
-            <p style={{ color: C.text, fontWeight: 600, marginBottom: 6 }}>Aucun objectif défini</p>
-            <p style={{ color: C.muted, fontSize: 13 }}>Créez votre premier objectif pour suivre votre progression.</p>
+            <Target size={40} style={{ color: T.muted, margin: "0 auto 12px" }} />
+            <p style={{ color: T.text, fontWeight: 600, marginBottom: 6 }}>Aucun objectif défini</p>
+            <p style={{ color: T.muted, fontSize: 13 }}>Créez votre premier objectif pour suivre votre progression.</p>
           </div>
         </Card>
       )}
@@ -6504,20 +6119,20 @@ function ObjectifsView({ goals, setGoals, totals }) {
           const GoalIcon = GOAL_ICONS[g.icon] || Star;
 
           return (
-            <Card key={g.id} style={{ borderColor: done ? `${C.green}44` : `${g.color}33` }}>
+            <Card key={g.id} style={{ borderColor: done ? `${T.green}44` : `${g.color}33` }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: `${g.color}1a`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <GoalIcon size={18} style={{ color: g.color }} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{g.name}</div>
+                    <div style={{ fontWeight: 700, color: T.text, fontSize: 15 }}>{g.name}</div>
                     {done
-                      ? <div style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Objectif atteint !</div>
-                      : <div style={{ fontSize: 12, color: C.muted }}>{dateEst ? `Estimé : ${dateEst}` : months == null ? "Définissez un versement mensuel" : ""}</div>}
+                      ? <div style={{ fontSize: 12, color: T.green, fontWeight: 600 }}>Objectif atteint !</div>
+                      : <div style={{ fontSize: 12, color: T.muted }}>{dateEst ? `Estimé : ${dateEst}` : months == null ? "Définissez un versement mensuel" : ""}</div>}
                   </div>
                 </div>
-                <button onClick={() => setGoals(gs => gs.filter(x => x.id !== g.id))}
+                <button onClick={() => setGoals(gs => gs.filter(x => x.id !== g.id))} aria-label="Supprimer l'objectif"
                   style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", padding: 2 }}>
                   <Trash2 size={14} />
                 </button>
@@ -6526,9 +6141,9 @@ function ObjectifsView({ goals, setGoals, totals }) {
               {/* Progress bar */}
               <div style={{ marginBottom: 10 }}>
                 <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: done ? C.green : g.color }} />
+                  <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: done ? T.green : g.color }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 12, color: C.muted }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 12, color: T.muted }}>
                   <span>{eur(g.saved)} épargné</span>
                   <span style={{ fontWeight: 700, color: g.color }}>{pct.toFixed(0)}%</span>
                   <span>sur {eur(g.target)}</span>
@@ -6537,17 +6152,17 @@ function ObjectifsView({ goals, setGoals, totals }) {
 
               {/* Métriques */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Reste à épargner</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{eur(Math.max(0, g.target - g.saved))}</div>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Reste à épargner</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>{eur(Math.max(0, g.target - g.saved))}</div>
                 </div>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Versement mensuel</div>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Versement mensuel</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: g.color }}>{eur(g.monthly)}</div>
                 </div>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Temps restant</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: done ? C.green : C.text }}>{done ? "Atteint ✓" : formatMonths(months)}</div>
+                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Temps restant</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: done ? T.green : T.text }}>{done ? "Atteint ✓" : formatMonths(months)}</div>
                 </div>
               </div>
             </Card>
@@ -6580,12 +6195,12 @@ function FIREInfoModal({ onClose }) {
         style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 560, position: "relative" }}
       >
         {/* Close */}
-        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#6b7280", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#6b7280", cursor: "pointer", lineHeight: 1, display: "inline-flex" }}><X size={20} /></button>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15))", border: "1px solid rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-            🔥
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15))", border: "1px solid rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Flame size={24} style={{ color: "#f59e0b" }} aria-hidden="true" />
           </div>
           <div>
             <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 22, margin: 0 }}>FIRE</h2>
@@ -6600,9 +6215,9 @@ function FIREInfoModal({ onClose }) {
 
         <button
           onClick={onClose}
-          style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff" }}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          🔥 Calculer mon objectif FIRE
+          <Flame size={16} /> Calculer mon objectif FIRE
         </button>
       </div>
     </div>
@@ -6613,6 +6228,7 @@ function FIREInfoModal({ onClose }) {
 /*  APP                                                                */
 /* ------------------------------------------------------------------ */
 export default function App() {
+  const T = useT();
   const [showApp,    setShowApp]    = useState(false);
   const [view,       setView]       = useState("dashboard");
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
@@ -6700,7 +6316,7 @@ export default function App() {
   if (!showApp) return <Landing onStart={() => setShowApp(true)} />;
 
   return (
-    <div className="flex min-h-screen" style={{ background: C.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       <ScrollProgressBar />
       {showFIREModal && (
         <FIREInfoModal onClose={() => setShowFIREModal(false)} />
@@ -6721,6 +6337,31 @@ export default function App() {
       )}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
+        {/* logout button */}
+        {supabase && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.reload();
+              }}
+              style={{
+                padding: "8px 14px",
+                fontSize: 12,
+                fontWeight: 600,
+                border: `1px solid ${T.border}`,
+                borderRadius: 8,
+                background: "transparent",
+                color: T.muted,
+                cursor: "pointer",
+              }}
+              aria-label="Déconnexion"
+            >
+              Déconnexion
+            </button>
+          </div>
+        )}
+
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
           {["dashboard", "finances", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "assistant", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
@@ -6759,7 +6400,6 @@ export default function App() {
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "defi"         && (canAccess(plan, "defi")        ? <DeFi />   : <PaywallBanner feature="defi"  plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "assistant"    && (canAccess(plan, "assistant")   ? <Chatbot totals={totals} simParams={simParams} patrimoine={patrimoine} /> : <PaywallBanner feature="assistant" plan={plan} onUpgrade={() => setView("pricing")} />)}
 
         {/* Vues Pro */}
         {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoine} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
@@ -6774,41 +6414,42 @@ export default function App() {
 /*  DISCLAIMER LÉGAL                                                   */
 /* ------------------------------------------------------------------ */
 function LegalDisclaimer() {
+  const T = useT();
   const [expanded, setExpanded] = useState(false);
   return (
     <footer
       className="mt-16 rounded-2xl p-5"
       style={{
         background: "rgba(255,255,255,0.02)",
-        border: `1px solid ${C.border}`,
+        border: `1px solid ${T.border}`,
       }}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 flex-1">
-          <Info size={15} style={{ color: C.muted, flexShrink: 0, marginTop: 2 }} />
+          <Info size={15} style={{ color: T.muted, flexShrink: 0, marginTop: 2 }} />
           <div>
-            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: C.muted }}>
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
               Informations légales — non contractuel
             </span>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: C.muted }}>
-              WealthTrack est un outil de simulation et de suivi patrimonial personnel à titre purement informatif. Les informations, calculs, projections et simulations présentés sur cette plateforme <strong style={{ color: C.text }}>ne constituent en aucun cas un conseil en investissement, un conseil financier, fiscal ou juridique</strong> au sens des articles L. 321-1 et suivants du Code monétaire et financier.
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: T.muted }}>
+              WealthTrack est un outil de simulation et de suivi patrimonial personnel à titre purement informatif. Les informations, calculs, projections et simulations présentés sur cette plateforme <strong style={{ color: T.text }}>ne constituent en aucun cas un conseil en investissement, un conseil financier, fiscal ou juridique</strong> au sens des articles L. 321-1 et suivants du Code monétaire et financier.
             </p>
             {expanded && (
-              <div className="mt-3 space-y-2 text-xs leading-relaxed" style={{ color: C.muted }}>
+              <div className="mt-3 space-y-2 text-xs leading-relaxed" style={{ color: T.muted }}>
                 <p>
-                  <strong style={{ color: C.text }}>Rendements passés :</strong> Les performances passées, les taux de rendement historiques (ETF, crypto-actifs, immobilier, livrets réglementés, etc.) affichés sur WealthTrack ne préjugent pas des performances futures et ne sont pas garantis. Tout investissement comporte un risque de perte partielle ou totale du capital investi.
+                  <strong style={{ color: T.text }}>Rendements passés :</strong> Les performances passées, les taux de rendement historiques (ETF, crypto-actifs, immobilier, livrets réglementés, etc.) affichés sur WealthTrack ne préjugent pas des performances futures et ne sont pas garantis. Tout investissement comporte un risque de perte partielle ou totale du capital investi.
                 </p>
                 <p>
-                  <strong style={{ color: C.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement, d'inflation et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
+                  <strong style={{ color: T.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement, d'inflation et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
                 </p>
                 <p>
-                  <strong style={{ color: C.text }}>Crypto-actifs :</strong> Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI).
+                  <strong style={{ color: T.text }}>Crypto-actifs :</strong> Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI).
                 </p>
                 <p>
-                  <strong style={{ color: C.text }}>Responsabilité :</strong> WealthTrack et ses auteurs déclinent toute responsabilité pour les décisions d'investissement ou patrimoniales prises sur la base des informations contenues dans cette application. L'utilisateur est seul responsable de l'utilisation des données et des décisions financières qui en découlent.
+                  <strong style={{ color: T.text }}>Responsabilité :</strong> WealthTrack et ses auteurs déclinent toute responsabilité pour les décisions d'investissement ou patrimoniales prises sur la base des informations contenues dans cette application. L'utilisateur est seul responsable de l'utilisation des données et des décisions financières qui en découlent.
                 </p>
                 <p>
-                  <strong style={{ color: C.text }}>Conseil professionnel :</strong> Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation.
+                  <strong style={{ color: T.text }}>Conseil professionnel :</strong> Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation.
                 </p>
                 <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>
                   WealthTrack n'est pas un prestataire de services d'investissement (PSI) au sens de la directive MIF II. Cette application ne fait pas l'objet d'un enregistrement auprès de l'AMF ou de l'ACPR en tant que conseiller en investissements financiers (CIF). © WealthTrack — Tous droits réservés.
@@ -6820,7 +6461,7 @@ function LegalDisclaimer() {
         <button
           onClick={() => setExpanded(e => !e)}
           className="text-xs flex-shrink-0 px-3 py-1.5 rounded-lg"
-          style={{ color: C.muted, border: `1px solid ${C.border}`, background: "rgba(255,255,255,0.02)", whiteSpace: "nowrap" }}
+          style={{ color: T.muted, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.02)", whiteSpace: "nowrap" }}
         >
           {expanded ? "Réduire ▲" : "Lire tout ▼"}
         </button>

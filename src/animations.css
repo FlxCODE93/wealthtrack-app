@@ -205,6 +205,55 @@
 }
 
 /* ─────────────────────────────────────────────────────────────── */
+/* 10b. Animated Shiny Text (gradient sweep on headline accents)   */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-shiny-text {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.wt-shiny-text {
+  background-size: 300% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wt-shiny-text 3.6s ease-in-out infinite;
+  text-shadow: 0 0 18px rgba(124, 58, 237, 0.55);
+  will-change: background-position;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-shiny-text {
+    animation: none;
+    background-position: 0 0;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 10c. Hero Fade Entrances (badge down, content up + stagger)      */
+/* ─────────────────────────────────────────────────────────────── */
+
+@keyframes wt-fade-in-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wt-fade-in-down {
+  animation: wt-fade-in-down 0.8s var(--ease-out) forwards;
+}
+
+.wt-fade-in-up {
+  opacity: 0;
+  animation: wt-hero-up 0.8s var(--ease-out) forwards;
+}
+
+.wt-delay-200 { animation-delay: 0.2s; }
+.wt-delay-400 { animation-delay: 0.4s; }
+.wt-delay-600 { animation-delay: 0.6s; }
+.wt-delay-800 { animation-delay: 0.8s; }
+
+/* ─────────────────────────────────────────────────────────────── */
 /* 11. Link Hover Animation                                          */
 /* ─────────────────────────────────────────────────────────────── */
 
@@ -243,10 +292,119 @@
 /* ─────────────────────────────────────────────────────────────── */
 
 .recharts-surface {
-  /* Enable hardware acceleration for smooth chart animations */
   will-change: transform, opacity;
 }
 
-/* ─────────────────────────────────────────────────────────────── */
-/* End of animations.css                                            */
-/* ─────────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════ */
+/* PREMIUM CINEMA LAYER — Ultra-dark fintech animations            */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ── Missing classes used in Landing.jsx ─────────────────────── */
+
+.wt-slide-up {
+  opacity: 0;
+  animation: wt-hero-up 0.8s var(--ease-out) forwards;
+}
+
+.wt-stagger .wt-slide-up:nth-child(1) { animation-delay: 0ms; }
+.wt-stagger .wt-slide-up:nth-child(2) { animation-delay: 130ms; }
+.wt-stagger .wt-slide-up:nth-child(3) { animation-delay: 260ms; }
+.wt-stagger .wt-slide-up:nth-child(4) { animation-delay: 390ms; }
+.wt-stagger .wt-slide-up:nth-child(5) { animation-delay: 520ms; }
+
+@keyframes wt-scale-in-anim {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.wt-scale-in {
+  animation: wt-scale-in-anim 0.55s var(--ease-smooth) forwards;
+}
+
+/* ── Ambient blob (for inline references in dashboard preview) ── */
+
+@keyframes wt-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(28px, -22px) scale(1.04); }
+  66%       { transform: translate(-16px, 14px) scale(0.97); }
+}
+
+/* ── Hero ambient orbs (slow drift, parallax depth) ──────────── */
+
+@keyframes wt-orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  20%       { transform: translate(18px, -32px) scale(1.03); }
+  40%       { transform: translate(-22px, 10px) scale(0.97); }
+  60%       { transform: translate(26px, 20px) scale(1.02); }
+  80%       { transform: translate(-10px, -18px) scale(0.99); }
+}
+
+/* ── Dashboard glow pulse ────────────────────────────────────── */
+
+@keyframes wt-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 50px 120px -30px rgba(0,0,0,0.95),
+      0 0 40px rgba(124,58,237,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  50% {
+    box-shadow:
+      0 50px 120px -30px rgba(0,0,0,0.95),
+      0 0 80px rgba(124,58,237,0.20),
+      0 0 150px rgba(79,70,229,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+}
+
+.wt-glow-pulse {
+  animation: wt-glow-pulse 5s ease-in-out infinite;
+}
+
+/* ── Premium card hover — violet glow ───────────────────────── */
+
+.wt-card-hover {
+  transition: all 220ms var(--ease-smooth);
+}
+
+.wt-card-hover:hover {
+  box-shadow: 0 0 28px rgba(124,58,237,0.10), 0 12px 40px rgba(0,0,0,0.5);
+  transform: translateY(-3px);
+}
+
+/* ── Shimmer sweep (for stat numbers reveal) ─────────────────── */
+
+@keyframes wt-count-reveal {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.wt-count-reveal {
+  animation: wt-count-reveal 0.5s var(--ease-smooth) forwards;
+}
+
+/* ── Glass morphism utility ──────────────────────────────────── */
+
+.wt-glass {
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+/* ── Gradient text animation (enhanced shine) ────────────────── */
+
+@keyframes wt-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Respect prefers-reduced-motion (extended) ───────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-glow-pulse,
+  .wt-orb,
+  [style*="wt-orb-drift"],
+  [style*="wt-blob"] {
+    animation: none !important;
+  }
+}

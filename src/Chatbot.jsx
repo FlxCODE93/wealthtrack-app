@@ -3,12 +3,10 @@
  * 16 sujets : PEA, AV, crypto, PER, livrets, IR, SCPI, DCA, PTZ, notaire, FIRE…
  * Extraction automatique des montants depuis les questions.
  */
-import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Info, AlertTriangle, CheckCircle2, PartyPopper, Wallet } from "lucide-react";
+import React, { useState } from "react";
+import { Info, AlertTriangle, CheckCircle2, PartyPopper, Wallet } from "lucide-react";
 import { C, eur } from "./theme.js";
 import { fvMonthly, loanCap, RATE_A, RATE_C, RATE_BTC, RATE_ETH } from "./finance.js";
-
-const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shadow duration-150";
 
 /* ─── Utilitaires ──────────────────────────────────────────────────── */
 function fv(m, r, y) {
@@ -671,7 +669,7 @@ const INTENTS = [
   { re: /ouvrir.*pea|comment.*pea|[eé]tape.*pea/i,                                           fn: mkPEASteps },
 ];
 
-function classify(text, ctx) {
+export function classify(text, ctx) {
   const params = extractParams(text);
 
   // 1. PEA avant 5 ans — check avant tout le reste
@@ -711,7 +709,7 @@ function withIcons(text, keyPrefix) {
   });
 }
 
-function AssistantMessage({ data, onChip }) {
+export function AssistantMessage({ data, onChip }) {
   const [quizAnswer, setQuizAnswer] = useState(null);
   const bold = (str) =>
     String(str).split(/\*\*(.*?)\*\*/g).map((p, i) =>
@@ -820,8 +818,8 @@ function AssistantMessage({ data, onChip }) {
   );
 }
 
-/* ─── Composant principal ──────────────────────────────────────────── */
-const QUICK = [
+/* ─── Sujets suggérés ──────────────────────────────────────────────── */
+export const QUICK = [
   "Capacité d'emprunt",
   "PEA avant 5 ans — fiscalité ?",
   "Livret A / Livrets",
@@ -831,145 +829,3 @@ const QUICK = [
   "Fonds d'urgence",
   "Mon FIRE / indépendance financière",
 ];
-
-export default function Chatbot({ totals, simParams, patrimoine }) {
-  const ctx = { totals, simParams, patrimoine };
-  const [msgs, setMsgs]   = useState([]);
-  const [input, setInput] = useState("");
-  const bottomRef         = useRef();
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-
-  const sendMessage = (text) => {
-    const userText = text.trim();
-    if (!userText) return;
-    setMsgs((prev) => [
-      ...prev,
-      { role: "user", id: Date.now(),     text: userText },
-      { role: "bot",  id: Date.now() + 1, data: classify(userText, ctx) },
-    ]);
-    setInput("");
-  };
-
-  const handleKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
-  };
-
-  return (
-    <div className="flex flex-col gap-6" style={{ maxWidth: 760 }}>
-      <div>
-        <h1 className="text-3xl font-bold" style={{ color: C.text }}>Assistant financier</h1>
-        <p style={{ color: C.muted }}>Réponses personnalisées basées sur votre profil — PEA, crypto, IR, AV, PER, immo et plus.</p>
-      </div>
-
-      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, overflow: "hidden" }}>
-        <div style={{ minHeight: 340, maxHeight: 520, overflowY: "auto", padding: "20px 20px 0" }}>
-          {msgs.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 20px" }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(91,141,239,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Bot size={24} style={{ color: C.blue }} />
-                </div>
-              </div>
-              <div className="font-semibold" style={{ color: C.text, marginBottom: 6 }}>
-                Bonjour ! Je suis votre assistant financier.
-              </div>
-              <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-                Posez votre question en langage naturel ou choisissez un sujet.
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {QUICK.map((q) => (
-                  <button key={q} onClick={() => sendMessage(q)}
-                    className="hover:bg-[rgba(47,155,255,0.16)] hover:border-[rgba(91,141,239,0.4)] transition-colors"
-                    style={{
-                      background: "rgba(47,155,255,0.08)", border: `1px solid ${C.border}`,
-                      borderRadius: 20, padding: "6px 14px", fontSize: 12, color: C.blue, cursor: "pointer",
-                    }}>{q}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {msgs.map((msg) => (
-            <div key={msg.id} className={`flex gap-3 mb-5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              {msg.role === "bot" && (
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                  background: "rgba(47,155,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <Bot size={16} style={{ color: C.blue }} />
-                </div>
-              )}
-              {msg.role === "user" ? (
-                <>
-                  <div style={{
-                    background: C.blue, color: "#fff",
-                    borderRadius: "16px 16px 4px 16px",
-                    padding: "10px 14px", fontSize: 13, maxWidth: 420,
-                  }}>
-                    {msg.text}
-                  </div>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                    background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <User size={16} style={{ color: C.muted }} />
-                  </div>
-                </>
-              ) : (
-                <div style={{
-                  background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`,
-                  borderRadius: "4px 16px 16px 16px", padding: "14px 16px",
-                }}>
-                  <AssistantMessage data={msg.data} onChip={(c) => sendMessage(c)} />
-                </div>
-              )}
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-
-        <div style={{ padding: 16, borderTop: `1px solid ${C.border}`, display: "flex", gap: 10 }}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="Ex : Si je mets 11444€ sur PEA mais que je le clôture avant 5 ans vais-je payer des impôts ?"
-            className={INPUT_FOCUS_CLASS}
-            style={{
-              flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`,
-              borderRadius: 12, padding: "10px 14px", color: C.text, fontSize: 13, outline: "none",
-            }}
-          />
-          <button
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim()}
-            className={input.trim() ? "hover:brightness-110" : ""}
-            style={{
-              background: input.trim() ? C.blue : "rgba(255,255,255,0.05)",
-              color: input.trim() ? "#fff" : C.muted,
-              border: "none", borderRadius: 12, padding: "10px 16px",
-              cursor: input.trim() ? "pointer" : "default", transition: "all 0.2s",
-              display: "flex", alignItems: "center",
-            }}
-          >
-            <Send size={16} />
-          </button>
-        </div>
-      </div>
-
-      {msgs.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {QUICK.map((q) => (
-            <button key={q} onClick={() => sendMessage(q)}
-              className="hover:bg-white/[0.06] hover:text-[#e8e9f3] transition-colors"
-              style={{
-                background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`,
-                borderRadius: 20, padding: "5px 12px", fontSize: 11, color: C.muted, cursor: "pointer",
-              }}>{q}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

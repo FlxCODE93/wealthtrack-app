@@ -1,0 +1,163 @@
+import React, { useState } from "react";
+import { supabase } from "./supabaseClient.js";
+import { useT } from "./ThemeProvider.jsx";
+import { LogIn, Mail, Lock, AlertCircle } from "lucide-react";
+
+export default function Auth({ onAuthSuccess }) {
+  const T = useT();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+        if (err) throw err;
+      } else {
+        const { error: err } = await supabase.auth.signUp({ email, password });
+        if (err) throw err;
+      }
+      onAuthSuccess?.();
+    } catch (err) {
+      setError(err.message || "Erreur d'authentification");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: T.bg,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 400,
+          width: "100%",
+          padding: 32,
+          borderRadius: 16,
+          border: `1px solid ${T.border}`,
+          background: T.panel,
+        }}
+      >
+        <div style={{ marginBottom: 28, textAlign: "center" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <LogIn size={32} style={{ color: T.blue }} />
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: 0 }}>
+            WealthTrack
+          </h1>
+          <p style={{ fontSize: 13, color: T.muted, margin: "8px 0 0 0" }}>
+            {isLogin ? "Connectez-vous" : "Créez un compte"}
+          </p>
+        </div>
+
+        <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Email */}
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 6 }}>
+              Email
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+              <Mail size={16} style={{ color: T.muted, flexShrink: 0 }} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  color: T.text,
+                  outline: "none",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 6 }}>
+              Mot de passe
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+              <Lock size={16} style={{ color: T.muted, flexShrink: 0 }} />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  color: T.text,
+                  outline: "none",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ display: "flex", gap: 8, padding: 12, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+              <AlertCircle size={16} style={{ color: "#ef4444", flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 13, color: "#fca5a5" }}>{error}</span>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: "11px 16px",
+              borderRadius: 8,
+              border: "none",
+              background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? "Connexion..." : isLogin ? "Se connecter" : "S'inscrire"}
+          </button>
+        </form>
+
+        {/* Toggle */}
+        <div style={{ marginTop: 20, textAlign: "center", fontSize: 13 }}>
+          <span style={{ color: T.muted }}>
+            {isLogin ? "Pas de compte ? " : "Déjà inscrit ? "}
+          </span>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(!isLogin); setError(""); }}
+            style={{ background: "none", border: "none", color: T.blue, fontWeight: 700, cursor: "pointer", fontSize: 13 }}
+          >
+            {isLogin ? "S'inscrire" : "Se connecter"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

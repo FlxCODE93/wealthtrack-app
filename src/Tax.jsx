@@ -7,21 +7,12 @@ import {
   ClipboardList, BarChart3, Armchair, Briefcase, Trophy, Zap,
   ArrowDownToLine, ArrowUpFromLine, User,
 } from "lucide-react";
-import { C, eur } from "./theme.js";
+import { eur } from "./theme.js";
+import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
+import { API_URL } from "./config.js";
 import InfoTooltip from "./InfoTooltip.jsx";
-
-/* ─── LocalStorage hook ─────────────────────────────────────────────── */
-function useLocalStorage(key, def) {
-  const [state, setState] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : def; }
-    catch { return def; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
-  return [state, setState];
-}
+import { useLocalStorage } from "./storage.js";
 
 /* ─── Constantes ────────────────────────────────────────────────────── */
 const TAX_RATE    = 0.30;
@@ -168,39 +159,60 @@ function exportFiscalRecap(cessions, lots, taxYear) {
 /* ─── Styles partagés ───────────────────────────────────────────────── */
 const EMPTY_LOT  = { symbol: "", name: "", amount: "", costPerUnit: "", date: new Date().toISOString().slice(0, 10) };
 const EMPTY_SELL = { symbol: "", amount: "", pricePerUnit: "", date: new Date().toISOString().slice(0, 10), notes: "" };
-const INPUT = { width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box" };
-const LBL   = { display: "block", color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
 const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shadow duration-150";
 
 /* ─── ID map CoinGecko ──────────────────────────────────────────────── */
 const COIN_ID = { BTC: "bitcoin", ETH: "ethereum", SOL: "solana", BNB: "binancecoin", MATIC: "matic-network", AVAX: "avalanche-2", DOT: "polkadot", LINK: "chainlink", ADA: "cardano", ATOM: "cosmos", XRP: "ripple" };
 
 /* ─── Listes à puces — icône par nature de règle ─────────────────────── */
-const RULE_ICON = {
-  good:   { Icon: CheckCircle2,  color: C.green },
-  bad:    { Icon: XCircle,       color: C.red },
-  tip:    { Icon: Lightbulb,     color: C.amber },
-  warn:   { Icon: AlertTriangle, color: C.amber },
-  info:   { Icon: Info,          color: C.cyan },
-  cycle:  { Icon: RotateCw,      color: C.blue },
-  global: { Icon: Globe,         color: C.cyan },
-  down:   { Icon: TrendingDown,  color: C.red },
-  time:   { Icon: Clock,         color: C.muted },
-  gift:   { Icon: Gift,          color: C.green },
-  stat:   { Icon: BarChart3,     color: C.cyan },
-  note:   { Icon: ClipboardList, color: C.muted },
-  calc:   { Icon: Calculator,    color: C.blue },
-  sofa:   { Icon: Armchair,      color: C.amber },
-  job:    { Icon: Briefcase,     color: C.amber },
-  best:   { Icon: Trophy,        color: C.green },
-  age:    { Icon: User,          color: C.muted },
-  home:   { Icon: Home,          color: C.blue },
-  zap:    { Icon: Zap,           color: C.red },
+const RULE_ICON_MAP = {
+  good:   CheckCircle2,
+  bad:    XCircle,
+  tip:    Lightbulb,
+  warn:   AlertTriangle,
+  info:   Info,
+  cycle:  RotateCw,
+  global: Globe,
+  down:   TrendingDown,
+  time:   Clock,
+  gift:   Gift,
+  stat:   BarChart3,
+  note:   ClipboardList,
+  calc:   Calculator,
+  sofa:   Armchair,
+  job:    Briefcase,
+  best:   Trophy,
+  age:    User,
+  home:   Home,
+  zap:    Zap,
 };
+
 const RuleItem = ({ kind, children }) => {
+  const T = useT();
+  const RULE_ICON = {
+    good:   { Icon: CheckCircle2,  color: T.green },
+    bad:    { Icon: XCircle,       color: T.red },
+    tip:    { Icon: Lightbulb,     color: T.amber },
+    warn:   { Icon: AlertTriangle, color: T.amber },
+    info:   { Icon: Info,          color: T.cyan },
+    cycle:  { Icon: RotateCw,      color: T.blue },
+    global: { Icon: Globe,         color: T.cyan },
+    down:   { Icon: TrendingDown,  color: T.red },
+    time:   { Icon: Clock,         color: T.muted },
+    gift:   { Icon: Gift,          color: T.green },
+    stat:   { Icon: BarChart3,     color: T.cyan },
+    note:   { Icon: ClipboardList, color: T.muted },
+    calc:   { Icon: Calculator,    color: T.blue },
+    sofa:   { Icon: Armchair,      color: T.amber },
+    job:    { Icon: Briefcase,     color: T.amber },
+    best:   { Icon: Trophy,        color: T.green },
+    age:    { Icon: User,          color: T.muted },
+    home:   { Icon: Home,          color: T.blue },
+    zap:    { Icon: Zap,           color: T.red },
+  };
   const { Icon, color } = RULE_ICON[kind] || RULE_ICON.info;
   return (
-    <li className="flex items-start gap-2" style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>
+    <li className="flex items-start gap-2" style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>
       <Icon size={13} style={{ color, opacity: 0.85, flexShrink: 0, marginTop: 1 }} />
       <span>{children}</span>
     </li>
@@ -209,6 +221,10 @@ const RuleItem = ({ kind, children }) => {
 
 /* ─── Composant principal ───────────────────────────────────────────── */
 export default function Tax() {
+  const T = useT();
+  const INPUT = { width: "100%", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" };
+  const LBL   = { display: "block", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
+
   /* ── Crypto state ── */
   const [lots,    setLots]   = useLocalStorage("wt_tax_lots",  []);
   const [sells,   setSells]  = useLocalStorage("wt_tax_sells", []);
@@ -252,7 +268,7 @@ export default function Tax() {
 
   /* ── Ping serveur ── */
   useEffect(() => {
-    fetch("http://localhost:3001/api/tax/ping", { signal: AbortSignal.timeout(1500) })
+    fetch(`${API_URL}/api/tax/ping`, { signal: AbortSignal.timeout(1500) })
       .then(r => r.ok && setServerOk(true))
       .catch(() => {});
   }, []);
@@ -379,14 +395,14 @@ export default function Tax() {
     if (!lotForm.symbol || !lotForm.amount || !lotForm.costPerUnit) return;
     const lot = { id: Date.now(), symbol: lotForm.symbol.toUpperCase().trim(), name: lotForm.name.trim() || lotForm.symbol.toUpperCase(), amount: parseFloat(lotForm.amount), costPerUnit: parseFloat(lotForm.costPerUnit), date: lotForm.date };
     setLots(prev => [...prev, lot]);
-    if (serverOk) fetch("http://localhost:3001/api/tax/lots", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lot) }).catch(() => {});
+    if (serverOk) fetch(`${API_URL}/api/tax/lots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lot) }).catch(() => {});
     setLotForm(EMPTY_LOT); setShowLotForm(false);
   };
   const addSell = () => {
     if (!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit) return;
     const sell = { id: Date.now(), symbol: sellForm.symbol.toUpperCase().trim(), amount: parseFloat(sellForm.amount), pricePerUnit: parseFloat(sellForm.pricePerUnit), date: sellForm.date, notes: sellForm.notes };
     setSells(prev => [...prev, sell]);
-    if (serverOk) fetch("http://localhost:3001/api/tax/sells", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sell) }).catch(() => {});
+    if (serverOk) fetch(`${API_URL}/api/tax/sells`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sell) }).catch(() => {});
     setSellForm(EMPTY_SELL); setShowSellForm(false);
   };
   const deleteLot  = (id) => setLots(prev => prev.filter(l => l.id !== id));
@@ -409,27 +425,27 @@ export default function Tax() {
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-3xl font-bold" style={{ color: C.text }}>Fiscalité</h1>
-            <p style={{ color: C.muted }}>Crypto · PEA · CTO · Assurance-Vie · Immobilier</p>
+            <h1 className="text-3xl font-bold" style={{ color: T.text }}>Fiscalité</h1>
+            <p style={{ color: T.muted }}>Crypto · PEA · CTO · Assurance-Vie · Immobilier</p>
           </div>
           {envelope === "crypto" && (
             <div className="flex items-center gap-2 flex-wrap">
               {lots.length === 0 && (
-                <button onClick={loadDemo} style={{ background: "rgba(91,141,239,0.12)", border: `1px solid ${C.blue}44`, color: C.blue, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
+                <button onClick={loadDemo} style={{ background: "rgba(91,141,239,0.12)", border: `1px solid ${T.blue}44`, color: T.blue, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
                   <FlaskConical size={14} /> Données démo
                 </button>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.panel, border: `1px solid ${C.border}`, borderRadius: 10, padding: "6px 12px" }}>
-                <span style={{ color: C.muted, fontSize: 12 }}>Année</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 10, padding: "6px 12px" }}>
+                <span style={{ color: T.muted, fontSize: 12 }}>Année</span>
                 <select value={taxYear} onChange={e => setTaxYear(+e.target.value)}
-                  style={{ background: "transparent", border: "none", color: C.text, fontWeight: 700, fontSize: 14, outline: "none", cursor: "pointer" }}>
+                  style={{ background: "transparent", border: "none", color: T.text, fontWeight: 700, fontSize: 14, outline: "none", cursor: "pointer" }}>
                   {[CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3, CURRENT_YEAR].map(y => (
-                    <option key={y} value={y} style={{ background: C.card }}>{y}</option>
+                    <option key={y} value={y} style={{ background: T.card }}>{y}</option>
                   ))}
                 </select>
               </div>
               <button onClick={() => exportFiscalRecap(cessions, lots, taxYear)} title="Document indicatif non officiel — ne remplace pas le formulaire 2086"
-                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.muted, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
+                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
                 <Download size={14} /> Export récap. fiscal {taxYear}
               </button>
             </div>
@@ -443,8 +459,8 @@ export default function Tax() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "9px 18px", borderRadius: 10, border: "none", cursor: "pointer",
               fontSize: 13, fontWeight: 700,
-              background: envelope === e.id ? C.blue : "rgba(255,255,255,0.05)",
-              color: envelope === e.id ? "#fff" : C.muted,
+              background: envelope === e.id ? T.blue : "rgba(255,255,255,0.05)",
+              color: envelope === e.id ? "#fff" : T.muted,
               transition: "all 0.15s",
             }}>
               {e.icon} {e.label}
@@ -458,7 +474,7 @@ export default function Tax() {
         <>
           <div className="flex items-start gap-2" style={{
             background: "rgba(245,158,11,0.08)", border: `1px solid rgba(245,158,11,0.3)`,
-            borderRadius: 12, padding: "12px 16px", fontSize: 12, color: C.text, lineHeight: 1.6,
+            borderRadius: 12, padding: "12px 16px", fontSize: 12, color: T.text, lineHeight: 1.6,
           }}>
             <AlertTriangle size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
             <p style={{ margin: 0 }}>
@@ -472,37 +488,37 @@ export default function Tax() {
           {/* Cartes résumé */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
             {[
-              { label: "Gains réalisés",    value: eur(totalProfit), color: C.green, icon: TrendingUp },
-              { label: "Pertes réalisées",  value: eur(totalLoss),   color: C.red,   icon: TrendingDown },
-              { label: "Gain net",          value: eur(netGain),     color: netGain >= 0 ? C.green : C.red, icon: netGain >= 0 ? TrendingUp : TrendingDown },
+              { label: "Gains réalisés",    value: eur(totalProfit), color: T.green, icon: TrendingUp },
+              { label: "Pertes réalisées",  value: eur(totalLoss),   color: T.red,   icon: TrendingDown },
+              { label: "Gain net",          value: eur(netGain),     color: netGain >= 0 ? T.green : T.red, icon: netGain >= 0 ? TrendingUp : TrendingDown },
               {
                 label: "Impôt estimé 30 %",
                 value: isExonere ? "0 €" : eur(estimTax),
-                color: isExonere ? C.green : C.amber,
+                color: isExonere ? T.green : T.amber,
                 icon: Percent,
                 sub: isExonere ? `Exonéré — seuil de cession ${SEUIL_EXONERATION_CESSION} €/an non atteint` : null,
               },
-              ...(harvestSave > 0 && netGain > 0 && !isExonere ? [{ label: "Économie harvesting", value: eur(harvestSave), color: C.amber, icon: Zap }] : []),
+              ...(harvestSave > 0 && netGain > 0 && !isExonere ? [{ label: "Économie harvesting", value: eur(harvestSave), color: T.amber, icon: Zap }] : []),
             ].map(c => (
-              <div key={c.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px" }}>
+              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
                 <div className="flex items-start justify-between">
-                  <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>{c.label}</div>
+                  <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>{c.label}</div>
                   <c.icon size={16} style={{ color: c.color, opacity: 0.65 }} />
                 </div>
                 <div style={{ color: c.color, fontSize: 22, fontWeight: 800, marginTop: 6 }}>{c.value}</div>
-                {c.sub && <div style={{ color: C.muted, fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>{c.sub}</div>}
+                {c.sub && <div style={{ color: T.muted, fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>{c.sub}</div>}
               </div>
             ))}
           </div>
 
           {/* Répartition par actif */}
           {byAsset.length > 0 && (
-            <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-              <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Gains par actif — {taxYear}</span>
-                <span style={{ color: C.muted, fontSize: 12 }}>{byAsset.length} actif{byAsset.length > 1 ? "s" : ""}</span>
+            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+              <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Gains par actif — {taxYear}</span>
+                <span style={{ color: T.muted, fontSize: 12 }}>{byAsset.length} actif{byAsset.length > 1 ? "s" : ""}</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "9px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "9px 20px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                 <span>Actif</span>
                 <span style={{ textAlign: "right" }}>Produits cession</span>
                 <span style={{ textAlign: "right" }}>Plus-value</span>
@@ -510,26 +526,26 @@ export default function Tax() {
                 <span style={{ textAlign: "right" }}>PFU estimé (30 %)</span>
               </div>
               {byAsset.map(a => (
-                <div key={a.symbol} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "13px 20px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 13 }}>
-                  <span style={{ color: C.text, fontWeight: 800, fontSize: 15 }}>{a.symbol}</span>
-                  <span style={{ textAlign: "right", color: C.muted }}>{eur(a.proceeds)}</span>
-                  <span style={{ textAlign: "right", color: C.green, fontWeight: 600 }}>{a.gain > 0 ? `+${eur(a.gain)}` : "—"}</span>
-                  <span style={{ textAlign: "right", color: C.red,   fontWeight: 600 }}>{a.loss < 0 ? eur(a.loss) : "—"}</span>
+                <div key={a.symbol} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "13px 20px", borderBottom: `1px solid ${T.border}`, alignItems: "center", fontSize: 13 }}>
+                  <span style={{ color: T.text, fontWeight: 800, fontSize: 15 }}>{a.symbol}</span>
+                  <span style={{ textAlign: "right", color: T.muted }}>{eur(a.proceeds)}</span>
+                  <span style={{ textAlign: "right", color: T.green, fontWeight: 600 }}>{a.gain > 0 ? `+${eur(a.gain)}` : "—"}</span>
+                  <span style={{ textAlign: "right", color: T.red,   fontWeight: 600 }}>{a.loss < 0 ? eur(a.loss) : "—"}</span>
                   <div style={{ textAlign: "right" }}>
                     {isExonere
-                      ? <span style={{ color: C.green, fontSize: 12 }}>Exonéré</span>
+                      ? <span style={{ color: T.green, fontSize: 12 }}>Exonéré</span>
                       : a.tax > 0
-                        ? <span style={{ color: C.red, fontWeight: 700 }}>{eur(a.tax)}</span>
-                        : <span style={{ color: C.green, fontSize: 12 }}>0 €</span>}
+                        ? <span style={{ color: T.red, fontWeight: 700 }}>{eur(a.tax)}</span>
+                        : <span style={{ color: T.green, fontSize: 12 }}>0 €</span>}
                   </div>
                 </div>
               ))}
-              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderTop: `2px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
-                <span style={{ color: C.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
-                <span style={{ textAlign: "right", color: C.muted }}>{eur(byAsset.reduce((s, a) => s + a.proceeds, 0))}</span>
-                <span style={{ textAlign: "right", color: C.green }}>{totalProfit > 0 ? `+${eur(totalProfit)}` : "—"}</span>
-                <span style={{ textAlign: "right", color: C.red }}>{totalLoss < 0 ? eur(totalLoss) : "—"}</span>
-                <span style={{ textAlign: "right", color: isExonere ? C.green : estimTax > 0 ? C.red : C.muted }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
+              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderTop: `2px solid ${T.border}`, fontSize: 13, fontWeight: 700 }}>
+                <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
+                <span style={{ textAlign: "right", color: T.muted }}>{eur(byAsset.reduce((s, a) => s + a.proceeds, 0))}</span>
+                <span style={{ textAlign: "right", color: T.green }}>{totalProfit > 0 ? `+${eur(totalProfit)}` : "—"}</span>
+                <span style={{ textAlign: "right", color: T.red }}>{totalLoss < 0 ? eur(totalLoss) : "—"}</span>
+                <span style={{ textAlign: "right", color: isExonere ? T.green : estimTax > 0 ? T.red : T.muted }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
               </div>
             </div>
           )}
@@ -538,24 +554,24 @@ export default function Tax() {
           {harvestOps.length > 0 && netGain > 0 && (
             <div style={{ background: "rgba(200,136,58,0.08)", border: `1px solid rgba(200,136,58,0.25)`, borderRadius: 14, padding: "16px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <TrendingDown size={16} style={{ color: C.amber }} />
-                <span style={{ color: C.amber, fontWeight: 700, fontSize: 14 }}>
+                <TrendingDown size={16} style={{ color: T.amber }} />
+                <span style={{ color: T.amber, fontWeight: 700, fontSize: 14 }}>
                   Tax-Loss Harvesting — économie potentielle : {eur(harvestSave)}
                   <InfoTooltip text="Tax-Loss Harvesting : réaliser une moins-value latente (vendre un actif en perte) pour compenser une plus-value imposable et réduire le PFU dû. Vous pouvez ensuite racheter l'actif si vous souhaitez conserver votre exposition." align="left" />
                 </span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", gap: "8px 0", fontSize: 12, marginBottom: 8 }}>
                 {["Actif","Position","Valeur actuelle","Perte latente","Économie PFU"].map(h => (
-                  <span key={h} style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", textAlign: h !== "Actif" && h !== "Position" ? "right" : "left" }}>{h}</span>
+                  <span key={h} style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", textAlign: h !== "Actif" && h !== "Position" ? "right" : "left" }}>{h}</span>
                 ))}
               </div>
               {harvestOps.slice(0, 5).map(h => (
                 <div key={h.id} style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", alignItems: "center", fontSize: 12, padding: "6px 0", borderTop: `1px solid rgba(200,136,58,0.12)` }}>
-                  <span style={{ color: C.text, fontWeight: 700 }}>{h.symbol}</span>
-                  <span style={{ color: C.muted }}>{h.remaining.toFixed(4)} unités · coût {eur(h.costBasis)}</span>
-                  <span style={{ textAlign: "right", color: C.muted }}>{eur(h.currentValue)}</span>
-                  <span style={{ textAlign: "right", color: C.red, fontWeight: 600 }}>{eur(h.unrealized)}</span>
-                  <span style={{ textAlign: "right", color: C.amber, fontWeight: 700 }}>{eur(h.taxSaving)}</span>
+                  <span style={{ color: T.text, fontWeight: 700 }}>{h.symbol}</span>
+                  <span style={{ color: T.muted }}>{h.remaining.toFixed(4)} unités · coût {eur(h.costBasis)}</span>
+                  <span style={{ textAlign: "right", color: T.muted }}>{eur(h.currentValue)}</span>
+                  <span style={{ textAlign: "right", color: T.red, fontWeight: 600 }}>{eur(h.unrealized)}</span>
+                  <span style={{ textAlign: "right", color: T.amber, fontWeight: 700 }}>{eur(h.taxSaving)}</span>
                 </div>
               ))}
               {(() => {
@@ -563,10 +579,10 @@ export default function Tax() {
                 const offsetUsed       = harvestSave / TAX_RATE;
                 const pctBillErased    = estimTax > 0 ? Math.round((harvestSave / estimTax) * 100) : 0;
                 return (
-                  <p style={{ color: C.muted, fontSize: 11, marginTop: 12, lineHeight: 1.7 }}>
-                    Ces <strong style={{ color: C.text }}>{eur(totalHarvestLoss)}</strong> de pertes latentes permettraient de compenser{" "}
-                    <strong style={{ color: C.text }}>{eur(offsetUsed)}</strong> de plus-values imposables — soit{" "}
-                    <strong style={{ color: C.amber }}>{pctBillErased} % de votre facture fiscale</strong> effacée.{" "}
+                  <p style={{ color: T.muted, fontSize: 11, marginTop: 12, lineHeight: 1.7 }}>
+                    Ces <strong style={{ color: T.text }}>{eur(totalHarvestLoss)}</strong> de pertes latentes permettraient de compenser{" "}
+                    <strong style={{ color: T.text }}>{eur(offsetUsed)}</strong> de plus-values imposables — soit{" "}
+                    <strong style={{ color: T.amber }}>{pctBillErased} % de votre facture fiscale</strong> effacée.{" "}
                     En France, il n'existe aucune règle <em>anti-wash sale</em> : vous pouvez revendre ces positions et les racheter immédiatement.{" "}
                     Attention : les moins-values crypto ne sont pas reportables sur l'exercice suivant — agissez avant le 31 décembre {taxYear}.
                   </p>
@@ -584,8 +600,8 @@ export default function Tax() {
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} className="flex items-center gap-1.5" style={{
                 padding: "8px 16px", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-                background: tab === t.id ? C.blue : "transparent",
-                color:      tab === t.id ? "#fff" : C.muted,
+                background: tab === t.id ? T.blue : "transparent",
+                color:      tab === t.id ? "#fff" : T.muted,
               }}>
                 <t.icon size={13} /> {t.label}
               </button>
@@ -595,15 +611,15 @@ export default function Tax() {
           {/* Cessions */}
           {tab === "summary" && (
             sessionsInYear.length === 0 ? (
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
-                <FileText size={36} style={{ color: C.muted, opacity: 0.3, margin: "0 auto 16px", display: "block" }} />
-                <div style={{ color: C.text, fontWeight: 600, marginBottom: 8 }}>Aucune cession en {taxYear}</div>
-                <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Saisissez vos achats puis vos ventes, ou chargez les données démo</div>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
+                <FileText size={36} style={{ color: T.muted, opacity: 0.3, margin: "0 auto 16px", display: "block" }} />
+                <div style={{ color: T.text, fontWeight: 600, marginBottom: 8 }}>Aucune cession en {taxYear}</div>
+                <div style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Saisissez vos achats puis vos ventes, ou chargez les données démo</div>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                  <button onClick={loadDemo} style={{ background: C.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={loadDemo} style={{ background: T.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                     <FlaskConical size={14} /> Données démo
                   </button>
-                  <button onClick={() => setTab("lots")} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+                  <button onClick={() => setTab("lots")} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
                     Saisir des achats
                   </button>
                 </div>
@@ -613,17 +629,17 @@ export default function Tax() {
               {isExonere && (
                 <div className="flex items-start gap-2" style={{
                   background: "rgba(34,199,154,0.08)", border: `1px solid rgba(34,199,154,0.25)`,
-                  borderRadius: 12, padding: "12px 16px", fontSize: 12, color: C.text, lineHeight: 1.6,
+                  borderRadius: 12, padding: "12px 16px", fontSize: 12, color: T.text, lineHeight: 1.6,
                 }}>
-                  <CheckCircle2 size={14} style={{ color: C.green, flexShrink: 0, marginTop: 2 }} />
+                  <CheckCircle2 size={14} style={{ color: T.green, flexShrink: 0, marginTop: 2 }} />
                   <p style={{ margin: 0 }}>
-                    <strong style={{ color: C.green }}>Plus-value exonérée d'impôt.</strong>{" "}
+                    <strong style={{ color: T.green }}>Plus-value exonérée d'impôt.</strong>{" "}
                     Le total des prix de cession en {taxYear} ({eur(totalProceeds)}) ne dépasse pas le seuil de {SEUIL_EXONERATION_CESSION} €/an (art. 150 VH bis CGI) — aucun PFU n'est dû sur ces cessions, quel que soit le gain réalisé.
                   </p>
                 </div>
               )}
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "visible" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "10px 16px", borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                   <span>Date</span><span>Actif</span>
                   <span style={{ textAlign: "right" }}>Qté</span>
                   <span style={{ textAlign: "right" }}>Cession</span>
@@ -632,27 +648,27 @@ export default function Tax() {
                   <span style={{ textAlign: "right" }}>PFU 30 %</span>
                 </div>
                 {sessionsInYear.map(c => (
-                  <div key={c.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "11px 16px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 12 }}>
-                    <span style={{ color: C.muted }}>{c.date}</span>
-                    <span style={{ color: C.text, fontWeight: 700 }}>{c.symbol}</span>
-                    <span style={{ textAlign: "right", color: C.muted }}>{c.amount.toFixed(4)}</span>
-                    <span style={{ textAlign: "right", color: C.text }}>{eur(c.proceeds)}</span>
-                    <span style={{ textAlign: "right", color: C.muted }}>{eur(c.costBasis)}</span>
-                    <span style={{ textAlign: "right", fontWeight: 700, color: c.gain >= 0 ? C.green : C.red }}>
+                  <div key={c.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "11px 16px", borderBottom: `1px solid ${T.border}`, alignItems: "center", fontSize: 12 }}>
+                    <span style={{ color: T.muted }}>{c.date}</span>
+                    <span style={{ color: T.text, fontWeight: 700 }}>{c.symbol}</span>
+                    <span style={{ textAlign: "right", color: T.muted }}>{c.amount.toFixed(4)}</span>
+                    <span style={{ textAlign: "right", color: T.text }}>{eur(c.proceeds)}</span>
+                    <span style={{ textAlign: "right", color: T.muted }}>{eur(c.costBasis)}</span>
+                    <span style={{ textAlign: "right", fontWeight: 700, color: c.gain >= 0 ? T.green : T.red }}>
                       {c.gain >= 0 ? "+" : ""}{eur(c.gain)}
                     </span>
-                    <span style={{ textAlign: "right", color: isExonere ? C.green : c.tax > 0 ? C.red : C.muted, fontWeight: 600 }}>
+                    <span style={{ textAlign: "right", color: isExonere ? T.green : c.tax > 0 ? T.red : T.muted, fontWeight: 600 }}>
                       {isExonere ? "Exonéré" : c.tax > 0 ? eur(c.tax) : "0 €"}
                     </span>
                   </div>
                 ))}
-                <div style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "12px 16px", borderTop: `2px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
-                  <span style={{ color: C.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
+                <div style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "12px 16px", borderTop: `2px solid ${T.border}`, fontSize: 13, fontWeight: 700 }}>
+                  <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
                   <span /><span />
-                  <span style={{ textAlign: "right", color: C.text }}>{eur(sessionsInYear.reduce((s, c) => s + c.proceeds, 0))}</span>
-                  <span style={{ textAlign: "right", color: C.muted }}>{eur(sessionsInYear.reduce((s, c) => s + c.costBasis, 0))}</span>
-                  <span style={{ textAlign: "right", color: netGain >= 0 ? C.green : C.red }}>{netGain >= 0 ? "+" : ""}{eur(netGain)}</span>
-                  <span style={{ textAlign: "right", color: isExonere ? C.green : C.red }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
+                  <span style={{ textAlign: "right", color: T.text }}>{eur(sessionsInYear.reduce((s, c) => s + c.proceeds, 0))}</span>
+                  <span style={{ textAlign: "right", color: T.muted }}>{eur(sessionsInYear.reduce((s, c) => s + c.costBasis, 0))}</span>
+                  <span style={{ textAlign: "right", color: netGain >= 0 ? T.green : T.red }}>{netGain >= 0 ? "+" : ""}{eur(netGain)}</span>
+                  <span style={{ textAlign: "right", color: isExonere ? T.green : T.red }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
                 </div>
               </div>
               </div>
@@ -663,29 +679,29 @@ export default function Tax() {
           {tab === "lots" && (
             <>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={() => setShowLotForm(true)} style={{ background: C.blue, color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setShowLotForm(true)} style={{ background: T.blue, color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                   <Plus size={15} /> Ajouter un achat
                 </button>
               </div>
               {lots.length === 0 ? (
-                <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
+                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(91,141,239,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                    <ArrowDownToLine size={24} style={{ color: C.blue }} />
+                    <ArrowDownToLine size={24} style={{ color: T.blue }} />
                   </div>
-                  <div style={{ color: C.text, fontWeight: 600, marginBottom: 8 }}>Aucun lot d'achat</div>
-                  <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Ajoutez vos achats ou chargez les données démo</div>
+                  <div style={{ color: T.text, fontWeight: 600, marginBottom: 8 }}>Aucun lot d'achat</div>
+                  <div style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Ajoutez vos achats ou chargez les données démo</div>
                   <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                    <button onClick={() => setShowLotForm(true)} style={{ background: C.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={() => setShowLotForm(true)} style={{ background: T.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                       <Plus size={14} /> Ajouter un achat
                     </button>
-                    <button onClick={loadDemo} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={loadDemo} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                       <FlaskConical size={14} /> Données démo
                     </button>
                   </div>
                 </div>
               ) : (
-                <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                     <span>Date</span><span>Symbole</span><span>Nom</span>
                     <span style={{ textAlign: "right" }}>Quantité</span>
                     <span style={{ textAlign: "right" }}>Prix/unité (€)</span>
@@ -693,22 +709,22 @@ export default function Tax() {
                     <span />
                   </div>
                   {lots.map(l => (
-                    <div key={l.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "11px 16px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 12 }}>
-                      <span style={{ color: C.muted }}>{l.date}</span>
-                      <span style={{ color: C.text, fontWeight: 700 }}>{l.symbol}</span>
-                      <span style={{ color: C.muted }}>{l.name}</span>
-                      <span style={{ textAlign: "right", color: C.text }}>{l.amount.toFixed(6)}</span>
-                      <span style={{ textAlign: "right", color: C.muted }}>{eur(l.costPerUnit)}</span>
-                      <span style={{ textAlign: "right", color: C.text, fontWeight: 600 }}>{eur(l.amount * l.costPerUnit)}</span>
-                      <button onClick={() => deleteLot(l.id)} className="hover:text-[#ff5c7a] transition-colors" style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 4, display: "flex" }}>
+                    <div key={l.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "11px 16px", borderBottom: `1px solid ${T.border}`, alignItems: "center", fontSize: 12 }}>
+                      <span style={{ color: T.muted }}>{l.date}</span>
+                      <span style={{ color: T.text, fontWeight: 700 }}>{l.symbol}</span>
+                      <span style={{ color: T.muted }}>{l.name}</span>
+                      <span style={{ textAlign: "right", color: T.text }}>{l.amount.toFixed(6)}</span>
+                      <span style={{ textAlign: "right", color: T.muted }}>{eur(l.costPerUnit)}</span>
+                      <span style={{ textAlign: "right", color: T.text, fontWeight: 600 }}>{eur(l.amount * l.costPerUnit)}</span>
+                      <button onClick={() => deleteLot(l.id)} aria-label="Supprimer le lot" className="hover:text-[#ff5c7a] transition-colors" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}>
                         <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
-                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "12px 16px", borderTop: `2px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
-                    <span style={{ color: C.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "12px 16px", borderTop: `2px solid ${T.border}`, fontSize: 13, fontWeight: 700 }}>
+                    <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
                     <span /><span /><span /><span />
-                    <span style={{ textAlign: "right", color: C.text }}>{eur(lots.reduce((s, l) => s + l.amount * l.costPerUnit, 0))}</span>
+                    <span style={{ textAlign: "right", color: T.text }}>{eur(lots.reduce((s, l) => s + l.amount * l.costPerUnit, 0))}</span>
                     <span />
                   </div>
                 </div>
@@ -720,24 +736,24 @@ export default function Tax() {
           {tab === "sells" && (
             <>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={() => setShowSellForm(true)} style={{ background: C.red, color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setShowSellForm(true)} style={{ background: T.red, color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                   <Plus size={15} /> Enregistrer une vente
                 </button>
               </div>
               {sells.length === 0 ? (
-                <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
+                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,92,122,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                    <ArrowUpFromLine size={24} style={{ color: C.red }} />
+                    <ArrowUpFromLine size={24} style={{ color: T.red }} />
                   </div>
-                  <div style={{ color: C.text, fontWeight: 600, marginBottom: 8 }}>Aucune vente</div>
-                  <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Saisissez vos cessions pour calculer l'impôt</div>
-                  <button onClick={() => setShowSellForm(true)} style={{ background: C.red, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: "0 auto" }}>
+                  <div style={{ color: T.text, fontWeight: 600, marginBottom: 8 }}>Aucune vente</div>
+                  <div style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Saisissez vos cessions pour calculer l'impôt</div>
+                  <button onClick={() => setShowSellForm(true)} style={{ background: T.red, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: "0 auto" }}>
                     <Plus size={14} /> Enregistrer une vente
                   </button>
                 </div>
               ) : (
-                <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 100px 110px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "90px 70px 100px 110px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                     <span>Date</span><span>Symbole</span>
                     <span style={{ textAlign: "right" }}>Quantité</span>
                     <span style={{ textAlign: "right" }}>Prix/unité (€)</span>
@@ -745,13 +761,13 @@ export default function Tax() {
                     <span />
                   </div>
                   {sells.map(s => (
-                    <div key={s.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "90px 70px 100px 110px 1fr 36px", padding: "11px 16px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 12 }}>
-                      <span style={{ color: C.muted }}>{s.date}</span>
-                      <span style={{ color: C.text, fontWeight: 700 }}>{s.symbol}</span>
-                      <span style={{ textAlign: "right", color: C.muted }}>{s.amount.toFixed(6)}</span>
-                      <span style={{ textAlign: "right", color: C.muted }}>{eur(s.pricePerUnit)}</span>
-                      <span style={{ textAlign: "right", color: C.green, fontWeight: 600 }}>{eur(s.amount * s.pricePerUnit)}</span>
-                      <button onClick={() => deleteSell(s.id)} className="hover:text-[#ff5c7a] transition-colors" style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 4, display: "flex" }}>
+                    <div key={s.id} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "90px 70px 100px 110px 1fr 36px", padding: "11px 16px", borderBottom: `1px solid ${T.border}`, alignItems: "center", fontSize: 12 }}>
+                      <span style={{ color: T.muted }}>{s.date}</span>
+                      <span style={{ color: T.text, fontWeight: 700 }}>{s.symbol}</span>
+                      <span style={{ textAlign: "right", color: T.muted }}>{s.amount.toFixed(6)}</span>
+                      <span style={{ textAlign: "right", color: T.muted }}>{eur(s.pricePerUnit)}</span>
+                      <span style={{ textAlign: "right", color: T.green, fontWeight: 600 }}>{eur(s.amount * s.pricePerUnit)}</span>
+                      <button onClick={() => deleteSell(s.id)} aria-label="Supprimer la vente" className="hover:text-[#ff5c7a] transition-colors" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -761,11 +777,11 @@ export default function Tax() {
             </>
           )}
 
-          <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-            <span style={{ color: C.text, fontWeight: 600 }}>Méthode FIFO</span> — calcul simplifié, <strong>non officiel</strong> ·
+          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+            <span style={{ color: T.text, fontWeight: 600 }}>Méthode FIFO</span> — calcul simplifié, <strong>non officiel</strong> ·
             La méthode légale française (art. 150 VH bis CGI) utilise le PMCA (quote-part du portefeuille global), pas le FIFO ·
             PFU 30 % (art. 200 A CGI) · L'export ci-dessus est un brouillon de travail — pour votre déclaration 2086, passez par <strong>Waltio</strong>, <strong>Koinly</strong> ou un expert-comptable
-            {serverOk && <span style={{ color: C.green, marginLeft: 8 }}>· Serveur connecté</span>}
+            {serverOk && <span style={{ color: T.green, marginLeft: 8 }}>· Serveur connecté</span>}
           </div>
         </>
       )}
@@ -777,15 +793,15 @@ export default function Tax() {
           {/* KPI */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             {[
-              { label: "PEA ≥ 5 ans — IR",     value: "0 %",    sub: "+ 17,2 % PS",          color: C.green },
-              { label: "PEA < 5 ans / CTO",     value: "30 %",   sub: "12,8 % IR + 17,2 % PS", color: C.red },
-              { label: "Plafond PEA",            value: "150 k€", sub: "225 k€ avec PEA-PME",   color: C.cyan },
-              { label: "Dividendes dans PEA",    value: "0 %",    sub: "Tant qu'ils restent",    color: C.green },
+              { label: "PEA ≥ 5 ans — IR",     value: "0 %",    sub: "+ 17,2 % PS",          color: T.green },
+              { label: "PEA < 5 ans / CTO",     value: "30 %",   sub: "12,8 % IR + 17,2 % PS", color: T.red },
+              { label: "Plafond PEA",            value: "150 k€", sub: "225 k€ avec PEA-PME",   color: T.cyan },
+              { label: "Dividendes dans PEA",    value: "0 %",    sub: "Tant qu'ils restent",    color: T.green },
             ].map(c => (
-              <div key={c.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 18px" }}>
-                <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
+              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+                <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
                 <div style={{ color: c.color, fontSize: 26, fontWeight: 800 }}>{c.value}</div>
-                <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
+                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
               </div>
             ))}
           </div>
@@ -794,7 +810,7 @@ export default function Tax() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               {
-                icon: <Landmark size={16} style={{ color: C.cyan }} />,
+                icon: <Landmark size={16} style={{ color: T.cyan }} />,
                 title: "PEA — Plan d'Épargne en Actions",
                 color: "rgba(0,180,216,0.08)",
                 border: "rgba(0,180,216,0.25)",
@@ -807,7 +823,7 @@ export default function Tax() {
                 ],
               },
               {
-                icon: <TrendingUp size={16} style={{ color: C.amber }} />,
+                icon: <TrendingUp size={16} style={{ color: T.amber }} />,
                 title: "CTO — Compte-Titres Ordinaire",
                 color: "rgba(245,166,35,0.06)",
                 border: "rgba(245,166,35,0.2)",
@@ -823,7 +839,7 @@ export default function Tax() {
               <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
                 <div className="flex items-center gap-2 mb-3">
                   {card.icon}
-                  <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
                 </div>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   {card.items.map(([kind, text], i) => (
@@ -835,10 +851,10 @@ export default function Tax() {
           </div>
 
           {/* Calculateur */}
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 24px" }}>
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
             <div className="flex items-center gap-2 mb-4">
-              <Calculator size={16} style={{ color: C.blue }} />
-              <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Simulateur PEA vs CTO</span>
+              <Calculator size={16} style={{ color: T.blue }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Simulateur PEA vs CTO</span>
             </div>
             <div className="flex gap-4 flex-wrap mb-4">
               <div style={{ flex: "1 1 180px" }}>
@@ -851,9 +867,9 @@ export default function Tax() {
                 <div className="flex gap-2">
                   {[["<5", "Moins de 5 ans"], ["5+", "5 ans ou plus"]].map(([val, lbl]) => (
                     <button key={val} onClick={() => setPeaCalc(p => ({ ...p, years: val }))} style={{
-                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${peaCalc.years === val ? C.blue : C.border}`,
+                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${peaCalc.years === val ? T.blue : T.border}`,
                       background: peaCalc.years === val ? "rgba(91,141,239,0.15)" : "transparent",
-                      color: peaCalc.years === val ? C.blue : C.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
+                      color: peaCalc.years === val ? T.blue : T.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
                     }}>{lbl}</button>
                   ))}
                 </div>
@@ -868,7 +884,7 @@ export default function Tax() {
                     total: peaCalc.years === "5+" ? peaResult.peaGe5.total : peaResult.peaLt5.total,
                     detail: peaCalc.years === "5+" ? `IR : 0 € · PS : ${eur(peaResult.peaGe5.ps)}` : `IR : ${eur(peaResult.peaLt5.ir)} · PS : ${eur(peaResult.peaLt5.ps)}`,
                     note: peaCalc.years === "5+" ? peaResult.peaGe5.note : peaResult.peaLt5.note,
-                    color: peaCalc.years === "5+" ? C.green : C.red,
+                    color: peaCalc.years === "5+" ? T.green : T.red,
                     bg: peaCalc.years === "5+" ? "rgba(34,199,154,0.08)" : "rgba(239,68,68,0.08)",
                     border: peaCalc.years === "5+" ? "rgba(34,199,154,0.25)" : "rgba(239,68,68,0.25)",
                   },
@@ -877,7 +893,7 @@ export default function Tax() {
                     total: peaResult.cto.total,
                     detail: `IR : ${eur(peaResult.cto.ir)} · PS : ${eur(peaResult.cto.ps)}`,
                     note: "Standard",
-                    color: C.red,
+                    color: T.red,
                     bg: "rgba(239,68,68,0.06)",
                     border: "rgba(239,68,68,0.2)",
                   },
@@ -886,16 +902,16 @@ export default function Tax() {
                     total: peaResult.saving,
                     detail: `Soit ${((peaResult.saving / peaResult.cto.total) * 100).toFixed(0)} % d'impôt en moins`,
                     note: "Grâce à l'exonération IR",
-                    color: C.amber,
+                    color: T.amber,
                     bg: "rgba(245,166,35,0.08)",
                     border: "rgba(245,166,35,0.25)",
                   }] : []),
                 ].map(r => (
                   <div key={r.label} style={{ background: r.bg, border: `1px solid ${r.border}`, borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
+                    <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
                     <div style={{ color: r.color, fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{eur(r.total)}</div>
-                    <div style={{ color: C.muted, fontSize: 11 }}>{r.detail}</div>
-                    <div style={{ color: C.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
+                    <div style={{ color: T.muted, fontSize: 11 }}>{r.detail}</div>
+                    <div style={{ color: T.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
                   </div>
                 ))}
               </div>
@@ -903,8 +919,8 @@ export default function Tax() {
           </div>
 
           {/* Stratégie */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            <span style={{ color: C.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un PEA dès maintenant (même avec 100 €) pour lancer le compteur des 5 ans. Investissez les actions mondiales via un ETF MSCI World synthétique (Amundi, Lyxor) éligible PEA. En parallèle, gardez le CTO pour les titres hors UE (Chine, Inde, Small Caps US) et les obligations. La combinaison PEA + CTO + PEA-PME offre 375 k€ de capacité de versement et une fiscalité optimisée.
+          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+            <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un PEA dès maintenant (même avec 100 €) pour lancer le compteur des 5 ans. Investissez les actions mondiales via un ETF MSCI World synthétique (Amundi, Lyxor) éligible PEA. En parallèle, gardez le CTO pour les titres hors UE (Chine, Inde, Small Caps US) et les obligations. La combinaison PEA + CTO + PEA-PME offre 375 k€ de capacité de versement et une fiscalité optimisée.
           </div>
         </div>
       )}
@@ -916,15 +932,15 @@ export default function Tax() {
           {/* KPI */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             {[
-              { label: "AV ≥ 8 ans — IR",         value: "7,5 %",   sub: "+ 17,2 % PS",                  color: C.green },
-              { label: "Abattement annuel (seul)",  value: "4 600 €", sub: "9 200 € pour un couple",       color: C.cyan },
-              { label: "AV < 8 ans",                value: "30 %",    sub: "Même taux que le CTO",          color: C.amber },
-              { label: "Avantage succession",        value: "152 500 €", sub: "Hors droits par bénéficiaire", color: C.green },
+              { label: "AV ≥ 8 ans — IR",         value: "7,5 %",   sub: "+ 17,2 % PS",                  color: T.green },
+              { label: "Abattement annuel (seul)",  value: "4 600 €", sub: "9 200 € pour un couple",       color: T.cyan },
+              { label: "AV < 8 ans",                value: "30 %",    sub: "Même taux que le CTO",          color: T.amber },
+              { label: "Avantage succession",        value: "152 500 €", sub: "Hors droits par bénéficiaire", color: T.green },
             ].map(c => (
-              <div key={c.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 18px" }}>
-                <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
+              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+                <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
                 <div style={{ color: c.color, fontSize: c.value.length > 6 ? 18 : 26, fontWeight: 800 }}>{c.value}</div>
-                <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
+                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
               </div>
             ))}
           </div>
@@ -933,7 +949,7 @@ export default function Tax() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               {
-                icon: <Shield size={16} style={{ color: C.green }} />,
+                icon: <Shield size={16} style={{ color: T.green }} />,
                 title: "Fiscalité des rachats",
                 color: "rgba(34,199,154,0.06)",
                 border: "rgba(34,199,154,0.2)",
@@ -946,7 +962,7 @@ export default function Tax() {
                 ],
               },
               {
-                icon: <Shield size={16} style={{ color: C.amber }} />,
+                icon: <Shield size={16} style={{ color: T.amber }} />,
                 title: "Avantage successoral",
                 color: "rgba(245,166,35,0.06)",
                 border: "rgba(245,166,35,0.2)",
@@ -961,7 +977,7 @@ export default function Tax() {
               <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
                 <div className="flex items-center gap-2 mb-3">
                   {card.icon}
-                  <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
                 </div>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   {card.items.map(([kind, text], i) => (
@@ -973,10 +989,10 @@ export default function Tax() {
           </div>
 
           {/* Calculateur */}
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 24px" }}>
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
             <div className="flex items-center gap-2 mb-4">
-              <Calculator size={16} style={{ color: C.blue }} />
-              <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Simulateur Assurance-Vie</span>
+              <Calculator size={16} style={{ color: T.blue }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Simulateur Assurance-Vie</span>
             </div>
             <div className="flex gap-4 flex-wrap mb-2">
               <div style={{ flex: "1 1 160px" }}>
@@ -994,9 +1010,9 @@ export default function Tax() {
                 <div className="flex gap-2">
                   {[["<8", "< 8 ans"], ["8+", "≥ 8 ans"]].map(([val, lbl]) => (
                     <button key={val} onClick={() => setAvCalc(p => ({ ...p, age: val }))} style={{
-                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${avCalc.age === val ? C.blue : C.border}`,
+                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${avCalc.age === val ? T.blue : T.border}`,
                       background: avCalc.age === val ? "rgba(91,141,239,0.15)" : "transparent",
-                      color: avCalc.age === val ? C.blue : C.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
+                      color: avCalc.age === val ? T.blue : T.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
                     }}>{lbl}</button>
                   ))}
                 </div>
@@ -1006,9 +1022,9 @@ export default function Tax() {
                 <div className="flex gap-2">
                   {[[false, "Seul"], [true, "Couple"]].map(([val, lbl]) => (
                     <button key={String(val)} onClick={() => setAvCalc(p => ({ ...p, couple: val }))} style={{
-                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${avCalc.couple === val ? C.blue : C.border}`,
+                      flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${avCalc.couple === val ? T.blue : T.border}`,
                       background: avCalc.couple === val ? "rgba(91,141,239,0.15)" : "transparent",
-                      color: avCalc.couple === val ? C.blue : C.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
+                      color: avCalc.couple === val ? T.blue : T.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
                     }}>{lbl}</button>
                   ))}
                 </div>
@@ -1022,27 +1038,27 @@ export default function Tax() {
                     label: avCalc.age === "8+" ? "AV ≥ 8 ans" : "AV < 8 ans",
                     ir: avResult.ir, ps: avResult.ps, total: avResult.total,
                     note: avCalc.age === "8+" ? `Abattement ${eur(avResult.abattement)} appliqué` : "PFU standard",
-                    color: avResult.total < avResult.cto ? C.green : C.amber,
+                    color: avResult.total < avResult.cto ? T.green : T.amber,
                     bg: "rgba(34,199,154,0.07)", border: "rgba(34,199,154,0.2)",
                   },
                   {
                     label: "CTO (référence)",
                     ir: avResult.cto * (0.128 / 0.30), ps: avResult.cto * (0.172 / 0.30), total: avResult.cto,
                     note: "PFU 30 % sans abattement",
-                    color: C.red, bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.2)",
+                    color: T.red, bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.2)",
                   },
                   ...(avResult.total < avResult.cto ? [{
                     label: "Économie vs CTO",
                     total: avResult.cto - avResult.total,
                     note: `Soit ${(((avResult.cto - avResult.total) / avResult.cto) * 100).toFixed(0)} % d'impôt économisé`,
-                    color: C.amber, bg: "rgba(245,166,35,0.08)", border: "rgba(245,166,35,0.25)",
+                    color: T.amber, bg: "rgba(245,166,35,0.08)", border: "rgba(245,166,35,0.25)",
                   }] : []),
                 ].map(r => (
                   <div key={r.label} style={{ background: r.bg, border: `1px solid ${r.border}`, borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
+                    <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
                     <div style={{ color: r.color, fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{eur(r.total)}</div>
-                    {r.ir != null && <div style={{ color: C.muted, fontSize: 11 }}>IR : {eur(r.ir)} · PS : {eur(r.ps)}</div>}
-                    <div style={{ color: C.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
+                    {r.ir != null && <div style={{ color: T.muted, fontSize: 11 }}>IR : {eur(r.ir)} · PS : {eur(r.ps)}</div>}
+                    <div style={{ color: T.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
                   </div>
                 ))}
               </div>
@@ -1050,8 +1066,8 @@ export default function Tax() {
           </div>
 
           {/* Conseil */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            <span style={{ color: C.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un contrat AV dès maintenant pour lancer le compteur des 8 ans. Privilégiez les contrats multisupports (ETF en unités de compte) à frais d'entrée et de gestion réduits. Effectuez vos rachats après 8 ans par tranches annuelles pour maximiser l'abattement de 4 600 € / 9 200 €. En matière de succession, l'AV est l'outil le plus puissant : chaque bénéficiaire peut recevoir 152 500 € sans aucun impôt.
+          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+            <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un contrat AV dès maintenant pour lancer le compteur des 8 ans. Privilégiez les contrats multisupports (ETF en unités de compte) à frais d'entrée et de gestion réduits. Effectuez vos rachats après 8 ans par tranches annuelles pour maximiser l'abattement de 4 600 € / 9 200 €. En matière de succession, l'AV est l'outil le plus puissant : chaque bénéficiaire peut recevoir 152 500 € sans aucun impôt.
           </div>
         </div>
       )}
@@ -1063,15 +1079,15 @@ export default function Tax() {
           {/* KPI */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             {[
-              { label: "Résidence principale",  value: "0 %",    sub: "Exonération totale",          color: C.green },
-              { label: "Locatif — taux PV",      value: "36,2 %", sub: "19 % IR + 17,2 % PS",         color: C.red },
-              { label: "Exonération IR",         value: "22 ans", sub: "Abattements progressifs",      color: C.cyan },
-              { label: "Exonération PS",         value: "30 ans", sub: "1,65 %/an puis 9 %/an",        color: C.amber },
+              { label: "Résidence principale",  value: "0 %",    sub: "Exonération totale",          color: T.green },
+              { label: "Locatif — taux PV",      value: "36,2 %", sub: "19 % IR + 17,2 % PS",         color: T.red },
+              { label: "Exonération IR",         value: "22 ans", sub: "Abattements progressifs",      color: T.cyan },
+              { label: "Exonération PS",         value: "30 ans", sub: "1,65 %/an puis 9 %/an",        color: T.amber },
             ].map(c => (
-              <div key={c.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 18px" }}>
-                <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
+              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+                <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
                 <div style={{ color: c.color, fontSize: 24, fontWeight: 800 }}>{c.value}</div>
-                <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
+                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
               </div>
             ))}
           </div>
@@ -1080,9 +1096,9 @@ export default function Tax() {
           <div className="flex gap-2">
             {[["pv", "Plus-values immobilières"], ["loc", "Revenus locatifs"]].map(([val, lbl]) => (
               <button key={val} onClick={() => setImmoMode(val)} style={{
-                padding: "9px 18px", borderRadius: 10, border: `1px solid ${immoMode === val ? C.blue : C.border}`,
+                padding: "9px 18px", borderRadius: 10, border: `1px solid ${immoMode === val ? T.blue : T.border}`,
                 background: immoMode === val ? "rgba(91,141,239,0.15)" : "transparent",
-                color: immoMode === val ? C.blue : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer",
+                color: immoMode === val ? T.blue : T.muted, fontWeight: 700, fontSize: 13, cursor: "pointer",
               }}>{lbl}</button>
             ))}
           </div>
@@ -1108,13 +1124,13 @@ export default function Tax() {
                   },
                 ].map(card => (
                   <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                    <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <tbody>
                         {card.rows.map(([période, taux]) => (
-                          <tr key={période} style={{ borderBottom: `1px solid ${C.border}` }}>
-                            <td style={{ color: C.muted, padding: "5px 0" }}>{période}</td>
-                            <td style={{ color: C.text, fontWeight: 700, textAlign: "right", padding: "5px 0" }}>{taux}</td>
+                          <tr key={période} style={{ borderBottom: `1px solid ${T.border}` }}>
+                            <td style={{ color: T.muted, padding: "5px 0" }}>{période}</td>
+                            <td style={{ color: T.text, fontWeight: 700, textAlign: "right", padding: "5px 0" }}>{taux}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1123,10 +1139,10 @@ export default function Tax() {
                 ))}
               </div>
 
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 24px" }}>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <Calculator size={16} style={{ color: C.blue }} />
-                  <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Calculateur de plus-value immobilière</span>
+                  <Calculator size={16} style={{ color: T.blue }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Calculateur de plus-value immobilière</span>
                 </div>
                 <div className="flex gap-4 flex-wrap mb-4">
                   {[
@@ -1146,8 +1162,8 @@ export default function Tax() {
                 {immoResult && (
                   immoResult.pvBrute <= 0 ? (
                     <div style={{ background: "rgba(34,199,154,0.1)", border: `1px solid rgba(34,199,154,0.3)`, borderRadius: 12, padding: "14px 18px" }}>
-                      <span style={{ color: C.green, fontWeight: 700 }}>Pas de plus-value imposable.</span>
-                      <span style={{ color: C.muted, fontSize: 12, marginLeft: 8 }}>
+                      <span style={{ color: T.green, fontWeight: 700 }}>Pas de plus-value imposable.</span>
+                      <span style={{ color: T.muted, fontSize: 12, marginLeft: 8 }}>
                         Prix de revient (achat + frais + travaux) : {eur(immoResult.prixRevient)} — vous vendez moins cher ou au même prix.
                       </span>
                     </div>
@@ -1155,18 +1171,18 @@ export default function Tax() {
                     <div className="flex flex-col gap-3">
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
                         {[
-                          { label: "Plus-value brute",      value: eur(immoResult.pvBrute),  color: C.amber },
-                          { label: `IR 19 % (abat. ${immoResult.abatIR} %)`, value: eur(immoResult.ir), color: C.red },
-                          { label: `PS 17,2 % (abat. ${immoResult.abatPS.toFixed(1)} %)`, value: eur(immoResult.ps), color: C.red },
-                          { label: "TOTAL À PAYER",         value: eur(immoResult.total),    color: immoResult.total > 0 ? C.red : C.green },
+                          { label: "Plus-value brute",      value: eur(immoResult.pvBrute),  color: T.amber },
+                          { label: `IR 19 % (abat. ${immoResult.abatIR} %)`, value: eur(immoResult.ir), color: T.red },
+                          { label: `PS 17,2 % (abat. ${immoResult.abatPS.toFixed(1)} %)`, value: eur(immoResult.ps), color: T.red },
+                          { label: "TOTAL À PAYER",         value: eur(immoResult.total),    color: immoResult.total > 0 ? T.red : T.green },
                         ].map(r => (
-                          <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px" }}>
-                            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
+                          <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                            <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
                             <div style={{ color: r.color, fontSize: 20, fontWeight: 800 }}>{r.value}</div>
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, padding: "8px 0" }}>
+                      <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, padding: "8px 0" }}>
                         Prix de revient retenu : {eur(immoResult.prixRevient)} (acquisition + frais notaire 7,5 % forfait
                         {parseFloat(immoCalc.travaux) > 0 ? ` + ${eur(parseFloat(immoCalc.travaux))} travaux réels` : immoResult.duree >= 5 ? " + travaux forfait 15 %" : ""})
                       </div>
@@ -1204,7 +1220,7 @@ export default function Tax() {
                   },
                 ].map(card => (
                   <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                    <div style={{ color: C.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {card.items.map(([kind, text], i) => (
                         <RuleItem key={i} kind={kind}>{text}</RuleItem>
@@ -1214,10 +1230,10 @@ export default function Tax() {
                 ))}
               </div>
 
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 24px" }}>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <Calculator size={16} style={{ color: C.blue }} />
-                  <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Calculateur revenus locatifs (location nue)</span>
+                  <Calculator size={16} style={{ color: T.blue }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Calculateur revenus locatifs (location nue)</span>
                 </div>
                 <div className="flex gap-4 flex-wrap mb-4">
                   <div style={{ flex: "1 1 160px" }}>
@@ -1230,9 +1246,9 @@ export default function Tax() {
                     <div className="flex gap-2">
                       {[["micro", "Micro"], ["reel", "Réel"]].map(([val, lbl]) => (
                         <button key={val} onClick={() => setLocCalc(p => ({ ...p, regime: val }))} style={{
-                          flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${locCalc.regime === val ? C.blue : C.border}`,
+                          flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${locCalc.regime === val ? T.blue : T.border}`,
                           background: locCalc.regime === val ? "rgba(91,141,239,0.15)" : "transparent",
-                          color: locCalc.regime === val ? C.blue : C.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
+                          color: locCalc.regime === val ? T.blue : T.muted, fontWeight: 600, fontSize: 12, cursor: "pointer",
                         }}>{lbl}</button>
                       ))}
                     </div>
@@ -1247,7 +1263,7 @@ export default function Tax() {
                   <div style={{ flex: "1 1 160px" }}>
                     <label style={LBL}>Votre TMI (%)</label>
                     <select value={locCalc.tmi} onChange={e => setLocCalc(p => ({ ...p, tmi: +e.target.value }))} className={INPUT_FOCUS_CLASS} style={{ ...INPUT, cursor: "pointer" }}>
-                      {[0, 11, 30, 41, 45].map(t => <option key={t} value={t} style={{ background: C.card }}>{t} %</option>)}
+                      {[0, 11, 30, 41, 45].map(t => <option key={t} value={t} style={{ background: T.card }}>{t} %</option>)}
                     </select>
                   </div>
                 </div>
@@ -1255,22 +1271,22 @@ export default function Tax() {
                 {locResult && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10, marginTop: 4 }}>
                     {[
-                      { label: locCalc.regime === "micro" ? "Revenu net (−30 %)" : "Revenu imposable", value: eur(locResult.net), color: C.text },
-                      { label: `IR (${locCalc.tmi} %)`, value: eur(locResult.ir), color: C.amber },
-                      { label: "PS (17,2 %)",            value: eur(locResult.ps), color: C.amber },
-                      { label: "Total charges fiscales", value: eur(locResult.total), color: C.red },
-                      { label: "Net après impôt",        value: eur((parseFloat(locCalc.loyers) || 0) - locResult.total), color: C.green },
+                      { label: locCalc.regime === "micro" ? "Revenu net (−30 %)" : "Revenu imposable", value: eur(locResult.net), color: T.text },
+                      { label: `IR (${locCalc.tmi} %)`, value: eur(locResult.ir), color: T.amber },
+                      { label: "PS (17,2 %)",            value: eur(locResult.ps), color: T.amber },
+                      { label: "Total charges fiscales", value: eur(locResult.total), color: T.red },
+                      { label: "Net après impôt",        value: eur((parseFloat(locCalc.loyers) || 0) - locResult.total), color: T.green },
                     ].map(r => (
-                      <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px" }}>
-                        <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
+                      <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                        <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
                         <div style={{ color: r.color, fontSize: 20, fontWeight: 800 }}>{r.value}</div>
                       </div>
                     ))}
                     {locResult.deficit > 0 && (
                       <div style={{ background: "rgba(34,199,154,0.08)", border: `1px solid rgba(34,199,154,0.25)`, borderRadius: 12, padding: "12px 14px" }}>
-                        <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>Déficit foncier</div>
-                        <div style={{ color: C.green, fontSize: 20, fontWeight: 800 }}>{eur(locResult.deficit)}</div>
-                        <div style={{ color: C.muted, fontSize: 10, marginTop: 2 }}>Imputable sur revenu global (max 10 700 €)</div>
+                        <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>Déficit foncier</div>
+                        <div style={{ color: T.green, fontSize: 20, fontWeight: 800 }}>{eur(locResult.deficit)}</div>
+                        <div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>Imputable sur revenu global (max 10 700 €)</div>
                       </div>
                     )}
                   </div>
@@ -1280,15 +1296,15 @@ export default function Tax() {
               {/* IFI */}
               <div style={{ background: "rgba(239,68,68,0.06)", border: `1px solid rgba(239,68,68,0.2)`, borderRadius: 14, padding: "16px 18px" }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle size={15} style={{ color: C.red }} />
-                  <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>IFI — Impôt sur la Fortune Immobilière</span>
+                  <AlertTriangle size={15} style={{ color: T.red }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>IFI — Impôt sur la Fortune Immobilière</span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, fontSize: 12, color: C.muted }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, fontSize: 12, color: T.muted }}>
                   {[
-                    { Icon: Zap,       color: C.red,   content: <>Déclenché si patrimoine immobilier net &gt; <strong style={{ color: C.text }}>800 000 €</strong></> },
-                    { Icon: Home,      color: C.blue,  content: <>Résidence principale : abattement <strong style={{ color: C.text }}>30 %</strong></> },
-                    { Icon: BarChart3, color: C.amber, content: "Taux : 0,5 % → 0,7 % → 1 % → 1,25 % → 1,5 % (progressif)" },
-                    { Icon: Lightbulb, color: C.amber, content: <>Actions, crypto, liquidités : <strong style={{ color: C.green }}>hors IFI</strong> (uniquement l'immobilier)</> },
+                    { Icon: Zap,       color: T.red,   content: <>Déclenché si patrimoine immobilier net &gt; <strong style={{ color: T.text }}>800 000 €</strong></> },
+                    { Icon: Home,      color: T.blue,  content: <>Résidence principale : abattement <strong style={{ color: T.text }}>30 %</strong></> },
+                    { Icon: BarChart3, color: T.amber, content: "Taux : 0,5 % → 0,7 % → 1 % → 1,25 % → 1,5 % (progressif)" },
+                    { Icon: Lightbulb, color: T.amber, content: <>Actions, crypto, liquidités : <strong style={{ color: T.green }}>hors IFI</strong> (uniquement l'immobilier)</> },
                   ].map((row, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <row.Icon size={13} style={{ color: row.color, opacity: 0.85, flexShrink: 0, marginTop: 1 }} />
@@ -1301,8 +1317,8 @@ export default function Tax() {
           )}
 
           {/* Conseil */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            <span style={{ color: C.blue, fontWeight: 700 }}>Stratégie optimale :</span> Pour la location longue durée, le LMNP au réel est presque toujours supérieur à la location nue : l'amortissement comptable du bien (2-4 % / an) génère un déficit BIC qui efface les loyers pendant 20-30 ans. Pour les plus-values, conserver un bien locatif 22 ans efface 100 % de l'IR, et 30 ans efface 100 % des PS. Sur la résidence principale, toute plus-value est totalement exonérée sans aucun délai ni aucun plafond.
+          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+            <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Pour la location longue durée, le LMNP au réel est presque toujours supérieur à la location nue : l'amortissement comptable du bien (2-4 % / an) génère un déficit BIC qui efface les loyers pendant 20-30 ans. Pour les plus-values, conserver un bien locatif 22 ans efface 100 % de l'IR, et 30 ans efface 100 % des PS. Sur la résidence principale, toute plus-value est totalement exonérée sans aucun délai ni aucun plafond.
           </div>
         </div>
       )}
@@ -1310,10 +1326,10 @@ export default function Tax() {
       {/* ══ Modals ═══════════════════════════════════════════════════════ */}
       {showLotForm && (
         <div className="wt-fade-in" onClick={() => setShowLotForm(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="wt-scale-in" onClick={e => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}>
+          <div className="wt-scale-in" onClick={e => e.stopPropagation()} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18 }}>Ajouter un achat</h2>
-              <button onClick={() => setShowLotForm(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={18} /></button>
+              <h2 style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>Ajouter un achat</h2>
+              <button onClick={() => setShowLotForm(false)} aria-label="Fermer" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted }}><X size={18} /></button>
             </div>
             {[
               { label: "Symbole",            key: "symbol",      placeholder: "BTC, ETH, SOL…" },
@@ -1328,14 +1344,14 @@ export default function Tax() {
               </div>
             ))}
             {lotForm.amount && lotForm.costPerUnit && (
-              <div style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>
-                Coût total : <span style={{ color: C.text, fontWeight: 700 }}>{eur(parseFloat(lotForm.amount) * parseFloat(lotForm.costPerUnit))}</span>
+              <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>
+                Coût total : <span style={{ color: T.text, fontWeight: 700 }}>{eur(parseFloat(lotForm.amount) * parseFloat(lotForm.costPerUnit))}</span>
               </div>
             )}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowLotForm(false)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+              <button onClick={() => setShowLotForm(false)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600 }}>Annuler</button>
               <button onClick={addLot} disabled={!lotForm.symbol || !lotForm.amount || !lotForm.costPerUnit}
-                style={{ flex: 2, background: C.blue, color: "#fff", border: "none", padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!lotForm.symbol || !lotForm.amount || !lotForm.costPerUnit) ? 0.5 : 1 }}>
+                style={{ flex: 2, background: T.blue, color: "#fff", border: "none", padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!lotForm.symbol || !lotForm.amount || !lotForm.costPerUnit) ? 0.5 : 1 }}>
                 Enregistrer l'achat
               </button>
             </div>
@@ -1345,10 +1361,10 @@ export default function Tax() {
 
       {showSellForm && (
         <div className="wt-fade-in" onClick={() => setShowSellForm(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="wt-scale-in" onClick={e => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}>
+          <div className="wt-scale-in" onClick={e => e.stopPropagation()} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18 }}>Enregistrer une vente</h2>
-              <button onClick={() => setShowSellForm(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={18} /></button>
+              <h2 style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>Enregistrer une vente</h2>
+              <button onClick={() => setShowSellForm(false)} aria-label="Fermer" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted }}><X size={18} /></button>
             </div>
             {[
               { label: "Symbole",                   key: "symbol",       placeholder: "BTC, ETH, SOL…" },
@@ -1363,14 +1379,14 @@ export default function Tax() {
               </div>
             ))}
             {sellForm.amount && sellForm.pricePerUnit && (
-              <div style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>
-                Produit de cession : <span style={{ color: C.green, fontWeight: 700 }}>{eur(parseFloat(sellForm.amount) * parseFloat(sellForm.pricePerUnit))}</span>
+              <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>
+                Produit de cession : <span style={{ color: T.green, fontWeight: 700 }}>{eur(parseFloat(sellForm.amount) * parseFloat(sellForm.pricePerUnit))}</span>
               </div>
             )}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowSellForm(false)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600 }}>Annuler</button>
+              <button onClick={() => setShowSellForm(false)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600 }}>Annuler</button>
               <button onClick={addSell} disabled={!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit}
-                style={{ flex: 2, background: C.red, color: "#fff", border: "none", padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit) ? 0.5 : 1 }}>
+                style={{ flex: 2, background: T.red, color: "#fff", border: "none", padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!sellForm.symbol || !sellForm.amount || !sellForm.pricePerUnit) ? 0.5 : 1 }}>
                 Enregistrer la vente
               </button>
             </div>

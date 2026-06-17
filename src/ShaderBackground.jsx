@@ -28,7 +28,6 @@ const ShaderBackground = () => {
       }
       container.appendChild(renderer.domElement);
 
-      console.log("✅ Three.js renderer created successfully");
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -112,7 +111,6 @@ const ShaderBackground = () => {
       const animate = () => {
         frameCount++;
         if (frameCount === 1) {
-          console.log("✅ Animation loop started");
         }
         material.uniforms.iTime.value += 0.016;
         renderer.render(scene, camera);
@@ -120,7 +118,6 @@ const ShaderBackground = () => {
       };
       animate();
 
-      console.log("✅ Shader material compiled and mesh added");
 
       const handleResize = () => {
         renderer.setSize(window.innerWidth, window.innerHeight);

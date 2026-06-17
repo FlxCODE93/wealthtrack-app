@@ -1,19 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Zap, Plus, Trash2, RefreshCw, Shield, ShieldAlert, ShieldOff, AlertTriangle, TrendingUp, Wallet, Coins, Percent, Filter, Sparkles, X } from "lucide-react";
-import { C, eur } from "./theme.js";
+import { eur } from "./theme.js";
+import { useT } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
-
-/* ─── LocalStorage hook ─────────────────────────────────────────────── */
-function useLocalStorage(key, def) {
-  const [state, setState] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : def; }
-    catch { return def; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
-  return [state, setState];
-}
+import { useLocalStorage } from "./storage.js";
 
 /* ─── Helpers ───────────────────────────────────────────────────────── */
 const pct  = (n) => (n != null && !isNaN(n)) ? `${(+n).toFixed(2)} %` : "—";
@@ -34,13 +24,13 @@ function riskOf(pool) {
 }
 
 /* ─── Badge de risque (pastille colorée, cohérente avec le reste de WT) ── */
-const RISK_TONE = {
-  Faible: { bg: "rgba(0,200,150,0.12)",  color: C.green, Icon: Shield },
-  Moyen:  { bg: "rgba(240,168,72,0.12)", color: C.amber, Icon: ShieldAlert },
-  Élevé:  { bg: "rgba(255,92,122,0.12)", color: C.red,   Icon: ShieldOff },
-};
-
 function RiskBadge({ risk }) {
+  const T = useT();
+  const RISK_TONE = {
+    Faible: { bg: "rgba(0,200,150,0.12)",  color: T.green, Icon: Shield },
+    Moyen:  { bg: "rgba(240,168,72,0.12)", color: T.amber, Icon: ShieldAlert },
+    Élevé:  { bg: "rgba(255,92,122,0.12)", color: T.red,   Icon: ShieldOff },
+  };
   const tone = RISK_TONE[risk] || RISK_TONE["Élevé"];
   const Icon = tone.Icon;
   return (
@@ -76,23 +66,13 @@ const EMPTY_FORM = {
   entryDate: new Date().toISOString().slice(0, 10),
 };
 
-const INPUT_STYLE = {
-  width: "100%", background: C.card, border: `1px solid ${C.border}`,
-  borderRadius: 10, padding: "10px 14px", color: C.text, fontSize: 14,
-  outline: "none", boxSizing: "border-box",
-};
-
 // Anneau de focus visible (a11y) — s'ajoute par-dessus INPUT_STYLE sans entrer
 // en conflit de spécificité avec la bordure inline (box-shadow vs border).
 const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shadow duration-150";
 
-const LABEL_STYLE = {
-  display: "block", color: C.muted, fontSize: 11, fontWeight: 700,
-  letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6,
-};
-
 /* ─── Ligne de squelette (chargement) ───────────────────────────────── */
 function SkeletonRow() {
+  const T = useT();
   const bar = (w, align) => (
     <div style={{ justifySelf: align }}>
       <div className="animate-pulse rounded" style={{ height: 11, width: w, background: "rgba(255,255,255,0.06)" }} />
@@ -102,7 +82,7 @@ function SkeletonRow() {
     <div style={{
       display: "grid",
       gridTemplateColumns: "1.2fr 1fr 100px 85px 110px 75px 80px",
-      padding: "13px 16px", borderBottom: `1px solid ${C.border}`,
+      padding: "13px 16px", borderBottom: `1px solid ${T.border}`,
       alignItems: "center",
     }}>
       {bar("65%", "start")}
@@ -118,6 +98,17 @@ function SkeletonRow() {
 
 /* ─── Composant principal ───────────────────────────────────────────── */
 export default function DeFi() {
+  const T = useT();
+  const INPUT_STYLE = {
+    width: "100%", background: T.card, border: `1px solid ${T.border}`,
+    borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14,
+    outline: "none", boxSizing: "border-box",
+  };
+  const LABEL_STYLE = {
+    display: "block", color: T.muted, fontSize: 11, fontWeight: 700,
+    letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6,
+  };
+
   const [positions, setPositions] = useLocalStorage("wt_defi_positions", []);
   const [pools, setPools]         = useState([]);
   const [loading, setLoading]     = useState(false);
@@ -222,23 +213,23 @@ export default function DeFi() {
       {/* En-tête */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>DeFi Yield</h1>
-          <p style={{ color: C.muted }}>Suivi de positions · Opportunités DefiLlama en temps réel</p>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>DeFi Yield</h1>
+          <p style={{ color: T.muted }}>Suivi de positions · Opportunités DefiLlama en temps réel</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {lastFetch && (
-            <span style={{ color: C.muted, fontSize: 12 }}>MAJ {lastFetch}</span>
+            <span style={{ color: T.muted, fontSize: 12 }}>MAJ {lastFetch}</span>
           )}
           <button onClick={fetchData} disabled={loading} style={{
-            background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`,
-            color: C.muted, padding: "8px 12px", borderRadius: 10, cursor: "pointer",
+            background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`,
+            color: T.muted, padding: "8px 12px", borderRadius: 10, cursor: "pointer",
             display: "flex", alignItems: "center", gap: 6, fontSize: 13,
           }}>
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Actualiser
           </button>
           <button onClick={() => setShowForm(true)} style={{
-            background: C.blue, color: "#fff", border: "none", padding: "8px 18px",
+            background: T.blue, color: "#fff", border: "none", padding: "8px 18px",
             borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
             display: "flex", alignItems: "center", gap: 6,
           }}>
@@ -248,10 +239,10 @@ export default function DeFi() {
       </div>
 
       {/* Disclaimer risque */}
-      <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5" style={{ background: "rgba(255,90,95,0.06)", border: `1px solid ${C.red}33` }}>
-        <AlertTriangle size={16} style={{ color: C.red, flexShrink: 0, marginTop: 2 }} />
-        <div style={{ color: C.muted, lineHeight: 1.6 }}>
-          <b style={{ color: C.text }}>La DeFi n'est pas un produit d'épargne réglementé.</b> Contrairement au Livret A,
+      <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5" style={{ background: "rgba(255,90,95,0.06)", border: `1px solid ${T.red}33` }}>
+        <AlertTriangle size={16} style={{ color: T.red, flexShrink: 0, marginTop: 2 }} />
+        <div style={{ color: T.muted, lineHeight: 1.6 }}>
+          <b style={{ color: T.text }}>La DeFi n'est pas un produit d'épargne réglementé.</b> Contrairement au Livret A,
           votre capital n'est pas garanti : risque de smart contract (bug, exploit, faillite du protocole), de perte
           impermanente sur les pools de liquidité, et forte volatilité des actifs sous-jacents. Les APY élevés sont
           souvent temporaires et peuvent chuter brutalement. N'investissez que ce que vous pouvez vous permettre de perdre intégralement.
@@ -261,14 +252,14 @@ export default function DeFi() {
       {/* Cartes résumé */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
         {[
-          { label: "Total investi",  value: eur(totalInvested), color: C.blue,  Icon: Wallet },
-          { label: "Revenu mensuel", value: eur(totalMonthly),  color: C.green, Icon: Coins },
-          { label: "Revenu annuel",  value: eur(totalYearly),   color: C.green, Icon: TrendingUp },
-          { label: "APY moyen",      value: pct(avgApy),        color: C.amber, Icon: Percent },
+          { label: "Total investi",  value: eur(totalInvested), color: T.blue,  Icon: Wallet },
+          { label: "Revenu mensuel", value: eur(totalMonthly),  color: T.green, Icon: Coins },
+          { label: "Revenu annuel",  value: eur(totalYearly),   color: T.green, Icon: TrendingUp },
+          { label: "APY moyen",      value: pct(avgApy),        color: T.amber, Icon: Percent },
         ].map(c => (
-          <div key={c.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px" }}>
+          <div key={c.label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
             <div className="flex items-start justify-between" style={{ marginBottom: 6 }}>
-              <span style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
                 {c.label}
               </span>
               <c.Icon size={16} style={{ color: c.color, opacity: 0.65, flexShrink: 0 }} />
@@ -286,8 +277,8 @@ export default function DeFi() {
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             padding: "8px 16px", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-            background: tab === t.id ? C.blue : "transparent",
-            color: tab === t.id ? "#fff" : C.muted,
+            background: tab === t.id ? T.blue : "transparent",
+            color: tab === t.id ? "#fff" : T.muted,
             display: "flex", alignItems: "center", gap: 7,
           }}>
             <t.Icon size={14} />
@@ -299,31 +290,31 @@ export default function DeFi() {
       {/* ── Mes positions ── */}
       {tab === "positions" && (
         positions.length === 0 ? (
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: "center" }}>
             <div style={{
               width: 64, height: 64, borderRadius: "50%", background: "rgba(91,141,239,0.1)",
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px",
             }}>
-              <Zap size={28} style={{ color: C.blue }} />
+              <Zap size={28} style={{ color: T.blue }} />
             </div>
-            <div style={{ color: C.text, fontWeight: 600, marginBottom: 8 }}>Aucune position DeFi</div>
-            <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
+            <div style={{ color: T.text, fontWeight: 600, marginBottom: 8 }}>Aucune position DeFi</div>
+            <div style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>
               Ajoutez vos positions manuellement ou explorez les opportunités
             </div>
             <button onClick={() => setTab("opportunities")} style={{
-              background: C.blue, color: "#fff", border: "none", padding: "10px 20px",
+              background: T.blue, color: "#fff", border: "none", padding: "10px 20px",
               borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13,
             }}>
               Voir les opportunités
             </button>
           </div>
         ) : (
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "visible" }}>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
             <div style={{
               display: "grid",
               gridTemplateColumns: "1.2fr 1fr 110px 80px 100px 110px 75px 36px",
-              padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-              fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+              padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+              fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
             }}>
               <span>Protocole</span><span>Actif / Chain</span>
               <span style={{ textAlign: "right" }}>Investi</span>
@@ -337,18 +328,18 @@ export default function DeFi() {
               <div key={pos.id} className="hover:bg-white/[0.025] transition-colors" style={{
                 display: "grid",
                 gridTemplateColumns: "1.2fr 1fr 110px 80px 100px 110px 75px 36px",
-                padding: "12px 16px", borderBottom: `1px solid ${C.border}`,
+                padding: "12px 16px", borderBottom: `1px solid ${T.border}`,
                 alignItems: "center", fontSize: 13,
               }}>
-                <span style={{ color: C.text, fontWeight: 600, textTransform: "capitalize" }}>{pos.protocol}</span>
+                <span style={{ color: T.text, fontWeight: 600, textTransform: "capitalize" }}>{pos.protocol}</span>
                 <div>
-                  <div style={{ color: C.text, fontWeight: 600 }}>{pos.asset}</div>
-                  <div style={{ color: C.muted, fontSize: 11 }}>{CHAIN_LABEL[pos.chain] || pos.chain}</div>
+                  <div style={{ color: T.text, fontWeight: 600 }}>{pos.asset}</div>
+                  <div style={{ color: T.muted, fontSize: 11 }}>{CHAIN_LABEL[pos.chain] || pos.chain}</div>
                 </div>
-                <span style={{ textAlign: "right", color: C.text, fontWeight: 700 }}>{eur(pos.amount)}</span>
-                <span style={{ textAlign: "right", color: C.amber, fontWeight: 700 }}>{pct(pos.liveApy)}</span>
-                <span style={{ textAlign: "right", color: C.green }}>{eur(pos.monthly)}</span>
-                <span style={{ textAlign: "right", color: C.green, fontWeight: 700 }}>{eur(pos.yearly)}</span>
+                <span style={{ textAlign: "right", color: T.text, fontWeight: 700 }}>{eur(pos.amount)}</span>
+                <span style={{ textAlign: "right", color: T.amber, fontWeight: 700 }}>{pct(pos.liveApy)}</span>
+                <span style={{ textAlign: "right", color: T.green }}>{eur(pos.monthly)}</span>
+                <span style={{ textAlign: "right", color: T.green, fontWeight: 700 }}>{eur(pos.yearly)}</span>
                 <div style={{ textAlign: "center" }}>
                   <RiskBadge risk={pos.risk} />
                 </div>
@@ -356,7 +347,7 @@ export default function DeFi() {
                   onClick={() => deletePosition(pos.id)}
                   aria-label={`Supprimer ${pos.protocol}`}
                   className="hover:text-[#ff5c7a] transition-colors"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 4, display: "flex" }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -366,15 +357,15 @@ export default function DeFi() {
             <div style={{
               display: "grid",
               gridTemplateColumns: "1.2fr 1fr 110px 80px 100px 110px 75px 36px",
-              padding: "12px 16px", borderTop: `2px solid ${C.border}`,
+              padding: "12px 16px", borderTop: `2px solid ${T.border}`,
               fontSize: 13, fontWeight: 700,
             }}>
-              <span style={{ color: C.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
+              <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
               <span />
-              <span style={{ textAlign: "right", color: C.text }}>{eur(totalInvested)}</span>
-              <span style={{ textAlign: "right", color: C.amber }}>{pct(avgApy)}</span>
-              <span style={{ textAlign: "right", color: C.green }}>{eur(totalMonthly)}</span>
-              <span style={{ textAlign: "right", color: C.green }}>{eur(totalYearly)}</span>
+              <span style={{ textAlign: "right", color: T.text }}>{eur(totalInvested)}</span>
+              <span style={{ textAlign: "right", color: T.amber }}>{pct(avgApy)}</span>
+              <span style={{ textAlign: "right", color: T.green }}>{eur(totalMonthly)}</span>
+              <span style={{ textAlign: "right", color: T.green }}>{eur(totalYearly)}</span>
               <span /><span />
             </div>
           </div>
@@ -386,16 +377,16 @@ export default function DeFi() {
         <>
           {/* Filtre chain */}
           <div>
-            <div className="flex items-center gap-1.5" style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
+            <div className="flex items-center gap-1.5" style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
               <Filter size={12} /> Réseau
             </div>
             <div className="flex flex-wrap gap-2">
               {["all", ...CHAINS].map(c => (
                 <button key={c} onClick={() => setChainFilter(c)} style={{
                   padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
-                  border: `1px solid ${chainFilter === c ? C.blue : C.border}`,
-                  background: chainFilter === c ? C.blue + "22" : "transparent",
-                  color: chainFilter === c ? C.blue : C.muted,
+                  border: `1px solid ${chainFilter === c ? T.blue : T.border}`,
+                  background: chainFilter === c ? T.blue + "22" : "transparent",
+                  color: chainFilter === c ? T.blue : T.muted,
                 }}>
                   {c === "all" ? "Toutes" : CHAIN_LABEL[c]}
                 </button>
@@ -405,7 +396,7 @@ export default function DeFi() {
 
           {loadErr && (
             <div style={{
-              color: C.red, fontSize: 13, padding: "12px 16px",
+              color: T.red, fontSize: 13, padding: "12px 16px",
               background: "rgba(217,84,84,0.08)", borderRadius: 10,
               border: `1px solid rgba(217,84,84,0.2)`,
               display: "flex", alignItems: "center", gap: 8,
@@ -414,12 +405,12 @@ export default function DeFi() {
             </div>
           )}
 
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "visible" }}>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
             <div style={{
               display: "grid",
               gridTemplateColumns: "1.2fr 1fr 100px 85px 110px 75px 80px",
-              padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-              fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+              padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+              fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
             }}>
               <span>Protocole</span><span>Actif</span><span>Chain</span>
               <span style={{ textAlign: "right" }}>APY<InfoTooltip text={APY_TOOLTIP} /></span>
@@ -431,7 +422,7 @@ export default function DeFi() {
               {loading && !pools.length ? (
                 Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} />)
               ) : opportunities.length === 0 ? (
-                <div style={{ padding: "40px 16px", textAlign: "center", color: C.muted, fontSize: 13 }}>
+                <div style={{ padding: "40px 16px", textAlign: "center", color: T.muted, fontSize: 13 }}>
                   Aucune opportunité disponible pour ce réseau pour le moment.
                 </div>
               ) : (
@@ -441,22 +432,22 @@ export default function DeFi() {
                     <div key={pool.pool} className="hover:bg-white/[0.025] transition-colors" style={{
                       display: "grid",
                       gridTemplateColumns: "1.2fr 1fr 100px 85px 110px 75px 80px",
-                      padding: "11px 16px", borderBottom: `1px solid ${C.border}`,
+                      padding: "11px 16px", borderBottom: `1px solid ${T.border}`,
                       alignItems: "center", fontSize: 12,
                     }}>
-                      <span style={{ color: C.text, fontWeight: 600 }}>{pool.project}</span>
-                      <span style={{ color: C.muted }}>{pool.symbol}</span>
-                      <span style={{ color: C.muted, fontSize: 11 }}>{CHAIN_LABEL[pool.chain?.toLowerCase()] || pool.chain}</span>
-                      <span style={{ textAlign: "right", fontWeight: 700, color: pool.apy > 15 ? C.amber : C.green }}>
+                      <span style={{ color: T.text, fontWeight: 600 }}>{pool.project}</span>
+                      <span style={{ color: T.muted }}>{pool.symbol}</span>
+                      <span style={{ color: T.muted, fontSize: 11 }}>{CHAIN_LABEL[pool.chain?.toLowerCase()] || pool.chain}</span>
+                      <span style={{ textAlign: "right", fontWeight: 700, color: pool.apy > 15 ? T.amber : T.green }}>
                         {pct(pool.apy)}
                       </span>
-                      <span style={{ textAlign: "right", color: C.muted }}>{tvlFmt(pool.tvlUsd)}</span>
+                      <span style={{ textAlign: "right", color: T.muted }}>{tvlFmt(pool.tvlUsd)}</span>
                       <div style={{ textAlign: "center" }}>
                         <RiskBadge risk={risk} />
                       </div>
                       <button onClick={() => addFromPool(pool)} style={{
-                        background: C.blue + "22", border: `1px solid ${C.blue}44`,
-                        color: C.blue, padding: "5px 10px", borderRadius: 8,
+                        background: T.blue + "22", border: `1px solid ${T.blue}44`,
+                        color: T.blue, padding: "5px 10px", borderRadius: 8,
                         cursor: "pointer", fontSize: 11, fontWeight: 700,
                         display: "flex", alignItems: "center", gap: 4, justifySelf: "start",
                       }}>
@@ -484,11 +475,11 @@ export default function DeFi() {
           <div
             onClick={e => e.stopPropagation()}
             className="wt-scale-in"
-            style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420 }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18 }}>Nouvelle position DeFi</h2>
-              <button onClick={() => setShowForm(false)} aria-label="Fermer" style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}>
+              <h2 style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>Nouvelle position DeFi</h2>
+              <button onClick={() => setShowForm(false)} aria-label="Fermer" style={{ background: "none", border: "none", cursor: "pointer", color: T.muted }}>
                 <X size={18} />
               </button>
             </div>
@@ -521,14 +512,14 @@ export default function DeFi() {
                 style={{ ...INPUT_STYLE, cursor: "pointer" }}
                 className={INPUT_FOCUS_CLASS}
               >
-                {CHAINS.map(c => <option key={c} value={c} style={{ background: C.card }}>{CHAIN_LABEL[c]}</option>)}
+                {CHAINS.map(c => <option key={c} value={c} style={{ background: T.card }}>{CHAIN_LABEL[c]}</option>)}
               </select>
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowForm(false)} style={{
-                flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`,
-                color: C.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600,
+                flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`,
+                color: T.muted, padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 600,
               }}>
                 Annuler
               </button>
@@ -536,7 +527,7 @@ export default function DeFi() {
                 onClick={addPosition}
                 disabled={!form.protocol || !form.asset || !form.amount}
                 style={{
-                  flex: 2, background: C.blue, color: "#fff", border: "none",
+                  flex: 2, background: T.blue, color: "#fff", border: "none",
                   padding: 12, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
                   opacity: (!form.protocol || !form.asset || !form.amount) ? 0.5 : 1,
                 }}
@@ -549,8 +540,8 @@ export default function DeFi() {
       )}
 
       {/* Note */}
-      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
-        Données <span style={{ color: C.text }}>DefiLlama</span> · APY variable, non garanti ·
+      <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>
+        Données <span style={{ color: T.text }}>DefiLlama</span> · APY variable, non garanti ·
         Actualisation automatique toutes les heures · Positions stockées localement
       </div>
     </div>

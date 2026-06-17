@@ -10,20 +10,11 @@ import {
   Shield, ShieldAlert, ShieldOff, ShieldQuestion, Search, X, Coins,
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { C } from "./theme.js";
+import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
+import { API_URL } from "./config.js";
+import { useLocalStorage } from "./storage.js";
 import InfoTooltip from "./InfoTooltip.jsx";
-
-function useLocalStorage(key, defaultValue) {
-  const [state, setState] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : defaultValue; }
-    catch { return defaultValue; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
-  return [state, setState];
-}
 
 const eur = (n, dec = 0) =>
   n == null ? "—" :
@@ -197,13 +188,14 @@ function CoinIcon({ symbol, src, size = 32 }) {
 }
 
 function GainBadge({ abs, pct: p }) {
+  const T = useT();
   const up = abs >= 0;
   return (
     <div>
-      <div style={{ color: up ? C.green : C.red, fontWeight: 700, fontSize: 13 }}>
+      <div style={{ color: up ? T.green : T.red, fontWeight: 700, fontSize: 13 }}>
         {up ? "+" : ""}{eur(abs)}
       </div>
-      <div style={{ color: up ? C.green : C.red, fontSize: 11 }}>
+      <div style={{ color: up ? T.green : T.red, fontSize: 11 }}>
         {pct(p)}
       </div>
     </div>
@@ -215,14 +207,14 @@ function GainBadge({ abs, pct: p }) {
 const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shadow duration-150";
 
 /* ─── Badge de risque (pastille colorée, cohérente avec DeFi) ──────────── */
-const RISK_TONE = {
-  "Faible": { bg: "rgba(0,200,150,0.12)",   color: C.green, Icon: Shield },
-  "Moyen":  { bg: "rgba(240,168,72,0.12)",  color: C.amber, Icon: ShieldAlert },
-  "Élevé":  { bg: "rgba(255,92,122,0.12)",  color: C.red,   Icon: ShieldOff },
-  "—":      { bg: "rgba(255,255,255,0.05)", color: C.muted, Icon: ShieldQuestion },
-};
-
 function RiskBadge({ risk }) {
+  const T = useT();
+  const RISK_TONE = {
+    "Faible": { bg: "rgba(0,200,150,0.12)",   color: T.green, Icon: Shield },
+    "Moyen":  { bg: "rgba(240,168,72,0.12)",  color: T.amber, Icon: ShieldAlert },
+    "Élevé":  { bg: "rgba(255,92,122,0.12)",  color: T.red,   Icon: ShieldOff },
+    "—":      { bg: "rgba(255,255,255,0.05)", color: T.muted, Icon: ShieldQuestion },
+  };
   const tone = RISK_TONE[risk] || RISK_TONE["—"];
   const Icon = tone.Icon;
   return (
@@ -235,6 +227,7 @@ function RiskBadge({ risk }) {
 
 /* ─── Ligne de squelette (chargement initial des prix) ──────────────────── */
 function SkeletonRow() {
+  const T = useT();
   const bar = (w, align) => (
     <div style={{ justifySelf: align }}>
       <div className="animate-pulse rounded" style={{ height: 11, width: w, background: "rgba(255,255,255,0.06)" }} />
@@ -243,7 +236,7 @@ function SkeletonRow() {
   return (
     <div style={{
       display: "grid", gridTemplateColumns: "1fr 90px 100px 100px 120px 36px",
-      padding: "12px 16px", borderBottom: `1px solid ${C.border}`, alignItems: "center",
+      padding: "12px 16px", borderBottom: `1px solid ${T.border}`, alignItems: "center",
     }}>
       {bar("55%", "start")}
       {bar("40%", "end")}
@@ -257,9 +250,10 @@ function SkeletonRow() {
 
 /* ─── Mini-graphique 7 jours (table Marchés) ─────────────────────────── */
 function Sparkline({ data, positive }) {
+  const T = useT();
   const points = (data || []).map((p, i) => ({ i, p }));
   if (points.length < 2) return <div style={{ width: 100, height: 32 }} />;
-  const color = positive ? C.green : C.red;
+  const color = positive ? T.green : T.red;
   const gradId = `spark-${positive ? "up" : "down"}`;
   return (
     <ResponsiveContainer width={100} height={32}>
@@ -279,6 +273,7 @@ function Sparkline({ data, positive }) {
 
 /* ─── Modale de détail d'une cryptomonnaie (prix, stats, graphique) ──── */
 function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeChange }) {
+  const T = useT();
   if (!coin) return null;
 
   const chartChange = chart && chart.length > 1
@@ -303,7 +298,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
     { label: "Capitalisation",         value: fmtLarge(coin.market_cap) },
     { label: "Volume 24h",             value: fmtLarge(coin.total_volume) },
     { label: "Offre en circulation",   value: `${fmtSupply(coin.circulating_supply)} ${coin.symbol?.toUpperCase()}` },
-    { label: "Variation 7j",           value: pct(coin.price_change_percentage_7d_in_currency), color: (coin.price_change_percentage_7d_in_currency ?? 0) >= 0 ? C.green : C.red },
+    { label: "Variation 7j",           value: pct(coin.price_change_percentage_7d_in_currency), color: (coin.price_change_percentage_7d_in_currency ?? 0) >= 0 ? T.green : T.red },
     { label: "Plus haut historique",   value: eurSmart(coin.ath), sub: `${fmtDate(coin.ath_date)} · ${pct(coin.ath_change_percentage)}` },
     { label: "Plus bas historique",    value: eurSmart(coin.atl), sub: `${fmtDate(coin.atl_date)} · ${pct(coin.atl_change_percentage)}` },
   ];
@@ -314,7 +309,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
       zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} style={{
-        background: C.panel, border: `1px solid ${C.border}`, borderRadius: 20,
+        background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20,
         padding: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto",
       }}>
         {/* En-tête */}
@@ -322,21 +317,21 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
           <div className="flex items-center gap-3">
             <CoinIcon symbol={coin.symbol?.toUpperCase()} src={coin.image} size={40} />
             <div>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 18 }}>{coin.name}</div>
-              <div style={{ color: C.muted, fontSize: 12 }}>{coin.symbol?.toUpperCase()} · Rang #{coin.market_cap_rank ?? "—"}</div>
+              <div style={{ color: T.text, fontWeight: 800, fontSize: 18 }}>{coin.name}</div>
+              <div style={{ color: T.muted, fontSize: 12 }}>{coin.symbol?.toUpperCase()} · Rang #{coin.market_cap_rank ?? "—"}</div>
             </div>
           </div>
           <button onClick={onClose} aria-label="Fermer"
-            style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 4 }}>
+            style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: 4 }}>
             <X size={18} />
           </button>
         </div>
 
         {/* Prix */}
         <div className="flex items-end gap-3 mb-4 flex-wrap">
-          <div style={{ color: C.text, fontWeight: 800, fontSize: 30 }}>{eurSmart(coin.current_price)}</div>
+          <div style={{ color: T.text, fontWeight: 800, fontSize: 30 }}>{eurSmart(coin.current_price)}</div>
           <div style={{
-            color: positive ? C.green : C.red, fontWeight: 700, fontSize: 14,
+            color: positive ? T.green : T.red, fontWeight: 700, fontSize: 14,
             display: "flex", alignItems: "center", gap: 4, marginBottom: 6,
           }}>
             {positive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
@@ -349,8 +344,8 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
           {MARKET_RANGES.map((r) => (
             <button key={r.id} onClick={() => onRangeChange(r.id)} style={{
               flex: 1, padding: "6px 0", borderRadius: 8, border: "none",
-              background: range === r.id ? C.blue : "transparent",
-              color: range === r.id ? "#fff" : C.muted,
+              background: range === r.id ? T.blue : "transparent",
+              color: range === r.id ? "#fff" : T.muted,
               fontWeight: range === r.id ? 700 : 500, fontSize: 12, cursor: "pointer",
             }}>
               {r.label}
@@ -361,7 +356,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
         {/* Graphique */}
         <div style={{ height: 220, marginBottom: 16 }}>
           {chartLoading ? (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.muted, fontSize: 12 }}>
+            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: T.muted, fontSize: 12 }}>
               Chargement du graphique…
             </div>
           ) : chart && chart.length > 1 ? (
@@ -369,27 +364,27 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
               <AreaChart data={chart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="coinDetailGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={positive ? C.green : C.red} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={positive ? C.green : C.red} stopOpacity={0} />
+                    <stop offset="0%" stopColor={positive ? T.green : T.red} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={positive ? T.green : T.red} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="time" tickFormatter={tickFormatter} stroke={C.muted} tick={{ fontSize: 10 }}
+                <XAxis dataKey="time" tickFormatter={tickFormatter} stroke={T.muted} tick={{ fontSize: 10 }}
                   interval={Math.max(0, Math.floor(chart.length / 6) - 1)} />
-                <YAxis domain={["auto", "auto"]} tickFormatter={(v) => eurSmart(v)} stroke={C.muted} tick={{ fontSize: 10 }} width={70} />
+                <YAxis domain={["auto", "auto"]} tickFormatter={(v) => eurSmart(v)} stroke={T.muted} tick={{ fontSize: 10 }} width={70} />
                 <Tooltip
-                  contentStyle={{ background: "rgba(20,20,45,0.95)", border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 12 }}
-                  itemStyle={{ color: C.text }}
-                  labelStyle={{ color: C.muted }}
+                  contentStyle={{ background: "rgba(20,20,45,0.95)", border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12 }}
+                  itemStyle={{ color: T.text }}
+                  labelStyle={{ color: T.muted }}
                   formatter={(v) => [eurSmart(v), "Prix"]}
                   labelFormatter={tickFormatter}
                 />
-                <Area type="monotone" dataKey="price" stroke={positive ? C.green : C.red} strokeWidth={2}
+                <Area type="monotone" dataKey="price" stroke={positive ? T.green : T.red} strokeWidth={2}
                   fill="url(#coinDetailGradient)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.muted, fontSize: 12 }}>
+            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: T.muted, fontSize: 12 }}>
               Données indisponibles.
             </div>
           )}
@@ -398,16 +393,16 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
         {/* Statistiques */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
           {stats.map((s) => (
-            <div key={s.label} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
-              <div style={{ color: s.color || C.text, fontWeight: 700, fontSize: 14 }}>{s.value}</div>
-              {s.sub && <div style={{ color: C.muted, fontSize: 10, marginTop: 2 }}>{s.sub}</div>}
+            <div key={s.label} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 12px" }}>
+              <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
+              <div style={{ color: s.color || T.text, fontWeight: 700, fontSize: 14 }}>{s.value}</div>
+              {s.sub && <div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>{s.sub}</div>}
             </div>
           ))}
         </div>
 
         <a href={`https://www.coingecko.com/en/coins/${coin.id}`} target="_blank" rel="noopener noreferrer"
-          style={{ color: C.blue, fontSize: 12, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+          style={{ color: T.blue, fontSize: 12, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
           Voir sur CoinGecko <ExternalLink size={12} />
         </a>
       </div>
@@ -417,6 +412,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
 
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
 export default function Crypto() {
+  const T = useT();
   const [holdings, setHoldings]     = useLocalStorage("wt_crypto_holdings", DEFAULT_HOLDINGS);
   const [prices, setPrices]         = useState({});
   const [loading, setLoading]       = useState(false);
@@ -461,7 +457,7 @@ export default function Crypto() {
   const fetchOffers = useCallback(async () => {
     setOffersLoading(true);
     try {
-      const r = await fetch("http://localhost:3001/api/staking-offers", { signal: AbortSignal.timeout(6000) });
+      const r = await fetch(`${API_URL}/api/staking-offers`, { signal: AbortSignal.timeout(6000) });
       if (!r.ok) throw new Error("server error");
       const json = await r.json();
       if (json.success && json.data?.length) {
@@ -589,8 +585,8 @@ export default function Crypto() {
   const removeHolding = (id) => setHoldings((prev) => prev.filter((h) => h.id !== id));
 
   const inp = {
-    background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`,
-    color: C.text, borderRadius: 10, padding: "8px 12px", fontSize: 13,
+    background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`,
+    color: T.text, borderRadius: 10, padding: "8px 12px", fontSize: 13,
     outline: "none",
   };
 
@@ -600,8 +596,8 @@ export default function Crypto() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: C.text }}>Crypto Portfolio</h1>
-          <p style={{ color: C.muted }}>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Crypto Portfolio</h1>
+          <p style={{ color: T.muted }}>
             Prix live · Staking · Fiscalité
             {lastUpdate && (
               <span style={{ fontSize: 11, marginLeft: 8 }}>
@@ -612,8 +608,8 @@ export default function Crypto() {
         </div>
         <div className="flex gap-2">
           <button onClick={refresh} disabled={loading} style={{
-            background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`,
-            color: loading ? C.muted : C.text, borderRadius: 10, padding: "9px 14px",
+            background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`,
+            color: loading ? T.muted : T.text, borderRadius: 10, padding: "9px 14px",
             cursor: loading ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6,
           }}>
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -621,8 +617,8 @@ export default function Crypto() {
           </button>
           <button onClick={() => exportCSV(holdings, prices)} title="Impôt PFU estimé par ligne — indicatif, ne remplace pas le calcul PMCA officiel"
             style={{
-              background: "rgba(47,155,255,0.1)", border: `1px solid ${C.blue}44`,
-              color: C.blue, borderRadius: 10, padding: "9px 14px", cursor: "pointer",
+              background: "rgba(47,155,255,0.1)", border: `1px solid ${T.blue}44`,
+              color: T.blue, borderRadius: 10, padding: "9px 14px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6,
             }}>
             <Download size={14} /> Export CSV
@@ -630,8 +626,8 @@ export default function Crypto() {
         </div>
       </div>
 
-      <div className="flex items-start gap-2" style={{ color: C.muted, fontSize: 11, lineHeight: 1.5 }}>
-        <AlertTriangle size={13} style={{ color: C.amber, flexShrink: 0, marginTop: 1 }} />
+      <div className="flex items-start gap-2" style={{ color: T.muted, fontSize: 11, lineHeight: 1.5 }}>
+        <AlertTriangle size={13} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} />
         <p style={{ margin: 0 }}>
           La colonne <strong>« Impôt PFU estimé »</strong> de l'export CSV calcule le gain ligne par ligne — ce n'est pas la méthode légale française (PMCA, art. 150 VH bis CGI). Elle suppose aussi une vente immédiate de toute la position : si vous ne vendez rien, ou si le total de vos cessions de l'année reste sous {SEUIL_EXONERATION_CESSION} €, votre plus-value est exonérée d'impôt. Contrairement aux actions (PEA/CTO), <strong>la durée de détention n'a aucune incidence</strong> sur la fiscalité des cryptomonnaies en France — le PFU de 30 % s'applique de la même façon après 1 jour ou après 10 ans. Pour votre déclaration, utilisez l'onglet <strong>Fiscalité</strong>, un outil dédié (Waltio, Koinly…) ou un expert-comptable.
         </p>
@@ -641,7 +637,7 @@ export default function Crypto() {
       {error && (
         <div style={{
           background: "rgba(239,68,68,0.08)", border: `1px solid rgba(239,68,68,0.25)`,
-          borderRadius: 12, padding: "10px 16px", fontSize: 12, color: C.red,
+          borderRadius: 12, padding: "10px 16px", fontSize: 12, color: T.red,
           display: "flex", gap: 8, alignItems: "center",
         }}>
           <AlertTriangle size={14} /> {error}
@@ -651,14 +647,14 @@ export default function Crypto() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Valeur totale", value: eur(totalValue), color: C.text, Icon: Wallet },
-          { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${eur(totalGain)}`, color: totalGain >= 0 ? C.green : C.red, Icon: totalGain >= 0 ? TrendingUp : TrendingDown },
-          { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? C.green : C.red, Icon: Percent },
-          { label: "Positions", value: `${holdings.length}`, color: C.blue, Icon: Layers },
+          { label: "Valeur totale", value: eur(totalValue), color: T.text, Icon: Wallet },
+          { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${eur(totalGain)}`, color: totalGain >= 0 ? T.green : T.red, Icon: totalGain >= 0 ? TrendingUp : TrendingDown },
+          { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? T.green : T.red, Icon: Percent },
+          { label: "Positions", value: `${holdings.length}`, color: T.blue, Icon: Layers },
         ].map((kpi) => (
-          <div key={kpi.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "18px 20px" }}>
+          <div key={kpi.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
             <div className="flex items-start justify-between" style={{ marginBottom: 6 }}>
-              <span style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
                 {kpi.label}
               </span>
               <kpi.Icon size={16} style={{ color: kpi.color, opacity: 0.65, flexShrink: 0 }} />
@@ -675,13 +671,13 @@ export default function Crypto() {
             { label: "Meilleure perf.", Icon: Trophy, h: best },
             { label: "Moins bonne perf.", Icon: TrendingDown, h: worst },
           ].map(({ label, Icon, h }) => (
-            <div key={label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "12px 16px" }}>
-              <div style={{ color: C.muted, fontSize: 11, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+            <div key={label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 16px" }}>
+              <div style={{ color: T.muted, fontSize: 11, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
                 <Icon size={11} />{label}
               </div>
               <div className="flex justify-between items-center">
-                <div className="font-semibold text-sm" style={{ color: C.text }}>{h.symbol} — {h.name}</div>
-                <div style={{ color: h.gainPct >= 0 ? C.green : C.red, fontWeight: 700, fontSize: 14 }}>
+                <div className="font-semibold text-sm" style={{ color: T.text }}>{h.symbol} — {h.name}</div>
+                <div style={{ color: h.gainPct >= 0 ? T.green : T.red, fontWeight: 700, fontSize: 14 }}>
                   {pct(h.gainPct)}
                 </div>
               </div>
@@ -700,8 +696,8 @@ export default function Crypto() {
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
               flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-              background: tab === t.id ? C.blue : "transparent",
-              color: tab === t.id ? "#fff" : C.muted,
+              background: tab === t.id ? T.blue : "transparent",
+              color: tab === t.id ? "#fff" : T.muted,
               fontWeight: tab === t.id ? 700 : 500,
               cursor: "pointer", fontSize: 13, transition: "all 0.2s",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
@@ -714,12 +710,12 @@ export default function Crypto() {
 
       {/* ── TAB: Holdings ── */}
       {tab === "holdings" && (
-        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "visible" }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
           {/* En-têtes */}
           <div style={{
             display: "grid", gridTemplateColumns: "1fr 90px 100px 100px 120px 36px",
-            padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-            fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+            padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+            fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
           }}>
             <span>Actif</span>
             <span style={{ textAlign: "right" }}>Quantité</span>
@@ -735,10 +731,10 @@ export default function Crypto() {
                 width: 56, height: 56, borderRadius: "50%", background: "rgba(91,141,239,0.1)",
                 display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px",
               }}>
-                <Wallet size={24} style={{ color: C.blue }} />
+                <Wallet size={24} style={{ color: T.blue }} />
               </div>
-              <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>Aucune position</div>
-              <div style={{ color: C.muted, fontSize: 13 }}>Ajoutez votre première position crypto ci-dessous.</div>
+              <div style={{ color: T.text, fontWeight: 600, marginBottom: 4 }}>Aucune position</div>
+              <div style={{ color: T.muted, fontSize: 13 }}>Ajoutez votre première position crypto ci-dessous.</div>
             </div>
           ) : loading && Object.keys(prices).length === 0 ? (
             enriched.map((h) => <SkeletonRow key={h.id} />)
@@ -746,28 +742,28 @@ export default function Crypto() {
             enriched.map((h) => (
             <div key={h.id} className="hover:bg-white/[0.025] transition-colors" style={{
               display: "grid", gridTemplateColumns: "1fr 90px 100px 100px 120px 36px",
-              padding: "12px 16px", borderBottom: `1px solid ${C.border}`,
+              padding: "12px 16px", borderBottom: `1px solid ${T.border}`,
               alignItems: "center", fontSize: 13,
             }}>
               <div>
-                <div className="font-semibold" style={{ color: C.text }}>{h.symbol}</div>
-                <div style={{ fontSize: 11, color: C.muted }}>{h.name}</div>
+                <div className="font-semibold" style={{ color: T.text }}>{h.symbol}</div>
+                <div style={{ fontSize: 11, color: T.muted }}>{h.name}</div>
                 {h.type === "staking" && (
-                  <span className="inline-flex items-center gap-1 mt-0.5 rounded-full text-[10px] font-bold" style={{ color: C.amber, background: "rgba(245,166,35,0.15)", padding: "1px 6px" }}>
+                  <span className="inline-flex items-center gap-1 mt-0.5 rounded-full text-[10px] font-bold" style={{ color: T.amber, background: "rgba(245,166,35,0.15)", padding: "1px 6px" }}>
                     <Lock size={9} /> STAKING
                   </span>
                 )}
               </div>
-              <div style={{ textAlign: "right", color: C.muted }}>{h.amount}</div>
+              <div style={{ textAlign: "right", color: T.muted }}>{h.amount}</div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ color: C.text }}>{h.currentPrice ? eur(h.currentPrice, 0) : "—"}</div>
+                <div style={{ color: T.text }}>{h.currentPrice ? eur(h.currentPrice, 0) : "—"}</div>
                 {h.change24h != null && (
-                  <div style={{ fontSize: 11, color: h.change24h >= 0 ? C.green : C.red }}>
+                  <div style={{ fontSize: 11, color: h.change24h >= 0 ? T.green : T.red }}>
                     {pct(h.change24h)} 24h
                   </div>
                 )}
               </div>
-              <div style={{ textAlign: "right", color: C.text, fontWeight: 600 }}>
+              <div style={{ textAlign: "right", color: T.text, fontWeight: 600 }}>
                 {h.value != null ? eur(h.value) : "—"}
               </div>
               <div style={{ textAlign: "right" }}>
@@ -776,7 +772,7 @@ export default function Crypto() {
               <button onClick={() => removeHolding(h.id)}
                 aria-label={`Supprimer ${h.name}`}
                 className="hover:text-[#ff5c7a] transition-colors"
-                style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 4, display: "flex" }}>
+                style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}>
                 <Trash2 size={13} />
               </button>
             </div>
@@ -787,17 +783,17 @@ export default function Crypto() {
           {!showForm ? (
             <button onClick={() => setShowForm(true)} style={{
               width: "100%", background: "none", border: "none", padding: "12px 16px",
-              color: C.blue, cursor: "pointer", fontSize: 13, textAlign: "left",
-              display: "flex", alignItems: "center", gap: 6, borderTop: `1px solid ${C.border}`,
+              color: T.blue, cursor: "pointer", fontSize: 13, textAlign: "left",
+              display: "flex", alignItems: "center", gap: 6, borderTop: `1px solid ${T.border}`,
             }}>
               <Plus size={14} /> Ajouter une position
             </button>
           ) : (
-            <div style={{ padding: 16, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ padding: 16, borderTop: `1px solid ${T.border}` }}>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <select value={form.coinId} onChange={(e) => setForm({ ...form, coinId: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS}>
                   {COINS.map((c) => (
-                    <option key={c.id} value={c.id} style={{ background: C.panel }}>{c.symbol} — {c.name}</option>
+                    <option key={c.id} value={c.id} style={{ background: T.panel }}>{c.symbol} — {c.name}</option>
                   ))}
                 </select>
                 <input placeholder="Quantité" value={form.amount} type="number"
@@ -807,19 +803,19 @@ export default function Crypto() {
                 <input placeholder="Date achat" value={form.buyDate} type="date"
                   onChange={(e) => setForm({ ...form, buyDate: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS} />
                 <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS}>
-                  <option value="spot" style={{ background: C.panel }}>Spot</option>
-                  <option value="staking" style={{ background: C.panel }}>Staking</option>
+                  <option value="spot" style={{ background: T.panel }}>Spot</option>
+                  <option value="staking" style={{ background: T.panel }}>Staking</option>
                 </select>
               </div>
               <div className="flex gap-3 mt-3">
                 <button onClick={addHolding} style={{
-                  background: C.green, color: "#0a0f1e", border: "none",
+                  background: T.green, color: "#0a0f1e", border: "none",
                   borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700,
                 }}>
                   Ajouter
                 </button>
                 <button onClick={() => setShowForm(false)} style={{
-                  background: "none", border: `1px solid ${C.border}`, color: C.muted,
+                  background: "none", border: `1px solid ${T.border}`, color: T.muted,
                   borderRadius: 8, padding: "8px 16px", cursor: "pointer",
                 }}>
                   Annuler
@@ -841,7 +837,7 @@ export default function Crypto() {
           <div className="flex flex-col gap-4">
             {/* Recherche */}
             <div style={{ position: "relative" }}>
-              <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: C.muted }} />
+              <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: T.muted }} />
               <input
                 placeholder="Rechercher une cryptomonnaie (nom ou symbole)…"
                 value={marketSearch}
@@ -852,16 +848,16 @@ export default function Crypto() {
             </div>
 
             {marketError && (
-              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "10px 16px", fontSize: 12, color: C.red, display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "10px 16px", fontSize: 12, color: T.red, display: "flex", gap: 8, alignItems: "center" }}>
                 <AlertTriangle size={14} /> {marketError}
               </div>
             )}
 
-            <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
               <div className="hidden sm:grid" style={{
                 gridTemplateColumns: "40px 1fr 100px 80px 80px 80px 110px 110px 110px",
-                padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-                fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+                padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+                fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
               }}>
                 <span>#</span>
                 <span>Actif</span>
@@ -877,7 +873,7 @@ export default function Crypto() {
               {marketLoading && marketCoins.length === 0 ? (
                 Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
               ) : filtered.length === 0 ? (
-                <div style={{ padding: "40px 16px", textAlign: "center", color: C.muted, fontSize: 13 }}>
+                <div style={{ padding: "40px 16px", textAlign: "center", color: T.muted, fontSize: 13 }}>
                   Aucune cryptomonnaie trouvée pour « {marketSearch} ».
                 </div>
               ) : (
@@ -890,30 +886,30 @@ export default function Crypto() {
                       className="hover:bg-white/[0.025] transition-colors hidden sm:grid"
                       style={{
                         gridTemplateColumns: "40px 1fr 100px 80px 80px 80px 110px 110px 110px",
-                        padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                        padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
                         alignItems: "center", fontSize: 13, width: "100%",
                         background: "none", border: "none", cursor: "pointer", textAlign: "left",
                       }}>
-                      <span style={{ color: C.muted, fontSize: 12 }}>{c.market_cap_rank ?? "—"}</span>
+                      <span style={{ color: T.muted, fontSize: 12 }}>{c.market_cap_rank ?? "—"}</span>
                       <div className="flex items-center gap-2">
                         <CoinIcon symbol={c.symbol?.toUpperCase()} src={c.image} size={26} />
                         <div>
-                          <div className="font-semibold" style={{ color: C.text }}>{c.name}</div>
-                          <div style={{ fontSize: 11, color: C.muted }}>{c.symbol?.toUpperCase()}</div>
+                          <div className="font-semibold" style={{ color: T.text }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: T.muted }}>{c.symbol?.toUpperCase()}</div>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right", color: C.text, fontWeight: 600 }}>{eurSmart(c.current_price)}</div>
-                      <div style={{ textAlign: "right", color: (chg1h ?? 0) >= 0 ? C.green : C.red, fontWeight: 600, fontSize: 12 }}>
+                      <div style={{ textAlign: "right", color: T.text, fontWeight: 600 }}>{eurSmart(c.current_price)}</div>
+                      <div style={{ textAlign: "right", color: (chg1h ?? 0) >= 0 ? T.green : T.red, fontWeight: 600, fontSize: 12 }}>
                         {pct(chg1h)}
                       </div>
-                      <div style={{ textAlign: "right", color: (chg24 ?? 0) >= 0 ? C.green : C.red, fontWeight: 600, fontSize: 12 }}>
+                      <div style={{ textAlign: "right", color: (chg24 ?? 0) >= 0 ? T.green : T.red, fontWeight: 600, fontSize: 12 }}>
                         {pct(chg24)}
                       </div>
-                      <div style={{ textAlign: "right", color: (chg7 ?? 0) >= 0 ? C.green : C.red, fontWeight: 600, fontSize: 12 }}>
+                      <div style={{ textAlign: "right", color: (chg7 ?? 0) >= 0 ? T.green : T.red, fontWeight: 600, fontSize: 12 }}>
                         {pct(chg7)}
                       </div>
-                      <div style={{ textAlign: "right", color: C.muted, fontSize: 12 }}>{fmtLarge(c.market_cap)}</div>
-                      <div style={{ textAlign: "right", color: C.muted, fontSize: 12 }}>{fmtLarge(c.total_volume)}</div>
+                      <div style={{ textAlign: "right", color: T.muted, fontSize: 12 }}>{fmtLarge(c.market_cap)}</div>
+                      <div style={{ textAlign: "right", color: T.muted, fontSize: 12 }}>{fmtLarge(c.total_volume)}</div>
                       <div style={{ display: "flex", justifyContent: "flex-end" }}>
                         <Sparkline data={c.sparkline_in_7d?.price} positive={(chg7 ?? 0) >= 0} />
                       </div>
@@ -931,19 +927,19 @@ export default function Crypto() {
                       <button key={c.id} onClick={() => { setSelectedCoin(c); setCoinChartRange("7"); }}
                         className="hover:bg-white/[0.025] transition-colors flex items-center justify-between gap-2"
                         style={{
-                          padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                          padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
                           background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%",
                         }}>
                         <div className="flex items-center gap-2">
                           <CoinIcon symbol={c.symbol?.toUpperCase()} src={c.image} size={26} />
                           <div>
-                            <div className="font-semibold" style={{ color: C.text, fontSize: 13 }}>{c.name}</div>
-                            <div style={{ fontSize: 11, color: C.muted }}>{c.symbol?.toUpperCase()}</div>
+                            <div className="font-semibold" style={{ color: T.text, fontSize: 13 }}>{c.name}</div>
+                            <div style={{ fontSize: 11, color: T.muted }}>{c.symbol?.toUpperCase()}</div>
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ color: C.text, fontWeight: 600, fontSize: 13 }}>{eurSmart(c.current_price)}</div>
-                          <div style={{ color: (chg24 ?? 0) >= 0 ? C.green : C.red, fontWeight: 600, fontSize: 11 }}>{pct(chg24)}</div>
+                          <div style={{ color: T.text, fontWeight: 600, fontSize: 13 }}>{eurSmart(c.current_price)}</div>
+                          <div style={{ color: (chg24 ?? 0) >= 0 ? T.green : T.red, fontWeight: 600, fontSize: 11 }}>{pct(chg24)}</div>
                         </div>
                       </button>
                     );
@@ -952,7 +948,7 @@ export default function Crypto() {
               )}
             </div>
 
-            <div style={{ fontSize: 11, color: C.muted, textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: T.muted, textAlign: "center" }}>
               Données fournies par CoinGecko · Top 100 par capitalisation
             </div>
           </div>
@@ -985,22 +981,22 @@ export default function Crypto() {
           <div className="flex flex-col gap-6">
             {/* Mes positions de staking */}
             <div className="flex flex-col gap-3">
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>Mes positions</div>
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>Mes positions</div>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
                 {staking.length === 0 ? (
                   <div style={{ padding: "40px 16px", textAlign: "center" }}>
                     <div style={{
                       width: 56, height: 56, borderRadius: "50%", background: "rgba(240,168,72,0.1)",
                       display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px",
                     }}>
-                      <Lock size={24} style={{ color: C.amber }} />
+                      <Lock size={24} style={{ color: T.amber }} />
                     </div>
-                    <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>Aucune position de staking</div>
-                    <div style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>
+                    <div style={{ color: T.text, fontWeight: 600, marginBottom: 4 }}>Aucune position de staking</div>
+                    <div style={{ color: T.muted, fontSize: 13, marginBottom: 16 }}>
                       Ajoutez une position avec le type « Staking » depuis l'onglet Holdings.
                     </div>
                     <button onClick={() => { setTab("holdings"); setShowForm(true); }} style={{
-                      background: C.blue, color: "#fff", border: "none", padding: "10px 20px",
+                      background: T.blue, color: "#fff", border: "none", padding: "10px 20px",
                       borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13,
                     }}>
                       Ajouter une position
@@ -1010,8 +1006,8 @@ export default function Crypto() {
                   <>
                     <div style={{
                       display: "grid", gridTemplateColumns: "1fr 80px 80px 100px 110px",
-                      padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-                      fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+                      padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+                      fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
                     }}>
                       <span>Actif</span>
                       <span style={{ textAlign: "right" }}>Quantité</span>
@@ -1022,25 +1018,25 @@ export default function Crypto() {
                     {staking.map((h) => (
                       <div key={h.id} className="hover:bg-white/[0.025] transition-colors" style={{
                         display: "grid", gridTemplateColumns: "1fr 80px 80px 100px 110px",
-                        padding: "12px 16px", borderBottom: `1px solid ${C.border}`,
+                        padding: "12px 16px", borderBottom: `1px solid ${T.border}`,
                         alignItems: "center", fontSize: 13,
                       }}>
                         <div>
-                          <div className="font-semibold" style={{ color: C.text }}>{h.symbol}</div>
-                          <div style={{ fontSize: 11, color: C.muted }}>{h.name}</div>
+                          <div className="font-semibold" style={{ color: T.text }}>{h.symbol}</div>
+                          <div style={{ fontSize: 11, color: T.muted }}>{h.name}</div>
                         </div>
-                        <div style={{ textAlign: "right", color: C.muted }}>{h.amount}</div>
-                        <div style={{ textAlign: "right", color: C.amber, fontWeight: 700 }}>
+                        <div style={{ textAlign: "right", color: T.muted }}>{h.amount}</div>
+                        <div style={{ textAlign: "right", color: T.amber, fontWeight: 700 }}>
                           {h.apy != null ? `${h.apy} %` : "—"}
                         </div>
-                        <div style={{ textAlign: "right", color: C.text }}>{eur(h.value)}</div>
+                        <div style={{ textAlign: "right", color: T.text }}>{eur(h.value)}</div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ color: C.green, fontWeight: 700 }}>{h.annualYield != null ? eur(h.annualYield) : "—"}</div>
-                          <div style={{ fontSize: 11, color: C.muted }}>{h.monthlyYield != null ? `${eur(h.monthlyYield)}/mois` : ""}</div>
+                          <div style={{ color: T.green, fontWeight: 700 }}>{h.annualYield != null ? eur(h.annualYield) : "—"}</div>
+                          <div style={{ fontSize: 11, color: T.muted }}>{h.monthlyYield != null ? `${eur(h.monthlyYield)}/mois` : ""}</div>
                         </div>
                       </div>
                     ))}
-                    <div style={{ padding: "12px 16px", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.muted }}>
+                    <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.border}`, fontSize: 11, color: T.muted }}>
                       APY estimatifs. Sources : staking récompenses publiques. Varient selon le réseau.
                     </div>
                   </>
@@ -1057,12 +1053,12 @@ export default function Crypto() {
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
               }}>
                 <div className="flex items-center gap-3">
-                  <Zap size={18} style={{ color: C.amber }} />
+                  <Zap size={18} style={{ color: T.amber }} />
                   <div>
-                    <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>
                       Offres de staking Crypto.com
                     </div>
-                    <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>
+                    <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>
                       {offersSource === "live"
                         ? "Données en direct depuis crypto.com"
                         : offersSource === "fallback"
@@ -1070,15 +1066,15 @@ export default function Crypto() {
                         : "Données indicatives (mai 2025) · Vérifiez sur crypto.com"}
                       {" · "}
                       <a href="https://crypto.com/en-fr/staking" target="_blank" rel="noopener noreferrer"
-                        style={{ color: C.blue, textDecoration: "underline" }}>
+                        style={{ color: T.blue, textDecoration: "underline" }}>
                         Voir le site officiel
                       </a>
                     </div>
                   </div>
                 </div>
                 <button onClick={fetchOffers} disabled={offersLoading} style={{
-                  background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`,
-                  color: offersLoading ? C.muted : C.text, borderRadius: 8, padding: "7px 12px",
+                  background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`,
+                  color: offersLoading ? T.muted : T.text, borderRadius: 8, padding: "7px 12px",
                   cursor: offersLoading ? "default" : "pointer", fontSize: 12,
                   display: "flex", alignItems: "center", gap: 5,
                 }}>
@@ -1090,36 +1086,36 @@ export default function Crypto() {
               {/* KPIs top */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Meilleur APY flexible", value: `${best?.flexApy ?? "—"} %`, sub: best?.coin, color: C.green },
-                  { label: "Offres disponibles",    value: offers.length, sub: "cryptos listées", color: C.blue },
-                  { label: "Taux Bitcoin (référence)", value: `${offers.find(o=>o.coin==="BTC")?.flexApy ?? "—"} %`, sub: "flexible, sans lock", color: C.muted },
+                  { label: "Meilleur APY flexible", value: `${best?.flexApy ?? "—"} %`, sub: best?.coin, color: T.green },
+                  { label: "Offres disponibles",    value: offers.length, sub: "cryptos listées", color: T.blue },
+                  { label: "Taux Bitcoin (référence)", value: `${offers.find(o=>o.coin==="BTC")?.flexApy ?? "—"} %`, sub: "flexible, sans lock", color: T.muted },
                 ].map(k => (
-                  <div key={k.label} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, padding: "12px 14px" }}>
-                    <div style={{ color: C.muted, fontSize: 11 }}>{k.label}</div>
+                  <div key={k.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 14px" }}>
+                    <div style={{ color: T.muted, fontSize: 11 }}>{k.label}</div>
                     <div style={{ color: k.color, fontWeight: 700, fontSize: 20, marginTop: 4 }}>{k.value}</div>
-                    <div style={{ color: C.muted, fontSize: 11 }}>{k.sub}</div>
+                    <div style={{ color: T.muted, fontSize: 11 }}>{k.sub}</div>
                   </div>
                 ))}
               </div>
   
               {/* Filtres + tri */}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ color: C.muted, fontSize: 12 }}>Risque :</span>
+                <span style={{ color: T.muted, fontSize: 12 }}>Risque :</span>
                 {[["all","Tous"],["low","Faible"],["medium","Moyen"],["high","Élevé"]].map(([v, l]) => (
                   <button key={v} onClick={() => setOfferFilter(v)} style={{
                     background: offerFilter === v ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: `1px solid ${offerFilter === v ? C.text : C.border}`,
-                    color: offerFilter === v ? C.text : C.muted,
+                    border: `1px solid ${offerFilter === v ? T.text : T.border}`,
+                    color: offerFilter === v ? T.text : T.muted,
                     borderRadius: 20, padding: "4px 12px", fontSize: 11, cursor: "pointer",
                   }}>{l}</button>
                 ))}
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ color: C.muted, fontSize: 12 }}>Trier par :</span>
+                  <span style={{ color: T.muted, fontSize: 12 }}>Trier par :</span>
                   {[["apy","APY"],["coin","Nom"],["risk","Risque"]].map(([v, l]) => (
                     <button key={v} onClick={() => setOfferSort(v)} style={{
                       background: offerSort === v ? "rgba(47,155,255,0.12)" : "transparent",
-                      border: `1px solid ${offerSort === v ? C.blue : C.border}`,
-                      color: offerSort === v ? C.blue : C.muted,
+                      border: `1px solid ${offerSort === v ? T.blue : T.border}`,
+                      color: offerSort === v ? T.blue : T.muted,
                       borderRadius: 20, padding: "4px 12px", fontSize: 11, cursor: "pointer",
                     }}>{l}</button>
                   ))}
@@ -1127,13 +1123,13 @@ export default function Crypto() {
               </div>
   
               {/* Table des offres */}
-              <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
                 {/* Header */}
                 <div style={{
                   display: "grid",
                   gridTemplateColumns: "52px 1fr 90px 90px 90px 80px 36px",
-                  padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
-                  fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.8, textTransform: "uppercase",
+                  padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
+                  fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase",
                 }}>
                   <span />
                   <span>Actif</span>
@@ -1150,7 +1146,7 @@ export default function Crypto() {
                     <div key={`${o.coin}-${i}`} className="hover:bg-white/[0.025] transition-colors" style={{
                       display: "grid",
                       gridTemplateColumns: "52px 1fr 90px 90px 90px 80px 36px",
-                      padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                      padding: "10px 16px", borderBottom: `1px solid ${T.border}`,
                       alignItems: "center",
                       background: isBest ? "rgba(245,166,35,0.04)" : "transparent",
                     }}>
@@ -1162,34 +1158,34 @@ export default function Crypto() {
                       {/* Nom */}
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{o.coin}</span>
-                          <span style={{ fontSize: 12, color: C.muted }}>{o.name}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{o.coin}</span>
+                          <span style={{ fontSize: 12, color: T.muted }}>{o.name}</span>
                           {isBest && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "rgba(245,166,35,0.2)", color: C.amber }}>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "rgba(245,166,35,0.2)", color: T.amber }}>
                               <Star size={9} fill="currentColor" /> TOP APY
                             </span>
                           )}
                         </div>
-                        {o.note && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{o.note}</div>}
+                        {o.note && <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{o.note}</div>}
                       </div>
   
                       {/* APY flexible */}
                       <div style={{ textAlign: "right" }}>
                         <span style={{
                           fontWeight: 700, fontSize: 14,
-                          color: o.flexApy >= 8 ? C.green : o.flexApy >= 4 ? C.cyan : C.muted,
+                          color: o.flexApy >= 8 ? T.green : o.flexApy >= 4 ? T.cyan : T.muted,
                         }}>
                           {o.flexApy > 0 ? `${o.flexApy.toFixed(1)} %` : "—"}
                         </span>
                       </div>
   
                       {/* APY 1 mois */}
-                      <div style={{ textAlign: "right", color: o.lock1m ? C.green : C.muted, fontSize: 13, fontWeight: o.lock1m ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", color: o.lock1m ? T.green : T.muted, fontSize: 13, fontWeight: o.lock1m ? 600 : 400 }}>
                         {o.lock1m ? `${o.lock1m.toFixed(1)} %` : "—"}
                       </div>
   
                       {/* APY 3 mois */}
-                      <div style={{ textAlign: "right", color: o.lock3m ? C.green : C.muted, fontSize: 13, fontWeight: o.lock3m ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", color: o.lock3m ? T.green : T.muted, fontSize: 13, fontWeight: o.lock3m ? 600 : 400 }}>
                         {o.lock3m ? `${o.lock3m.toFixed(1)} %` : "—"}
                       </div>
   
@@ -1200,7 +1196,7 @@ export default function Crypto() {
   
                       {/* Lien Crypto.com */}
                       <a href="https://crypto.com/en-fr/staking" target="_blank" rel="noopener noreferrer"
-                        style={{ display: "flex", justifyContent: "center", color: C.muted, opacity: 0.6 }}>
+                        style={{ display: "flex", justifyContent: "center", color: T.muted, opacity: 0.6 }}>
                         <ExternalLink size={13} />
                       </a>
                     </div>
@@ -1209,8 +1205,8 @@ export default function Crypto() {
               </div>
   
               {/* Disclaimer */}
-              <div className="flex items-start gap-2" style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, padding: "0 4px" }}>
-                <AlertTriangle size={13} style={{ color: C.amber, flexShrink: 0, marginTop: 1 }} />
+              <div className="flex items-start gap-2" style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, padding: "0 4px" }}>
+                <AlertTriangle size={13} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} />
                 <p style={{ margin: 0 }}>
                   Les taux sont indicatifs et varient selon votre niveau de staking CRO, les conditions du réseau et la politique de Crypto.com.
                   Les revenus de staking sont susceptibles d'être imposés comme des BNC (Bénéfices Non Commerciaux) en France — consultez un expert-comptable.

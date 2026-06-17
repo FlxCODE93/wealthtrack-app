@@ -6,10 +6,97 @@
     <title>WealthTrack — Gestion Patrimoniale</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="description" content="Simulez, comprenez et décidez. Gérez votre patrimoine avec WealthTrack : PEA, assurance-vie, immobilier, FIRE, crypto — projection à 30 ans, fiscalité réelle." />
+    <meta property="og:title" content="WealthTrack — Gestion Patrimoniale" />
+    <meta property="og:description" content="Projetez votre patrimoine à 30 ans. PEA, assurance-vie, immobilier, FIRE, crypto — fiscalité réelle incluse." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wealthtrack.app" />
+    <meta property="og:image" content="https://wealthtrack.app/og-image.png" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="WealthTrack — Gestion Patrimoniale" />
+    <meta name="twitter:description" content="Projetez votre patrimoine à 30 ans. PEA, AV, FIRE, crypto — fiscalité réelle incluse." />
+    <meta name="twitter:image" content="https://wealthtrack.app/og-image.png" />
+    <meta name="theme-color" content="#020617" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://wealthtrack.app" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Lora:wght@700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.2.5/index.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      :root {
+        --background: oklch(0 0 0);
+        --foreground: oklch(1 0 0);
+        --card: oklch(0.1 0 0 / 0.1);
+        --card-foreground: oklch(1 0 0);
+        --popover: oklch(0 0 0 / 0.8);
+        --popover-foreground: oklch(1 0 0);
+        --primary: oklch(1 0 0);
+        --primary-foreground: oklch(0 0 0);
+        --secondary: oklch(0.65 0.25 25);
+        --secondary-foreground: oklch(1 0 0);
+        --muted: oklch(1 0 0 / 0.5);
+        --muted-foreground: oklch(0.7 0 0);
+        --accent: oklch(0.65 0.25 25);
+        --accent-foreground: oklch(1 0 0);
+        --destructive: oklch(0.6 0.25 15);
+        --destructive-foreground: oklch(1 0 0);
+        --border: oklch(1 0 0 / 0.2);
+        --input: oklch(1 0 0 / 0.1);
+        --ring: oklch(1 0 0 / 0.3);
+        --chart-1: oklch(0.65 0.25 25);
+        --chart-2: oklch(0.8 0.15 85);
+        --chart-3: oklch(0.7 0.2 140);
+        --chart-4: oklch(0.7 0.2 240);
+        --chart-5: oklch(0.6 0.25 300);
+        --radius: 0.5rem;
+        --sidebar: oklch(0 0 0 / 0.9);
+        --sidebar-foreground: oklch(1 0 0);
+        --sidebar-primary: oklch(0.65 0.25 25);
+        --sidebar-primary-foreground: oklch(1 0 0);
+        --sidebar-accent: oklch(0.65 0.25 25);
+        --sidebar-accent-foreground: oklch(1 0 0);
+        --sidebar-border: oklch(1 0 0 / 0.2);
+        --sidebar-ring: oklch(1 0 0 / 0.3);
+        --font-geist-sans: "Geist Sans", sans-serif;
+        --font-geist-mono: "Geist Mono", monospace;
+      }
+
+      .dark {
+        --background: oklch(0 0 0);
+        --foreground: oklch(1 0 0);
+        --card: oklch(0.1 0 0 / 0.1);
+        --card-foreground: oklch(1 0 0);
+        --popover: oklch(0 0 0 / 0.8);
+        --popover-foreground: oklch(1 0 0);
+        --primary: oklch(1 0 0);
+        --primary-foreground: oklch(0 0 0);
+        --secondary: oklch(0.65 0.25 25);
+        --secondary-foreground: oklch(1 0 0);
+        --muted: oklch(1 0 0 / 0.5);
+        --muted-foreground: oklch(0.7 0 0);
+        --accent: oklch(0.65 0.25 25);
+        --accent-foreground: oklch(1 0 0);
+        --destructive: oklch(0.6 0.25 15);
+        --destructive-foreground: oklch(1 0 0);
+        --border: oklch(1 0 0 / 0.2);
+        --input: oklch(1 0 0 / 0.1);
+        --ring: oklch(1 0 0 / 0.3);
+        --chart-1: oklch(0.65 0.25 25);
+        --chart-2: oklch(0.8 0.15 85);
+        --chart-3: oklch(0.7 0.2 140);
+        --chart-4: oklch(0.7 0.2 240);
+        --chart-5: oklch(0.6 0.25 300);
+        --sidebar: oklch(0 0 0 / 0.9);
+        --sidebar-foreground: oklch(1 0 0);
+        --sidebar-primary: oklch(0.65 0.25 25);
+        --sidebar-primary-foreground: oklch(1 0 0);
+        --sidebar-accent: oklch(0.65 0.25 25);
+        --sidebar-accent-foreground: oklch(1 0 0);
+        --sidebar-border: oklch(1 0 0 / 0.2);
+        --sidebar-ring: oklch(1 0 0 / 0.3);
+      }
+
       *, *::before, *::after { box-sizing: border-box; }
       html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
       body {
@@ -83,6 +170,11 @@
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255,255,255,0.08);
       }
+      [data-theme="light"] .wt-glass {
+        background: rgba(255,255,255,0.6);
+        border: 1px solid rgba(15,23,42,0.08);
+        box-shadow: 0 8px 32px -8px rgba(15,23,42,0.12);
+      }
 
       /* Halo lumineux discret derrière titres / éléments clés */
       .wt-glow-text {
@@ -98,6 +190,63 @@
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         .wt-fade-in, .wt-slide-up, .wt-scale-in { animation: wt-fade-in 0.01ms ease-out both; }
+      }
+
+      /* ── DataGridHero ────────────────────────────────────────────── */
+      :root {
+        --dg-background: 220, 20%, 10%;
+        --dg-foreground: 0, 0%, 100%;
+        --dg-foreground-muted: 0, 0%, 80%;
+        --green: 150, 100%, 50%;
+        --pink: 300, 100%, 70%;
+        --cyan: 180, 100%, 60%;
+        --yellow: 50, 100%, 60%;
+        --orange: 25, 100%, 60%;
+      }
+
+      @keyframes cell-pulse {
+        from { opacity: var(--opacity-min); }
+        to   { opacity: var(--opacity-max); }
+      }
+
+      .data-grid-hero {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .grid-container {
+        position: absolute;
+        inset: 0;
+        display: grid;
+      }
+
+      .grid-container::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle 180px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.08), transparent 70%);
+        opacity: var(--mouse-glow-opacity, 0);
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .grid-cell {
+        border-radius: 2px;
+        opacity: var(--opacity-min, 0.05);
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        padding: 2rem;
       }
     </style>
   </head>

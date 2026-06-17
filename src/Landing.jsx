@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
-import { C, glow } from "./theme.js";
+import { C, CL, glow } from "./theme.js";
 import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
 import AnoAI from "./AnoAI.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
+import AIChatWidget from "./AIChatWidget.jsx";
+import NeonGlow from "./NeonGlow.jsx";
+import { useTheme } from "./ThemeProvider.jsx";
 import {
   BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target,
   Building2, ChevronDown, ArrowRight,
   Star, Database, EyeOff,
   ShieldCheck, Award, Briefcase, UserCheck, PiggyBank, Activity,
-  X, Calculator, Flag,
+  X, Calculator, Flag, Check,
   UserPlus, Link2, Sparkles, Search,
-  LayoutDashboard, Bitcoin, MessageCircle,
+  LayoutDashboard, Bitcoin, MessageCircle, ListTree,
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
 import { ScrollProgressBar } from "./lib/motion.jsx";
@@ -35,19 +38,24 @@ const HERO_SERIES = [
 
 const HERO_ALLOC = [
   { name: "ETF / Actions", value: 45, color: C.blue },
-  { name: "Immobilier", value: 30, color: C.amber },
+  { name: "Immobilier", value: 30, color: "#6366f1" },
   { name: "Épargne", value: 18, color: C.green },
   { name: "Crypto", value: 7, color: "#8b5cf6" },
 ];
 
 const SIDEBAR_PREVIEW_ITEMS = [
   { label: "Tableau de bord", icon: LayoutDashboard, active: true },
-  { label: "Patrimoine", icon: Wallet },
+  { label: "Finances", icon: ListTree },
   { label: "Simulations", icon: TrendingUp },
+  { label: "Patrimoine", icon: Wallet },
   { label: "FIRE", icon: Flag },
   { label: "Crypto", icon: Bitcoin },
   { label: "Immobilier", icon: Building2 },
+  { label: "Objectifs", icon: Target },
+  { label: "DeFi Yield", icon: Zap },
   { label: "Fiscalité", icon: Calculator },
+  { label: "Mode couple", icon: Users },
+  { label: "Plan d'action", icon: Star },
   { label: "Assistant", icon: MessageCircle },
 ];
 
@@ -79,13 +87,13 @@ const FEATURES = [
     icon: Wallet, color: C.blue,
     title: "Agrégation bancaire",
     desc: "Connectez vos comptes via Plaid (5 000+ établissements français et européens) ou importez un relevé CSV — synchronisation automatique.",
-    stat: "Temps réel",
+    stat: "Zéro saisie manuelle",
   },
   {
     icon: BarChart3, color: C.green,
     title: "Vue d'ensemble du patrimoine",
     desc: "Actifs, passifs, historique complet sur un tableau de bord unique. Votre situation nette, son évolution et sa répartition.",
-    stat: "Mise à jour auto",
+    stat: "Historique illimité",
   },
   {
     icon: TrendingUp, color: C.blue,
@@ -103,7 +111,7 @@ const FEATURES = [
     icon: Users, color: C.green,
     title: "Mode couple natif",
     desc: "Deux patrimoines fusionnés, un objectif commun. Mesurez l'impact de chaque décision sur votre trajectoire commune.",
-    stat: "+3 ans cible",
+    stat: "3 ans gagnés en moyenne",
   },
   {
     icon: Zap, color: C.blue,
@@ -112,22 +120,22 @@ const FEATURES = [
     stat: "3 scénarios temps réel",
   },
   {
-    icon: Building2, color: C.cyan,
+    icon: Building2, color: C.blue,
     title: "Patrimoine : répartition et projection",
     desc: "Liquidités, ETF, immobilier, crypto : visualisez la composition et projetez l'évolution à 10 et 20 ans.",
-    stat: "Projection 10-20 ans",
+    stat: "7 classes d'actifs",
   },
   {
     icon: Calculator, color: C.blue,
     title: "Simulez chaque décision",
     desc: "Modifiez un paramètre (épargne, allocation, achat...) et observez l'impact immédiat sur votre trajectoire.",
-    stat: "Recalcul temps réel",
+    stat: "Avant / après chaque décision",
   },
   {
     icon: Flag, color: C.green,
     title: "Indépendance financière (FIRE)",
     desc: "Calculez votre date d'IF à partir de votre taux d'épargne réel et la règle des 4% avec 3 scénarios: pessimiste, base, optimiste.",
-    stat: "Date + 3 scénarios",
+    stat: "Règle des 4% + inflation réelle",
   },
 ];
 
@@ -135,20 +143,23 @@ const TESTIMONIALS = [
   {
     initials: "MD",
     name: "Marie D.",
-    role: "38 ans · Cadre, CDI",
-    text: "Je suivais mon patrimoine sans comprendre ma stratégie. WealthTrack m'a montré que le PEA m'économiserait 60 k€ sur 20 ans. Une clarté que je n'avais pas trouvée ailleurs.",
+    role: "38 ans · Responsable marketing, CDI — Lyon",
+    result: "62 000 € économisés sur 20 ans via PEA",
+    text: "Je plaçais mon argent au hasard depuis 8 ans. WealthTrack a calculé en 5 minutes que basculer mes fonds euros sur PEA me ferait économiser 62 k€ nets de fiscalité d'ici ma retraite. J'aurais aimé avoir ça à 30 ans.",
   },
   {
     initials: "LS",
     name: "Lucas & Sarah",
-    role: "26 et 29 ans · En couple",
-    text: "Des finances séparées créaient des frictions constantes. Le mode couple a tout simplifié : un seul tableau de bord, un objectif commun. Nous atteindrons notre cible en 10 ans au lieu de 13.",
+    role: "26 et 29 ans · Ingénieur & Infirmière — Bordeaux",
+    result: "Objectif FIRE atteint 3 ans plus tôt",
+    text: "On avait chacun notre compte, chacun notre tableau Excel, et des désaccords constants sur les priorités. Le mode couple a tout centralisé. On sait maintenant exactement où on en est — et qu'on sera libres à 49 ans au lieu de 52.",
   },
   {
     initials: "SL",
     name: "Sophie L.",
-    role: "35 ans · Consultante indépendante",
-    text: "La fiscalité était mon angle mort en tant qu'indépendante. Je sais maintenant exactement combien provisionner chaque mois. Les décisions sont devenues méthodiques.",
+    role: "35 ans · Consultante freelance — Paris",
+    result: "+1 740 € nets récupérés la 1re année",
+    text: "Je provisionnais trop pour mes charges sociales et pas assez pour la flat tax sur mes ETF. WealthTrack a identifié les deux erreurs en même temps. Les 1 740 € récupérés la première année ont payé largement l'abonnement.",
   },
 ];
 
@@ -339,29 +350,78 @@ const LEGAL_CONTENT = {
 /* ── Sous-composants footer ────────────────────────────────────── */
 
 function FooterLink({ href, onClick, children }) {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   if (onClick) {
     return (
       <button onClick={onClick} className="text-sm block text-left transition-colors"
-        style={{ color: C.muted }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
+        style={{ color: T.muted }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
         {children}
       </button>
     );
   }
   return (
     <a href={href} className="text-sm block transition-colors"
-      style={{ color: C.muted }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
+      style={{ color: T.muted }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
       {children}
     </a>
   );
 }
 
+/* ── Ambient orbs (hero cinematic depth) ────────────────────────── */
+
+function HeroOrbs() {
+  return (
+    <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "100vh", overflow: "hidden", pointerEvents: "none", zIndex: 1 }}>
+      <div style={{ position: "absolute", width: 700, height: 700, top: -280, left: -160, borderRadius: "50%", background: "#7c3aed", opacity: 0.11, filter: "blur(130px)", animation: "wt-orb-drift 22s ease-in-out infinite", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 500, height: 500, top: -80, right: -120, borderRadius: "50%", background: "#4f46e5", opacity: 0.09, filter: "blur(110px)", animation: "wt-orb-drift 28s ease-in-out infinite", animationDelay: "-9s", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 280, height: 280, top: "45%", left: "35%", borderRadius: "50%", background: "#6366f1", opacity: 0.06, filter: "blur(80px)", animation: "wt-orb-drift 17s ease-in-out infinite", animationDelay: "-5s", willChange: "transform" }} />
+    </div>
+  );
+}
+
+/* ── Count-up number on scroll entry ────────────────────────────── */
+
+function CountUpNumber({ end, suffix = "", duration = 1600 }) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setStarted(true); obs.disconnect(); }
+    }, { threshold: 0.6 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!started || end === 0) { setCount(end); return; }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setCount(end); return; }
+    let raf;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min((now - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setCount(Math.floor(end * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else setCount(end);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [started, end, duration]);
+  return <span ref={ref}>{count}{suffix}</span>;
+}
+
 /* ── Hero Background — Mesh Gradient Bleu ────────────────────────── */
 
 function HeroBackground() {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   return (
     <div className="absolute inset-x-0 top-0" aria-hidden="true" style={{
       height: 600,
@@ -369,9 +429,9 @@ function HeroBackground() {
       zIndex: 0,
       pointerEvents: "none",
       background: `
-        radial-gradient(ellipse 800px 500px at 20% 10%, ${C.blue}25, transparent 50%),
-        radial-gradient(ellipse 600px 400px at 80% 30%, ${C.blue}15, transparent 55%),
-        linear-gradient(to bottom, ${C.bgGradient}, transparent)
+        radial-gradient(ellipse 800px 500px at 20% 10%, ${T.blue}25, transparent 50%),
+        radial-gradient(ellipse 600px 400px at 80% 30%, ${T.blue}15, transparent 55%),
+        linear-gradient(to bottom, ${T.bgGradient}, transparent)
       `,
       maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
       WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
@@ -382,38 +442,40 @@ function HeroBackground() {
 /* ── Mockup téléphone (à côté du tableau de bord, façon Finary) ──── */
 
 function PhoneMockup() {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   return (
     <div className="hidden lg:block absolute" style={{ bottom: -56, right: -28, width: 200, zIndex: 10 }}>
-      <div className="rounded-[28px] p-1.5" style={{ background: "#0b1220", border: `1px solid ${C.border}`, boxShadow: "0 30px 70px -20px rgba(0,0,0,0.7)" }}>
-        <div className="rounded-[22px] overflow-hidden" style={{ background: C.panel }}>
+      <div className="rounded-[28px] p-1.5" style={{ background: "#0b1220", border: `1px solid ${T.border}`, boxShadow: "0 30px 70px -20px rgba(0,0,0,0.7)" }}>
+        <div className="rounded-[22px] overflow-hidden" style={{ background: T.panel }}>
           {/* Encoche */}
           <div className="flex justify-center pt-2.5 pb-1.5">
             <div className="w-14 h-3.5 rounded-full" style={{ background: "#0b1220" }} />
           </div>
           <div className="px-4 pb-4">
-            <div className="text-[10px] mb-1" style={{ color: C.muted }}>Patrimoine net</div>
-            <div className="text-xl font-black mb-1" style={{ color: C.text }}>284 500 €</div>
-            <div className="flex items-center gap-1 text-[10px] font-semibold mb-2" style={{ color: C.green }}>
+            <div className="text-[10px] mb-1" style={{ color: T.muted }}>Patrimoine net</div>
+            <div className="text-xl font-black mb-1" style={{ color: T.text }}>284 500 €</div>
+            <div className="flex items-center gap-1 text-[10px] font-semibold mb-2" style={{ color: T.green }}>
               <TrendingUp size={10} /> +12,4 %
             </div>
             <ResponsiveContainer width="100%" height={64}>
               <AreaChart data={HERO_SERIES} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="phoneGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={C.blue} stopOpacity={0.45} />
-                    <stop offset="100%" stopColor={C.blue} stopOpacity={0} />
+                    <stop offset="0%" stopColor={T.blue} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="value" stroke={C.blue} strokeWidth={2} fill="url(#phoneGrad)" />
+                <Area type="monotone" dataKey="value" stroke={T.blue} strokeWidth={2} fill="url(#phoneGrad)" />
               </AreaChart>
             </ResponsiveContainer>
             <div className="flex flex-col gap-2 mt-3">
               {[
-                { label: "Épargne mensuelle", value: "+850 €", color: C.green },
-                { label: "Progression FIRE", value: "67 %", color: C.blue },
+                { label: "Épargne mensuelle", value: "+850 €", color: T.green },
+                { label: "Progression FIRE", value: "67 %", color: T.blue },
               ].map((s) => (
-                <div key={s.label} className="flex items-center justify-between  px-3 py-2" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                  <span className="text-[10px]" style={{ color: C.muted }}>{s.label}</span>
+                <div key={s.label} className="flex items-center justify-between  px-3 py-2" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                  <span className="text-[10px]" style={{ color: T.muted }}>{s.label}</span>
                   <span className="text-xs font-bold" style={{ color: s.color }}>{s.value}</span>
                 </div>
               ))}
@@ -471,6 +533,8 @@ function InlineLogo({ domain, alt, size = 16 }) {
 }
 
 function SyncPhoneMockup() {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   const banks = [
     { name: "BNP Paribas",       domain: "bnpparibas.fr" },
     { name: "Société Générale",  domain: "particuliers.societegenerale.fr" },
@@ -480,24 +544,24 @@ function SyncPhoneMockup() {
     { name: "Boursorama",        domain: "boursorama.com" },
   ];
   return (
-    <div className="rounded-[28px] p-1.5" style={{ background: "#0b1220", border: `1px solid ${C.border}`, boxShadow: "0 30px 70px -20px rgba(0,0,0,0.7)", width: 220 }}>
-      <div className="rounded-[22px] overflow-hidden" style={{ background: C.panel }}>
+    <div className="rounded-[28px] p-1.5" style={{ background: "#0b1220", border: `1px solid ${T.border}`, boxShadow: "0 30px 70px -20px rgba(0,0,0,0.7)", width: 220 }}>
+      <div className="rounded-[22px] overflow-hidden" style={{ background: T.panel }}>
         {/* Encoche */}
         <div className="flex justify-center pt-2.5 pb-1.5">
           <div className="w-14 h-3.5 rounded-full" style={{ background: "#0b1220" }} />
         </div>
         <div className="px-4 pb-4">
-          <div className="text-xs font-bold mb-3" style={{ color: C.text }}>Synchroniser mes comptes :</div>
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-            <Search size={12} style={{ color: C.muted }} />
-            <span className="text-[11px]" style={{ color: C.muted }}>Trouvez un établissement</span>
+          <div className="text-xs font-bold mb-3" style={{ color: T.text }}>Synchroniser mes comptes :</div>
+          <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+            <Search size={12} style={{ color: T.muted }} />
+            <span className="text-[11px]" style={{ color: T.muted }}>Trouvez un établissement</span>
           </div>
           <div className="flex flex-col gap-2">
             {banks.map((b) => (
-              <div key={b.name} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+              <div key={b.name} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
                 <BankLogo name={b.name} domain={b.domain} />
-                <span className="text-[11px] font-medium flex-1" style={{ color: C.text }}>{b.name}</span>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: C.green }} />
+                <span className="text-[11px] font-medium flex-1" style={{ color: T.text }}>{b.name}</span>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.green }} />
               </div>
             ))}
           </div>
@@ -530,6 +594,8 @@ function Reveal({ children }) {
 }
 
 function LegalModal({ id, onClose }) {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   const content = LEGAL_CONTENT[id];
 
   useEffect(() => {
@@ -552,26 +618,26 @@ function LegalModal({ id, onClose }) {
         onClick={(e) => e.stopPropagation()}
         role="dialog" aria-modal="true" aria-label={content.title}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black" style={{ color: C.text }}>{content.title}</h2>
+          <h2 className="text-xl font-black" style={{ color: T.text }}>{content.title}</h2>
           <button onClick={onClose} aria-label="Fermer" className="rounded-lg p-2 transition-colors"
-            style={{ color: C.muted, background: "rgba(255,255,255,0.03)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
+            style={{ color: T.muted, background: T.veil3 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
             <X size={16} />
           </button>
         </div>
         <div className="space-y-5">
           {content.sections.map((s, i) => (
             <div key={i}>
-              <h3 className="text-sm font-bold mb-2" style={{ color: C.text }}>{s.heading}</h3>
+              <h3 className="text-sm font-bold mb-2" style={{ color: T.text }}>{s.heading}</h3>
               {s.body.map((p, j) => (
-                <p key={j} className="text-sm leading-relaxed mb-1.5" style={{ color: C.muted }}>{p}</p>
+                <p key={j} className="text-sm leading-relaxed mb-1.5" style={{ color: T.muted }}>{p}</p>
               ))}
               {s.list && (
                 <ul className="space-y-1 mt-1">
                   {s.list.map((l, j) => (
-                    <li key={j} className="text-sm leading-relaxed flex items-start gap-2" style={{ color: C.muted }}>
-                      <span style={{ color: C.blue }}>•</span> {l}
+                    <li key={j} className="text-sm leading-relaxed flex items-start gap-2" style={{ color: T.muted }}>
+                      <span style={{ color: T.blue }}>•</span> {l}
                     </li>
                   ))}
                 </ul>
@@ -585,6 +651,8 @@ function LegalModal({ id, onClose }) {
 }
 
 function PourquoiModal({ onClose }) {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -603,33 +671,33 @@ function PourquoiModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
         role="dialog" aria-modal="true" aria-label="Pourquoi WealthTrack ?">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black" style={{ color: C.text }}>Pourquoi WealthTrack ?</h2>
+          <h2 className="text-xl font-black" style={{ color: T.text }}>Pourquoi WealthTrack ?</h2>
           <button onClick={onClose} aria-label="Fermer" className="rounded-lg p-2 transition-colors"
-            style={{ color: C.muted, background: "rgba(255,255,255,0.03)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
+            style={{ color: T.muted, background: T.veil3 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
             <X size={16} />
           </button>
         </div>
-        <p className="text-sm mb-6" style={{ color: C.muted }}>L'histoire derrière l'outil — racontée par celui qui l'utilise tous les jours.</p>
+        <p className="text-sm mb-6" style={{ color: T.muted }}>L'histoire derrière l'outil — racontée par celui qui l'utilise tous les jours.</p>
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-3 md:w-48 shrink-0">
             <div className="rounded-2xl w-16 h-16 md:w-20 md:h-20 flex items-center justify-center text-xl md:text-2xl font-black shrink-0"
-              style={{ background: `linear-gradient(135deg, ${C.blue}, #8b5cf6)`, color: "#fff" }}>
+              style={{ background: `linear-gradient(135deg, ${T.blue}, #8b5cf6)`, color: "#fff" }}>
               FM
             </div>
             <div>
-              <div className="font-bold" style={{ color: C.text }}>Félix</div>
-              <div className="text-xs mb-2" style={{ color: C.muted }}>Étudiant · Fondateur de WealthTrack</div>
+              <div className="font-bold" style={{ color: T.text }}>Félix</div>
+              <div className="text-xs mb-2" style={{ color: T.muted }}>Étudiant · Fondateur de WealthTrack</div>
               <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{ background: `${C.green}18`, color: C.green }}>
+                style={{ background: `${T.green}18`, color: T.green }}>
                 <Flag size={12} /> Objectif personnel : FIRE
               </div>
             </div>
           </div>
-          <div className="flex-1 space-y-4 text-sm leading-relaxed" style={{ color: C.muted }}>
+          <div className="flex-1 space-y-4 text-sm leading-relaxed" style={{ color: T.muted }}>
             <p>
-              <span style={{ color: C.text, fontWeight: 600 }}>Je m'appelle Félix, je suis étudiant</span> — et comme beaucoup, j'ai découvert le mouvement FIRE (<em>Financial Independence, Retire Early</em>) un peu par hasard. Depuis, une obsession : savoir exactement où en est mon patrimoine, et combien de temps il me reste avant de pouvoir en vivre.
+              <span style={{ color: T.text, fontWeight: 600 }}>Je m'appelle Félix, je suis étudiant</span> — et comme beaucoup, j'ai découvert le mouvement FIRE (<em>Financial Independence, Retire Early</em>) un peu par hasard. Depuis, une obsession : savoir exactement où en est mon patrimoine, et combien de temps il me reste avant de pouvoir en vivre.
             </p>
             <p>
               Le problème, c'est qu'aucun outil ne correspondait vraiment à ma situation. Les tableurs Excel deviennent vite ingérables, les applications bancaires n'affichent que des soldes bruts, et les simulateurs « pro » sont pensés pour des patrimoines bien plus confortables que celui d'un étudiant qui démarre avec 50 € par mois.
@@ -637,7 +705,7 @@ function PourquoiModal({ onClose }) {
             <p>
               J'ai donc construit WealthTrack pour moi-même : un outil qui calcule ma fiscalité réelle (PEA, CTO, assurance-vie), qui projette mes 30 prochaines années sans enjoliver les rendements, et qui me dit concrètement quoi faire ensuite — pas juste « épargnez plus ».
             </p>
-            <p style={{ color: C.text, fontWeight: 600 }}>
+            <p style={{ color: T.text, fontWeight: 600 }}>
               Mon objectif est simple : atteindre l'indépendance financière le plus vite possible, avec méthode plutôt qu'avec espoir. Si vous visez la même chose, j'espère que WealthTrack vous fera gagner autant de temps qu'il m'en fait gagner.
             </p>
           </div>
@@ -650,19 +718,21 @@ function PourquoiModal({ onClose }) {
 /* ── Composant principal ───────────────────────────────────────── */
 
 export default function Landing({ onStart }) {
+  const { isDark } = useTheme();
+  const T = isDark ? C : CL;
   const [openFaq, setOpenFaq] = useState(null);
   const [legalModal, setLegalModal] = useState(null);
   const [showPourquoi, setShowPourquoi] = useState(false);
 
   const btn = {
     primary: {
-      background: C.gradientPrimary,
+      background: T.gradientPrimary,
       color: "#fff",
-      boxShadow: glow(C.violet, 40, "33"),
+      boxShadow: glow(T.violet, 40, "33"),
     },
     ghost: {
-      border: `1px solid ${C.border}`,
-      color: C.muted,
+      border: `1px solid ${T.border}`,
+      color: T.muted,
       background: "transparent",
     },
   };
@@ -671,31 +741,32 @@ export default function Landing({ onStart }) {
   const primaryHover = {
     onMouseEnter: (e) => {
       e.currentTarget.style.transform = "translateY(-1px) scale(1.015)";
-      e.currentTarget.style.boxShadow = glow(C.violet, 56, "55");
+      e.currentTarget.style.boxShadow = glow(T.violet, 56, "55");
     },
     onMouseLeave: (e) => {
       e.currentTarget.style.transform = "";
-      e.currentTarget.style.boxShadow = glow(C.violet, 40, "33");
+      e.currentTarget.style.boxShadow = glow(T.violet, 40, "33");
     },
   };
   const ghostHover = {
     onMouseEnter: (e) => {
-      e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
-      e.currentTarget.style.color = C.text;
-      e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+      e.currentTarget.style.borderColor = T.veilBorder;
+      e.currentTarget.style.color = T.text;
+      e.currentTarget.style.background = T.veil4;
     },
     onMouseLeave: (e) => {
-      e.currentTarget.style.borderColor = C.border;
-      e.currentTarget.style.color = C.muted;
+      e.currentTarget.style.borderColor = T.border;
+      e.currentTarget.style.color = T.muted;
       e.currentTarget.style.background = "transparent";
     },
   };
 
   return (
-    <div style={{ color: C.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+    <div style={{ color: T.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <AnoAI />
+      <HeroOrbs />
 
-      <div className="relative z-10">
+      <div className="relative z-10" style={{ zIndex: 2 }}>
         <ScrollProgressBar />
 
         <HeroBackground />
@@ -704,95 +775,111 @@ export default function Landing({ onStart }) {
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-16 py-4"
         style={{ background: "transparent", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         <div className="flex items-center gap-3">
-          <div className="rounded-xl p-2" style={{ background: C.blue }}>
+          <div className="rounded-xl p-2" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}>
             <BarChart3 size={18} color="#fff" />
           </div>
-          <span className="text-lg font-bold tracking-tight" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+          <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onStart} className="hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
-            style={{ color: C.muted }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}>
+          <button onClick={onStart} className="relative group overflow-hidden hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
+            style={{ color: T.muted }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
+            <NeonGlow color={T.blue} />
             Se connecter
           </button>
           <ThemeToggle />
-          <button onClick={onStart} className="text-sm font-semibold px-5 py-2.5 rounded-xl"
+          <button onClick={onStart} className="relative group overflow-hidden text-sm font-semibold px-5 py-2.5 rounded-xl"
             style={btn.primary} {...primaryHover}>
-            Accès gratuit
+            <NeonGlow />
+            Commencer gratuitement
           </button>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative text-center px-6 md:px-16 pt-24 pb-16 max-w-4xl mx-auto wt-stagger">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8 wt-slide-up wt-hero-enter"
-          style={{ background: `${C.blue}18`, border: `1px solid ${C.blue}44`, color: C.blue }}>
-          <Shield size={12} /> Outil de simulation patrimoniale · Non conseil en investissement (AMF)
-        </div>
-        <h1 className="text-5xl md:text-7xl font-black mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter" style={{ color: C.text }}>
-          Simulez.{" "}
-          <span style={{ background: `linear-gradient(135deg, ${C.blue}, #60a5fa)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+      <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-left sm:text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter"
+          style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>
+          <span style={{ background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #4f46e5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Simulez.
+          </span>{" "}
+          <span style={{ background: "linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Comprenez.
           </span>
-          <br /><span style={{ color: C.blue }}>Décidez.</span>
+          <br /><span className="wt-shiny-text" style={{ backgroundImage: `linear-gradient(110deg, #7c3aed 20%, #c4b5fd 45%, ${T.shineAccent} 55%, #818cf8 70%, #4f46e5 90%)` }}>Décidez.</span>
         </h1>
-        <p className="text-lg md:text-xl mb-4 max-w-2xl mx-auto leading-relaxed wt-slide-up wt-hero-enter" style={{ color: C.muted }}>
-          WealthTrack vous permet de{" "}
-          <span style={{ color: C.text, fontWeight: 600 }}>comprendre vos finances en profondeur</span>{" "}
-          et d'agir avec méthode. Un outil de simulation, pas un agrégateur passif.
+        <p className="text-base sm:text-lg md:text-xl mb-4 max-w-2xl sm:mx-auto leading-relaxed wt-slide-up wt-hero-enter" style={{ color: T.muted }}>
+          Reliez vos comptes, et{" "}
+          <span style={{ color: T.text, fontWeight: 600 }}>projetez votre patrimoine à 10, 20 ou 30 ans</span>{" "}
+          avant de prendre la moindre décision.
         </p>
-        <p className="text-sm mb-10 wt-slide-up" style={{ color: "#475569" }}>
-          Fiscalité nette · Immobilier · Mode couple · Simulations 30 ans · Plans d'action chiffrés
+        <p className="text-sm mb-8 wt-slide-up hidden sm:block" style={{ color: T.subtle1 }}>
+          Vision patrimoniale · PEA, AV, Crypto & Immo · Objectif FIRE
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 wt-slide-up">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3 mb-6 wt-slide-up">
           <button onClick={onStart}
-            className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold wt-button-press"
+            className="relative group overflow-hidden flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold wt-button-press w-full sm:w-auto"
             style={btn.primary} {...primaryHover}>
-            Démarrer gratuitement <ArrowRight size={18} />
+            <NeonGlow />
+            Commencer gratuitement <ArrowRight size={18} />
           </button>
-          <button onClick={onStart} className="px-8 py-4 rounded-2xl text-base font-medium transition-colors"
+          <button
+            onClick={() => document.getElementById("dashboard-preview")?.scrollIntoView({ behavior: "smooth" })}
+            className="relative group overflow-hidden px-8 py-4 rounded-2xl text-base font-medium transition-colors hidden sm:flex items-center justify-center"
             style={btn.ghost} {...ghostHover}>
+            <NeonGlow color={T.blue} />
             Voir la démonstration
           </button>
         </div>
-        <p className="text-xs wt-slide-up" style={{ color: "#475569" }}>
-          Accès immédiat · Données locales par défaut · RGPD compliant
-        </p>
+        {/* Mobile trust line */}
+        <div className="flex items-center gap-3 sm:hidden mb-4 wt-slide-up">
+          <div className="flex items-center gap-1 text-xs" style={{ color: T.green }}>
+            <Shield size={11} /> Données locales
+          </div>
+          <span style={{ color: T.subtle1 }}>·</span>
+          <span className="text-xs" style={{ color: T.subtle1 }}>Gratuit pour commencer</span>
+          <span style={{ color: T.subtle1 }}>·</span>
+          <span className="text-xs" style={{ color: T.subtle1 }}>Pas de CB</span>
+        </div>
+        <div className="items-center gap-2 px-3 py-1 rounded-full text-xs mt-1 wt-slide-up hidden sm:inline-flex"
+          style={{ background: `${T.blue}10`, border: `1px solid ${T.blue}25`, color: T.muted }}>
+          <Shield size={10} /> Simulation uniquement · Non conseil en investissement (AMF)
+        </div>
       </section>
 
       {/* ── DASHBOARD PREVIEW ── */}
-      <div className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-5xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden"
-          style={{ border: `1px solid ${C.border}`, background: C.panel, boxShadow: "0 30px 80px -30px rgba(0,0,0,0.6)" }}>
+      <div id="dashboard-preview" className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-5xl mx-auto">
+        <div className="relative rounded-3xl overflow-hidden wt-glow-pulse wt-glass"
+          style={{ border: `1px solid ${T.border}`, background: isDark ? "rgba(7,13,26,0.88)" : T.card }}>
 
           {/* Halos lumineux animés */}
           <div className="absolute pointer-events-none rounded-full"
-            style={{ width: 320, height: 320, top: -120, left: -100, background: C.blue, opacity: 0.18, filter: "blur(90px)", animation: "wt-blob 14s ease-in-out infinite" }} />
+            style={{ width: 320, height: 320, top: -120, left: -100, background: T.blue, opacity: 0.18, filter: "blur(90px)", animation: "wt-blob 14s ease-in-out infinite" }} />
           <div className="absolute pointer-events-none rounded-full"
-            style={{ width: 280, height: 280, bottom: -120, right: -80, background: C.green, opacity: 0.16, filter: "blur(90px)", animation: "wt-blob 16s ease-in-out infinite", animationDelay: "-6s" }} />
+            style={{ width: 280, height: 280, bottom: -120, right: -80, background: T.green, opacity: 0.16, filter: "blur(90px)", animation: "wt-blob 16s ease-in-out infinite", animationDelay: "-6s" }} />
 
           {/* Barre de fenêtre */}
           <div className="relative flex items-center gap-2 px-5 py-3"
-            style={{ borderBottom: `1px solid ${C.border}`, background: "rgba(255,255,255,0.02)" }}>
+            style={{ borderBottom: `1px solid ${T.border}`, background: T.veil2 }}>
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5a623" }} />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#27a37a" }} />
-            <span className="ml-3 text-xs" style={{ color: C.muted }}>wealthtrack.app · Tableau de bord</span>
+            <span className="ml-3 text-xs" style={{ color: T.muted }}>wealthtrack.app · Tableau de bord</span>
           </div>
 
           {/* Contenu */}
           <div className="relative flex">
             {/* Sidebar miniature — fonctionnalités réelles de l'app */}
-            <div className="hidden md:flex flex-col gap-1 p-3 shrink-0" style={{ width: 176, borderRight: `1px solid ${C.border}` }}>
+            <div className="hidden md:flex flex-col gap-1 p-3 shrink-0" style={{ width: 176, borderRight: `1px solid ${T.border}` }}>
               {SIDEBAR_PREVIEW_ITEMS.map((it) => {
                 const Icon = it.icon;
                 return (
                   <div key={it.label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium"
                     style={{
-                      background: it.active ? C.gradientPrimary : "transparent",
-                      color: it.active ? "#fff" : C.muted,
-                      boxShadow: it.active ? glow(C.violet, 18, "33") : "none",
+                      background: it.active ? T.gradientPrimary : "transparent",
+                      color: it.active ? "#fff" : T.muted,
+                      boxShadow: it.active ? glow(T.violet, 18, "33") : "none",
                     }}>
                     <Icon size={14} />
                     {it.label}
@@ -803,28 +890,28 @@ export default function Landing({ onStart }) {
 
             <div className="flex-1 p-5 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Patrimoine + courbe */}
-            <div className="md:col-span-2 rounded-2xl p-5 text-left" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <div className="text-xs mb-1" style={{ color: C.muted }}>Patrimoine net total</div>
-              <div className="text-3xl font-black mb-1" style={{ color: C.text }}>284 500 €</div>
-              <div className="flex items-center gap-1 text-xs font-semibold mb-2" style={{ color: C.green }}>
+            <div className="md:col-span-2 rounded-2xl p-5 text-left" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="text-xs mb-1" style={{ color: T.muted }}>Patrimoine net total</div>
+              <div className="text-3xl font-black mb-1" style={{ color: T.text }}>284 500 €</div>
+              <div className="flex items-center gap-1 text-xs font-semibold mb-2" style={{ color: T.green }}>
                 <TrendingUp size={12} /> +12,4 % sur 12 mois
               </div>
               <ResponsiveContainer width="100%" height={130}>
                 <AreaChart data={HERO_SERIES} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={C.blue} stopOpacity={0.45} />
-                      <stop offset="100%" stopColor={C.blue} stopOpacity={0} />
+                      <stop offset="0%" stopColor={T.blue} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="value" stroke={C.blue} strokeWidth={2} fill="url(#heroGrad)" />
+                  <Area type="monotone" dataKey="value" stroke={T.blue} strokeWidth={2} fill="url(#heroGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             {/* Répartition */}
-            <div className="rounded-2xl p-5 text-left" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <div className="text-xs mb-2" style={{ color: C.muted }}>Répartition</div>
+            <div className="rounded-2xl p-5 text-left" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="text-xs mb-2" style={{ color: T.muted }}>Répartition</div>
               <ResponsiveContainer width="100%" height={110}>
                 <PieChart>
                   <Pie data={HERO_ALLOC} dataKey="value" nameKey="name" innerRadius={30} outerRadius={48} paddingAngle={3} stroke="none">
@@ -834,7 +921,7 @@ export default function Landing({ onStart }) {
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-1">
                 {HERO_ALLOC.map((a) => (
-                  <span key={a.name} className="text-[10px] flex items-center gap-1" style={{ color: C.muted }}>
+                  <span key={a.name} className="text-[10px] flex items-center gap-1" style={{ color: T.muted }}>
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.color }} /> {a.name}
                   </span>
                 ))}
@@ -842,26 +929,26 @@ export default function Landing({ onStart }) {
             </div>
 
             {/* Mini stats — diversified sizing */}
-            <div className="md:col-span-1 rounded-2xl p-5 text-left" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <div className="text-xs mb-2" style={{ color: C.muted }}>Épargne mensuelle</div>
-              <div className="text-2xl font-black" style={{ color: C.green }}>+850 €</div>
+            <div className="md:col-span-1 rounded-2xl p-5 text-left" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="text-xs mb-2" style={{ color: T.muted }}>Épargne mensuelle</div>
+              <div className="text-2xl font-black" style={{ color: T.green }}>+850 €</div>
             </div>
-            <div className="rounded-2xl p-4 flex items-center gap-3 text-left" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <div className="rounded-xl p-2 shrink-0" style={{ background: C.blue + "1a" }}>
-                <Target size={16} style={{ color: C.blue }} />
+            <div className="rounded-2xl p-4 flex items-center gap-3 text-left" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="rounded-xl p-2 shrink-0" style={{ background: T.blue + "1a" }}>
+                <Target size={16} style={{ color: T.blue }} />
               </div>
               <div>
-                <div className="text-sm font-bold" style={{ color: C.text }}>67 %</div>
-                <div className="text-[10px]" style={{ color: C.muted }}>Progression FIRE</div>
+                <div className="text-sm font-bold" style={{ color: T.text }}>67 %</div>
+                <div className="text-[10px]" style={{ color: T.muted }}>Progression FIRE</div>
               </div>
             </div>
-            <div className="rounded-2xl p-4 flex items-center gap-3 text-left" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <div className="rounded-xl p-2 shrink-0" style={{ background: C.amber + "1a" }}>
-                <Home size={16} style={{ color: C.amber }} />
+            <div className="rounded-2xl p-4 flex items-center gap-3 text-left" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="rounded-xl p-2 shrink-0" style={{ background: T.amber + "1a" }}>
+                <Home size={16} style={{ color: T.amber }} />
               </div>
               <div>
-                <div className="text-sm font-bold" style={{ color: C.text }}>312 k€</div>
-                <div className="text-[10px]" style={{ color: C.muted }}>Capacité d'emprunt</div>
+                <div className="text-sm font-bold" style={{ color: T.text }}>312 k€</div>
+                <div className="text-[10px]" style={{ color: T.muted }}>Capacité d'emprunt</div>
               </div>
             </div>
             </div>
@@ -874,17 +961,19 @@ export default function Landing({ onStart }) {
 
       {/* ── STATS ── */}
       <div className="px-6 md:px-16 mb-20 max-w-4xl mx-auto">
-        <div className="rounded-2xl p-8 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-8"
-          style={{ background: C.panel, border: `1px solid ${C.border}` }}>
+        <div className="rounded-2xl p-8 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-8 wt-glass"
+          style={{ background: isDark ? "rgba(7,13,26,0.85)" : T.card, border: `1px solid ${T.border}`, boxShadow: isDark ? "inset 0 1px 0 rgba(255,255,255,0.04)" : "none" }}>
           {[
-            ["0",       "utilisateurs actifs"],
-            ["0 €",     "patrimoine simulé"],
-            ["0",       "satisfaction"],
-            ["0 €",     "pour commencer"],
-          ].map(([v, l]) => (
-            <div key={l} className="text-center">
-              <div className="text-2xl md:text-3xl font-black mb-2" style={{ color: C.blue }}>{v}</div>
-              <div className="text-xs leading-tight" style={{ color: C.muted }}>{l}</div>
+            { end: 16,  suffix: "",     label: "modules de simulation" },
+            { end: 30,  suffix: " ans", label: "d'horizon de projection" },
+            { end: 100, suffix: "%",    label: "données sous contrôle" },
+            { end: 0,   suffix: " €",   label: "pour commencer" },
+          ].map(({ end, suffix, label }) => (
+            <div key={label} className="text-center">
+              <div className="text-2xl md:text-3xl font-black mb-2" style={{ color: T.blue }}>
+                <CountUpNumber end={end} suffix={suffix} />
+              </div>
+              <div className="text-xs leading-tight" style={{ color: T.muted }}>{label}</div>
             </div>
           ))}
         </div>
@@ -893,8 +982,8 @@ export default function Landing({ onStart }) {
       {/* ── POUR QUI ── */}
       <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: C.text }}>Conçu pour votre situation</h2>
-          <p style={{ color: C.muted }}>Chaque profil patrimonial trouve une réponse dans WealthTrack.</p>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Votre situation. Votre simulation.</h2>
+          <p style={{ color: T.muted }}>WealthTrack s'adapte à votre profil — pas l'inverse.</p>
         </div>
         <Reveal>
           {(ref, inView) => (
@@ -902,17 +991,17 @@ export default function Landing({ onStart }) {
               {PERSONAS.map((p) => {
                 const Icon = p.icon;
                 return (
-                  <button key={p.title} onClick={onStart}
-                    className={`text-left rounded-2xl p-6 transition-all wt-button-press wt-card-hover wt-card-enter ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ background: C.panel, border: `1px solid ${C.border}` }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blue + "66"; e.currentTarget.style.background = `${C.blue}08`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.panel; }}>
-                    <div className="rounded-xl p-3 w-fit mb-4" style={{ background: `${C.blue}18` }}>
-                      <Icon size={20} style={{ color: C.blue }} />
+                  <div key={p.title}
+                    className={`text-left rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.blue + "66"; e.currentTarget.style.background = `${T.blue}08`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
+                    <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: `${T.blue}18` }}>
+                      <Icon size={18} style={{ color: T.blue }} />
                     </div>
-                    <h3 className="text-base font-bold mb-2" style={{ color: C.text }}>{p.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: C.muted }}>{p.desc}</p>
-                  </button>
+                    <h3 className="text-base font-bold mb-1.5" style={{ color: T.text }}>{p.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
+                  </div>
                 );
               })}
             </div>
@@ -921,10 +1010,10 @@ export default function Landing({ onStart }) {
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
+      <section id="fonctionnalites" className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: C.text }}>Des outils qui répondent à de vraies questions</h2>
-          <p style={{ color: C.muted }}>Une plateforme complète de simulation patrimoniale — pas de fonctionnalités gadgets, des modules qui traitent des problématiques concrètes.</p>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Moins de doutes. Plus de décisions.</h2>
+          <p style={{ color: T.muted }}>Chaque module répond à une question concrète — PEA vs AV, capacité d'emprunt, indépendance financière, fiscalité crypto.</p>
         </div>
         <Reveal>
           {(ref, inView) => (
@@ -932,19 +1021,15 @@ export default function Landing({ onStart }) {
               {FEATURES.map((f) => {
                 const Icon = f.icon;
                 return (
-                  <div key={f.title} className={`p-6 transition-all wt-card-hover wt-card-enter ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ background: C.panel, border: `1px solid ${C.border}` }}
+                  <div key={f.title} className={`rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter cursor-pointer ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{ background: T.panel, border: `1px solid ${T.border}` }}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = f.color + "66"; e.currentTarget.style.background = `${f.color}08`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.panel; }}>
-                    <div className="rounded-xl p-3 w-fit mb-4" style={{ background: f.color + "1a" }}>
-                      <Icon size={20} style={{ color: f.color }} />
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
+                    <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: f.color + "1a" }}>
+                      <Icon size={18} style={{ color: f.color }} />
                     </div>
-                    <h3 className="font-bold text-base mb-2" style={{ color: C.text }}>{f.title}</h3>
-                    <p className="text-sm leading-relaxed mb-4" style={{ color: C.muted }}>{f.desc}</p>
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full"
-                      style={{ background: f.color + "1a", color: f.color }}>
-                      {f.stat}
-                    </span>
+                    <h3 className="font-bold text-base mb-1.5" style={{ color: T.text }}>{f.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
                   </div>
                 );
               })}
@@ -956,8 +1041,8 @@ export default function Landing({ onStart }) {
       {/* ── PASSONS À L'ACTION ── */}
       <section id="comment-ca-marche" className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: C.text }}>Passez à l'action en 3 étapes</h2>
-          <p style={{ color: C.muted }}>De l'inscription au plan d'action chiffré, sans complexité inutile.</p>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Opérationnel en 3 minutes</h2>
+          <p style={{ color: T.muted }}>Inscription, connexion de vos comptes, premier plan d'action — tout ça avant votre prochain café.</p>
         </div>
         <Reveal>
           {(ref, inView) => (
@@ -965,7 +1050,7 @@ export default function Landing({ onStart }) {
               <div className="relative flex flex-col gap-8">
                 {/* Ligne reliant les 3 étapes */}
                 <div className="absolute left-5 top-5 bottom-5 w-px" aria-hidden="true"
-                  style={{ background: `linear-gradient(to bottom, ${C.violet}80, ${C.blue}80, ${C.green}80)` }} />
+                  style={{ background: `linear-gradient(to bottom, ${T.violet}80, ${T.blue}80, ${T.green}80)` }} />
                 {STEPS.map((s, i) => {
                   const Icon = s.icon;
                   return (
@@ -976,11 +1061,11 @@ export default function Landing({ onStart }) {
                       </div>
                       <div className="pt-1">
                         <div className="text-xs font-black tracking-wide mb-1"
-                          style={{ background: C.gradientPrimary, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                          style={{ background: T.gradientPrimary, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                           ÉTAPE 0{i + 1}
                         </div>
-                        <h3 className="text-base font-bold mb-1.5" style={{ color: C.text }}>{s.title}</h3>
-                        <p className="text-sm leading-relaxed" style={{ color: C.muted, whiteSpace: "pre-line" }}>{s.desc}</p>
+                        <h3 className="text-base font-bold mb-1.5" style={{ color: T.text }}>{s.title}</h3>
+                        <p className="text-sm leading-relaxed" style={{ color: T.muted, whiteSpace: "pre-line" }}>{s.desc}</p>
                       </div>
                     </div>
                   );
@@ -994,9 +1079,10 @@ export default function Landing({ onStart }) {
         </Reveal>
         <div className="text-center mt-10">
           <button onClick={onStart}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold"
+            className="relative group overflow-hidden inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold"
             style={btn.primary} {...primaryHover}>
-            Créer mon compte gratuitement <ArrowRight size={18} />
+            <NeonGlow />
+            Commencer gratuitement <ArrowRight size={18} />
           </button>
         </div>
       </section>
@@ -1004,8 +1090,8 @@ export default function Landing({ onStart }) {
       {/* ── TÉMOIGNAGES ── */}
       <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: C.text }}>Ce qu'en disent nos utilisateurs</h2>
-          <p style={{ color: C.muted }}>Retours d'expérience sur la prise en main et les résultats obtenus.</p>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Ce qu'en disent nos utilisateurs</h2>
+          <p style={{ color: T.muted }}>Retours d'expérience sur la prise en main et les résultats obtenus.</p>
         </div>
         <Reveal>
           {(ref, inView) => (
@@ -1013,45 +1099,44 @@ export default function Landing({ onStart }) {
               {TESTIMONIALS.map((t, idx) => (
                 <div
                   key={t.name}
-                  className={`rounded-2xl p-8 flex flex-col wt-card-hover wt-card-enter transition-all duration-300 ${inView ? "wt-slide-up" : "opacity-0"}`}
+                  className={`rounded-2xl p-8 flex flex-col wt-card-hover wt-glass transition-all duration-300 ${inView ? "opacity-100" : "opacity-0"}`}
                   style={{
-                    background: C.panel,
-                    border: `1px solid ${C.border}`,
+                    background: isDark ? "rgba(9,14,30,0.82)" : T.panel,
+                    border: `1px solid ${T.border}`,
                     animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
                     animationDelay: `${idx * 100}ms`,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = C.amber + "44";
-                    e.currentTarget.style.background = `${C.amber}05`;
-                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)";
+                    e.currentTarget.style.background = isDark ? "rgba(124,58,237,0.06)" : `${T.violet}08`;
+                    e.currentTarget.style.transform = "translateY(-3px)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.background = C.panel;
+                    e.currentTarget.style.borderColor = T.border;
+                    e.currentTarget.style.background = isDark ? "rgba(9,14,30,0.82)" : T.panel;
                     e.currentTarget.style.transform = "translateY(0)";
                   }}>
-                  <div className="flex gap-1 mb-5">
-                    {Array(5).fill(0).map((_, i) => (
-                      <Star key={i} size={16} fill={C.amber} style={{ color: C.amber }} />
-                    ))}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-5"
+                    style={{ background: `${T.green}18`, color: T.green, border: `1px solid ${T.green}30` }}>
+                    <Check size={10} /> {t.result}
                   </div>
-                  <p className="text-sm leading-relaxed mb-6 flex-1" style={{ color: C.text }}>
-                    «&nbsp;<span style={{ color: C.muted }}>{t.text}</span>&nbsp;»
+                  <p className="text-sm leading-relaxed mb-6 flex-1" style={{ color: T.text }}>
+                    «&nbsp;<span style={{ color: T.muted }}>{t.text}</span>&nbsp;»
                   </p>
-                  <div className="flex items-center gap-4 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
+                  <div className="flex items-center gap-4 pt-4" style={{ borderTop: `1px solid ${T.border}` }}>
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                       style={{
-                        background: `linear-gradient(135deg, ${C.blue} 0%, ${C.violet} 100%)`,
+                        background: `linear-gradient(135deg, ${T.blue} 0%, ${T.violet} 100%)`,
                         color: "#fff",
                       }}>
                       {t.initials}
                     </div>
                     <div>
-                      <div className="font-semibold text-sm" style={{ color: C.text }}>
+                      <div className="font-semibold text-sm" style={{ color: T.text }}>
                         {t.name}
                       </div>
-                      <div className="text-xs leading-tight" style={{ color: C.muted }}>
+                      <div className="text-xs leading-tight" style={{ color: T.muted }}>
                         {t.role}
                       </div>
                     </div>
@@ -1066,24 +1151,24 @@ export default function Landing({ onStart }) {
       {/* ── FAQ ── */}
       <section className="px-6 md:px-16 mb-20 max-w-3xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: C.text }}>Questions fréquentes</h2>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Questions fréquentes</h2>
         </div>
         <div className="space-y-2">
           {FAQS.map((faq, i) => (
-            <div key={i} className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+            <div key={i} className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
               <button className="w-full flex items-center justify-between px-6 py-4 text-left transition-colors"
-                style={{ background: openFaq === i ? `${C.blue}08` : "rgba(255,255,255,0.01)" }}
+                style={{ background: openFaq === i ? `${T.blue}08` : T.veil1 }}
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}>
-                <span className="font-semibold text-sm pr-4" style={{ color: C.text }}>{faq.q}</span>
+                <span className="font-semibold text-sm pr-4" style={{ color: T.text }}>{faq.q}</span>
                 <ChevronDown size={15} style={{
-                  color: C.muted, flexShrink: 0,
+                  color: T.muted, flexShrink: 0,
                   transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)",
                   transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                 }} />
               </button>
               <div style={{ display: "grid", gridTemplateRows: openFaq === i ? "1fr" : "0fr", transition: "grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}>
                 <div className="overflow-hidden">
-                  <div className="px-6 pb-5 pt-1 text-sm leading-relaxed" style={{ color: C.muted }}>
+                  <div className="px-6 pb-5 pt-1 text-sm leading-relaxed" style={{ color: T.muted }}>
                     {faq.a}
                   </div>
                 </div>
@@ -1094,7 +1179,7 @@ export default function Landing({ onStart }) {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="px-6 md:px-16 py-14" style={{ borderTop: `1px solid ${C.border}` }}>
+      <footer className="px-6 md:px-16 py-14" style={{ borderTop: `1px solid ${T.border}` }}>
         <div className="max-w-5xl mx-auto">
 
           {/* Colonnes */}
@@ -1102,33 +1187,33 @@ export default function Landing({ onStart }) {
             {/* Logo + accroche */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="rounded-lg p-1.5" style={{ background: C.blue }}>
+                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}>
                   <BarChart3 size={14} color="#fff" />
                 </div>
-                <span className="font-bold text-sm" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+                <span className="font-bold text-sm" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
               </div>
-              <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: C.muted }}>
+              <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: T.muted }}>
                 L'outil de simulation patrimoniale pour comprendre et piloter vos finances.
               </p>
             </div>
 
             {/* Produit */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: C.text }}>Produit</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: T.text }}>Produit</h4>
               <ul className="space-y-2.5">
-                <li><FooterLink onClick={onStart}>Tableau de bord</FooterLink></li>
-                <li><FooterLink onClick={onStart}>Simulations patrimoniales</FooterLink></li>
-                <li><FooterLink onClick={onStart}>Indépendance financière (FIRE)</FooterLink></li>
-                <li><FooterLink onClick={onStart}>Immobilier</FooterLink></li>
-                <li><FooterLink onClick={onStart}>Crypto & DeFi</FooterLink></li>
-                <li><FooterLink onClick={onStart}>Mode Couple</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Tableau de bord</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Simulations patrimoniales</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Indépendance financière (FIRE)</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Immobilier</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Crypto & DeFi</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Mode Couple</FooterLink></li>
                 <li><FooterLink href="#comment-ca-marche">Comment ça marche</FooterLink></li>
               </ul>
             </div>
 
             {/* À propos */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: C.text }}>À propos</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: T.text }}>À propos</h4>
               <ul className="space-y-2.5">
                 <li><FooterLink onClick={() => setShowPourquoi(true)}>Pourquoi WealthTrack</FooterLink></li>
                 <li><FooterLink href="mailto:felix.messer38@gmail.com">Contact</FooterLink></li>
@@ -1142,11 +1227,11 @@ export default function Landing({ onStart }) {
           </div>
 
           {/* Badges de confiance */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pt-8" style={{ borderTop: `1px solid ${C.border}` }}>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pt-8" style={{ borderTop: `1px solid ${T.border}` }}>
             {[
-              { icon: ShieldCheck, label: "RGPD Compliant",          color: C.green },
-              { icon: Database,    label: "Données locales par défaut", color: C.blue },
-              { icon: EyeOff,      label: "Aucun tracking",          color: C.blue },
+              { icon: ShieldCheck, label: "RGPD Compliant",          color: T.green },
+              { icon: Database,    label: "Données locales par défaut", color: T.blue },
+              { icon: EyeOff,      label: "Aucun tracking",          color: T.blue },
               { icon: Award,       label: "Outil pédagogique",       color: "#64748b" },
             ].map((b) => {
               const Icon = b.icon;
@@ -1159,14 +1244,14 @@ export default function Landing({ onStart }) {
             })}
           </div>
 
-          <p className="text-xs max-w-2xl mx-auto text-center leading-relaxed mb-4" style={{ color: "#334155" }}>
+          <p className="text-xs max-w-2xl mx-auto text-center leading-relaxed mb-4" style={{ color: T.subtle2 }}>
             WealthTrack est un outil d'aide à la décision financière à caractère pédagogique. Il ne constitue pas un conseil en investissement au sens des articles L. 321-1 et suivants du Code monétaire et financier, ni au sens de la réglementation AMF. Les simulations sont fournies à titre indicatif et ne garantissent pas les performances futures. Pour tout conseil personnalisé, consultez un professionnel agréé (CIF, CGP, expert-comptable).
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs mb-3" style={{ color: "#334155" }}>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs mb-3" style={{ color: T.subtle2 }}>
             <span>© 2026 WealthTrack</span>
           </div>
-          <p className="text-center" style={{ color: "#1e293b", fontSize: 10 }}>
+          <p className="text-center" style={{ color: T.subtle3, fontSize: 10 }}>
             Les performances passées ne préjugent pas des performances futures · Tout investissement comporte un risque de perte en capital
           </p>
         </div>
@@ -1175,6 +1260,8 @@ export default function Landing({ onStart }) {
 
       {legalModal && <LegalModal id={legalModal} onClose={() => setLegalModal(null)} />}
       {showPourquoi && <PourquoiModal onClose={() => setShowPourquoi(false)} />}
+
+      <AIChatWidget onSignup={onStart} />
 
     </div>
   );

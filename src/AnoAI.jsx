@@ -19,16 +19,14 @@ const AnoAI = () => {
       });
 
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setClearColor(0x0f172a, 1);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x020617, 1);
 
       // Ensure container is clear before appending
       while (container.firstChild) {
         container.removeChild(container.firstChild);
       }
       container.appendChild(renderer.domElement);
-
-      console.log("✅ AnoAI renderer created successfully");
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -108,19 +106,12 @@ const AnoAI = () => {
       scene.add(mesh);
 
       let frameId;
-      let frameCount = 0;
       const animate = () => {
-        frameCount++;
-        if (frameCount === 1) {
-          console.log("✅ AnoAI animation loop started");
-        }
-        material.uniforms.iTime.value += 0.016;
+        material.uniforms.iTime.value += 0.064;
         renderer.render(scene, camera);
         frameId = requestAnimationFrame(animate);
       };
       animate();
-
-      console.log("✅ AnoAI shader material compiled and mesh added");
 
       const handleResize = () => {
         renderer.setSize(window.innerWidth, window.innerHeight);

@@ -29,6 +29,80 @@ export const RATE_IMMO_APPRECIATION = 0.02; // Appréciation immobilière annuel
    volatiles, non adaptées à une projection de revenu retraite fiable). */
 export const RATE_CRYPTO_FI_PRUDENT = 0.05;
 
+/* ────────────────────────────────────────────────────────────────────
+   Scénarios de rendement (pessimiste / base / optimiste) par classe d'actif.
+   Un rendement réel n'est JAMAIS lisse : ces fourchettes servent à tracer
+   une BANDE d'incertitude autour de la trajectoire centrale, plutôt qu'une
+   fausse exponentielle parfaite. `base` reprend les constantes ci-dessus
+   pour rester cohérent avec FIRE / dashboard / PDF.
+   ──────────────────────────────────────────────────────────────────── */
+export const RATE_SCENARIOS = {
+  etf:    { pess: 0.04,  base: RATE_ETF_WORLD, opt: 0.12 },  // krach long / médiane / cycle porteur
+  livret: { pess: 0.01,  base: RATE_LIVRET_A,  opt: 0.03 },  // taux administré, faible amplitude
+  immo:   { pess: -0.01, base: RATE_IMMO_APPRECIATION, opt: 0.04 },
+  btc:    { pess: -0.10, base: 0.12,           opt: RATE_BTC }, // base ≪ historique : l'historique = borne haute
+  eth:    { pess: -0.12, base: 0.10,           opt: RATE_ETH },
+};
+
+/* ────────────────────────────────────────────────────────────────────
+   Hypothèses immobilières — achat à crédit (le levier EST l'intérêt de l'immo)
+   ──────────────────────────────────────────────────────────────────── */
+export const IMMO_DOWN_FRAC   = 0.10;  // apport personnel (10 %)
+export const IMMO_NOTARY_FRAC = 0.08;  // frais de notaire (~7-8 % ancien)
+export const IMMO_LOAN_RATE   = 0.035; // taux crédit annuel
+export const IMMO_LOAN_YEARS  = 25;    // durée du prêt
+
+/* Mensualité d'un prêt (annuité constante). */
+export function loanPayment(principal, annualRate, years) {
+  const i = annualRate / 12;
+  const n = years * 12;
+  if (i === 0) return principal / n;
+  return (principal * i) / (1 - Math.pow(1 + i, -n));
+}
+
+/* Capital restant dû après `monthsPaid` mensualités (amortissement réel —
+   courbe convexe : les intérêts dominent au début, pas une droite). */
+export function loanRemaining(principal, annualRate, years, monthsPaid) {
+  const i = annualRate / 12;
+  const n = years * 12;
+  if (monthsPaid >= n) return 0;
+  if (i === 0) return principal * (1 - monthsPaid / n);
+  const pmt = loanPayment(principal, annualRate, years);
+  return principal * Math.pow(1 + i, monthsPaid) - pmt * (Math.pow(1 + i, monthsPaid) - 1) / i;
+}
+
+/* Série annuelle d'un achat immobilier à crédit.
+   - cash investi = apport + frais de notaire + mensualités versées (sorties réelles)
+   - equity       = valeur du bien − capital restant dû
+   - gains        = equity − cash investi (peut être négatif au début à cause des frais) */
+export function immoDetailedSeries(price, years, startYear, opts = {}) {
+  const apprec  = opts.apprec  ?? RATE_IMMO_APPRECIATION;
+  const down    = (opts.downFrac   ?? IMMO_DOWN_FRAC)   * price;
+  const notary  = (opts.notaryFrac ?? IMMO_NOTARY_FRAC) * price;
+  const loanRate  = opts.loanRate  ?? IMMO_LOAN_RATE;
+  const loanYears = opts.loanYears ?? IMMO_LOAN_YEARS;
+  const principal = price - down;
+  const pmt = loanPayment(principal, loanRate, loanYears);
+  const out = [];
+  for (let y = 0; y <= years; y++) {
+    const propValue = price * Math.pow(1 + apprec, y);
+    const monthsPaid = Math.min(y * 12, loanYears * 12);
+    const remaining = loanRemaining(principal, loanRate, loanYears, monthsPaid);
+    const equity = Math.round(propValue - remaining);
+    const cash = Math.round(down + notary + pmt * monthsPaid);
+    out.push({
+      year: startYear + y,
+      capital: equity,
+      equity,                       // alias consommé par le graphique ImmoCard
+      apports: cash,
+      gains: equity - cash,
+      propValue: Math.round(propValue),
+      loanRemaining: Math.round(remaining),
+    });
+  }
+  return out;
+}
+
 // Alias rétro-compatibles (anciens noms utilisés dans App.jsx/Simulations)
 export const RATE_A = RATE_ETF_WORLD;
 export const RATE_C = RATE_LIVRET_A;
@@ -84,6 +158,24 @@ export function fvDetailedSeries(initial, monthly, annualRate, years, startYear)
   return out;
 }
 
+/** Série détaillée avec BANDE d'incertitude pess/base/opt.
+   `scenario` = { pess, base, opt }. Ajoute capPess/capOpt + `range` (paire
+   [pess, opt] consommée par une Area Recharts pour dessiner la bande). */
+export function fvBandSeries(initial, monthly, scenario, years, startYear) {
+  const out = [];
+  for (let y = 0; y <= years; y++) {
+    const apports = Math.round(initial + monthly * 12 * y);
+    const capital = Math.round(fv(initial, monthly, scenario.base, y));
+    const capPess = Math.round(fv(initial, monthly, scenario.pess, y));
+    const capOpt  = Math.round(fv(initial, monthly, scenario.opt,  y));
+    out.push({
+      year: startYear + y, capital, apports, gains: capital - apports,
+      capPess, capOpt, range: [capPess, capOpt],
+    });
+  }
+  return out;
+}
+
 /* ────────────────────────────────────────────────────────────────────
    Capacité d'emprunt / mensualité (formule de l'annuité)
    PV = PMT·[1-(1+i)^-n]/i
@@ -105,6 +197,7 @@ export function loanCap(monthly, annualRate, years) {
 export function longTermGain(monthlyAmount, years = 20, annualRate = RATE_ETF_WORLD) {
   const r = annualRate / 12;
   const n = years * 12;
+  if (r === 0) return 0; // taux nul : aucun intérêt, gain nul (évite la division par zéro → NaN)
   const result = monthlyAmount * (Math.pow(1 + r, n) - 1) / r;
   return Math.round(result - monthlyAmount * n);
 }

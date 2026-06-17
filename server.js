@@ -27,6 +27,7 @@ import multer     from "multer";
 import Papa       from "papaparse";
 import rateLimit  from "express-rate-limit";
 import path       from "path";
+import { createClient } from "@supabase/supabase-js";
 
 const app    = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -61,6 +62,37 @@ const aiLimiter     = rateLimit({ windowMs: 60 * 1000, max: 20,  standardHeaders
   message: { success: false, error: "Trop de requêtes IA. Réessayez dans une minute." } });
 
 app.use("/api", apiLimiter);
+
+/* ─── Authentification (vérif JWT Supabase) ──────────────────────────
+   Protège les endpoints coûteux (IA). Le front envoie le token Supabase
+   dans `Authorization: Bearer <jwt>`. On le valide via Supabase.
+   Si SUPABASE_URL/ANON_KEY ne sont pas configurés (dev local), l'auth est
+   désactivée (pass-through) pour ne pas bloquer le développement.
+   Env : SUPABASE_URL, SUPABASE_ANON_KEY
+   ──────────────────────────────────────────────────────────────────── */
+const supabaseUrl  = process.env.SUPABASE_URL;
+const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+const authEnabled  = Boolean(supabaseUrl && supabaseAnon);
+const supabaseAuth = authEnabled ? createClient(supabaseUrl, supabaseAnon) : null;
+
+if (!authEnabled) {
+  console.warn("  ⚠ Auth désactivée (SUPABASE_URL/ANON_KEY absents) — endpoints IA ouverts. NE PAS déployer ainsi.");
+}
+
+async function requireAuth(req, res, next) {
+  if (!authEnabled) return next(); // dev local : pass-through
+  const header = req.headers.authorization || "";
+  const token  = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ success: false, error: "Authentification requise." });
+  try {
+    const { data, error } = await supabaseAuth.auth.getUser(token);
+    if (error || !data?.user) return res.status(401).json({ success: false, error: "Session invalide." });
+    req.user = data.user;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, error: "Session invalide." });
+  }
+}
 
 /* ─── MIME / extension helper ────────────────────────────────────── */
 const ALLOWED_EXTS = new Set([".csv", ".ofx"]);
@@ -203,7 +235,7 @@ app.get("/api/tax/ping", (_req, res) => res.json({ ok: true }));
  * multipart/form-data { file: <CSV/OFX> } → { success, count, transactions }
  * Parse + catégorise. Ne stocke rien : le front persiste via Supabase.
  */
-app.post("/api/import-transactions", importLimiter, upload.single("file"), async (req, res, next) => {
+app.post("/api/import-transactions", requireAuth, importLimiter, upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: "Aucun fichier." });
     if (!validateUpload(req.file)) {
@@ -262,7 +294,7 @@ app.post("/api/import-transactions", importLimiter, upload.single("file"), async
  * POST /api/categorize
  * Body: { description, amount, date } → { category, confidence, source }
  */
-app.post("/api/categorize", aiLimiter, async (req, res, next) => {
+app.post("/api/categorize", requireAuth, aiLimiter, async (req, res, next) => {
   try {
     const { description = "", amount = 0, date = "" } = req.body;
 

@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle } from "lucide-react";
 import { C, eur } from "./theme.js";
 import { API_URL } from "./config.js";
+import { authHeader } from "./supabaseClient.js";
 
 /* ─── Catégories ────────────────────────────────────────────────────── */
 export const IMPORT_CATS = {
@@ -252,7 +253,7 @@ export default function TransactionImportTab({ onImport }) {
     try {
       const res = await fetch(`${API_URL}/api/categorize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ description: tx.description, amount: tx.amount, date: tx.date }),
       });
       if (!res.ok) throw new Error("Serveur indisponible");

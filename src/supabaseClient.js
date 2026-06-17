@@ -33,3 +33,15 @@ export async function getCurrentUser() {
   const { data } = await supabase.auth.getUser();
   return data?.user ?? null;
 }
+
+/**
+ * En-tête Authorization avec le JWT Supabase courant, pour les appels au
+ * backend protégé. Retourne {} si pas de session (le backend reste ouvert
+ * en dev sans Supabase). À étaler dans les headers d'un fetch.
+ */
+export async function authHeader() {
+  if (!supabase) return {};
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

@@ -10,10 +10,12 @@ export default function Auth({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
 
     try {
@@ -27,6 +29,28 @@ export default function Auth({ onAuthSuccess }) {
       onAuthSuccess?.();
     } catch (err) {
       setError(err.message || "Erreur d'authentification");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Envoie un lien de réinitialisation de mot de passe (magic link).
+  const handleResetPassword = async () => {
+    setError("");
+    setInfo("");
+    if (!email) {
+      setError("Saisissez votre email d'abord.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (err) throw err;
+      setInfo("Email envoyé. Vérifiez votre boîte de réception pour réinitialiser votre mot de passe.");
+    } catch (err) {
+      setError(err.message || "Impossible d'envoyer l'email.");
     } finally {
       setLoading(false);
     }
@@ -124,6 +148,26 @@ export default function Auth({ onAuthSuccess }) {
             </div>
           )}
 
+          {/* Info (succès reset password) */}
+          {info && (
+            <div style={{ display: "flex", gap: 8, padding: 12, borderRadius: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.3)" }}>
+              <Mail size={16} style={{ color: "#38bdf8", flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 13, color: "#7dd3fc" }}>{info}</span>
+            </div>
+          )}
+
+          {/* Mot de passe oublié (mode connexion uniquement) */}
+          {isLogin && (
+            <button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={loading}
+              style={{ alignSelf: "flex-end", background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", padding: 0 }}
+            >
+              Mot de passe oublié ?
+            </button>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
@@ -151,7 +195,7 @@ export default function Auth({ onAuthSuccess }) {
           </span>
           <button
             type="button"
-            onClick={() => { setIsLogin(!isLogin); setError(""); }}
+            onClick={() => { setIsLogin(!isLogin); setError(""); setInfo(""); }}
             style={{ background: "none", border: "none", color: T.blue, fontWeight: 700, cursor: "pointer", fontSize: 13 }}
           >
             {isLogin ? "S'inscrire" : "Se connecter"}

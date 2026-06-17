@@ -3,6 +3,7 @@ import { C, CL, glow } from "./theme.js";
 import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
 import AnoAI from "./AnoAI.jsx";
+import AnimatedShaderHero from "./AnimatedShaderHero.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import AIChatWidget from "./AIChatWidget.jsx";
 import NeonGlow from "./NeonGlow.jsx";
@@ -763,7 +764,7 @@ export default function Landing({ onStart }) {
 
   return (
     <div style={{ color: T.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
-      <AnoAI />
+      <AnimatedShaderHero />
       <HeroOrbs />
 
       <div className="relative z-10" style={{ zIndex: 2 }}>

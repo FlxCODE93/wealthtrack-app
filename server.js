@@ -20,7 +20,24 @@ import path       from "path";
 const app    = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-app.use(cors({ origin: /^http:\/\/localhost:\d+$/ }));
+/* CORS : localhost en dev + origines de prod via CORS_ORIGINS (séparées par des virgules).
+   Ex : CORS_ORIGINS="https://wealthtrack.app,https://www.wealthtrack.app" */
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+const localhostRe = /^http:\/\/localhost:\d+$/;
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Pas d'origine (curl, same-origin) → autorisé
+      if (!origin) return cb(null, true);
+      if (localhostRe.test(origin) || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`Origine non autorisée par CORS : ${origin}`));
+    },
+  })
+);
 app.use(express.json({ limit: "64kb" }));
 
 /* ─── Rate limiting ──────────────────────────────────────────────── */

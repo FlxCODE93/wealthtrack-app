@@ -6722,6 +6722,24 @@ export default function App() {
     });
   }, [netWorthNow]);
 
+  // Snapshot mensuel automatique du revenu/dépenses dans l'historique (rend wt_histo vivant).
+  useEffect(() => {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${MOIS_ABBR[now.getMonth()]} ${now.getFullYear()}`;
+    const entry = {
+      m: label, ym,
+      rev: totals.revenus,
+      dep: totals.chargesFixes + totals.depensesVar,
+      inv: totals.invest,
+    };
+    setHisto((prev) => {
+      const exists = prev.some((h) => h.ym === ym);
+      if (exists) return prev.map((h) => (h.ym === ym ? { ...h, ...entry } : h));
+      return [...prev, entry].slice(-120); // 10 ans max
+    });
+  }, [totals.revenus, totals.chargesFixes, totals.depensesVar, totals.invest]);
+
   const handleImport = (imported) => {
     setTransactions((prev) => [...prev, ...imported.map((tx) => ({ ...tx, id: Date.now() + Math.random() }))]);
     setView("finances");

@@ -732,7 +732,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} style={{ color: T.green }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Évolution de votre patrimoine net</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution de votre patrimoine net</h2>
           </div>
           {snapshots.length > 0 && (
             <span className="text-sm" style={{ color: T.muted }}>{eur(snapshots[snapshots.length - 1].v)} aujourd'hui</span>
@@ -2085,7 +2085,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
           </div>
 
           <Card>
-            <h2 className="text-lg font-bold mb-4" style={{ color: T.text }}>
+            <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>
               Transactions ({list.length})
             </h2>
             {list.length === 0 && <p style={{ color: T.muted, fontSize: 13 }}>Aucune transaction dans ce filtre.</p>}
@@ -2155,7 +2155,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 
       {mainTab === "budgets" && (
         <Card>
-          <h2 className="text-lg font-bold mb-1" style={{ color: T.text }}>Budgets par catégorie</h2>
+          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Budgets par catégorie</h2>
           <p className="text-sm mb-5" style={{ color: T.muted }}>Fixez un plafond mensuel par catégorie de dépense. Laissez vide = pas de limite.</p>
           <div className="flex flex-col gap-4">
             {allCats.map(cat => {
@@ -2532,7 +2532,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
 
       {/* Paramètres communs */}
       <Card>
-        <h2 className="text-lg font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
+        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Investissement mensuel (€)">
             <input type="number" value={monthly} style={inputStyle}
@@ -3747,7 +3747,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Users size={18} style={{ color: T.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Choisir un partenaire</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Choisir un partenaire</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TEST_PROFILES.map((p) => (
@@ -3830,7 +3830,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
         <Card>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} style={{ color: T.blue }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Simulation à {horizonY} ans</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Simulation à {horizonY} ans</h2>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={projSeries}>
@@ -3945,7 +3945,7 @@ function Portefeuille() {
 
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Mes positions</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Mes positions</h2>
           <button onClick={addPosition} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
             style={{ background: "rgba(139,92,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
             <Plus size={14} /> Ajouter
@@ -4014,7 +4014,7 @@ function Portefeuille() {
         <Card style={{ borderColor: "rgba(245,166,35,0.3)" }}>
           <div className="flex items-center gap-2 mb-4">
             <Zap size={16} style={{ color: T.amber }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Optimisations recommandées</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Optimisations recommandées</h2>
           </div>
           <div className="space-y-3 mb-4">
             {recommendations.map((r, i) => (
@@ -4285,7 +4285,7 @@ function CreditForm({ credit, onSave, onCancel }) {
     <Card>
       <div className="flex items-center gap-2 mb-4">
         <Pencil size={18} style={{ color: T.blue }} />
-        <h2 className="text-lg font-bold" style={{ color: T.text }}>{credit.id ? "Modifier le crédit" : "Nouveau crédit"}</h2>
+        <h2 className="text-xl font-bold" style={{ color: T.text }}>{credit.id ? "Modifier le crédit" : "Nouveau crédit"}</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Field label="Type de crédit">
@@ -4587,7 +4587,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       {active.length > 0 && totalRestant > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
-            <h2 className="text-lg font-bold mb-2" style={{ color: T.text }}>Répartition par type</h2>
+            <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Répartition par type</h2>
             <div ref={pieRef} style={{ width: "100%", height: 220 }}>
               {pieW > 0 && (
                 <PieChart width={pieW} height={220}>
@@ -4613,7 +4613,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
             </div>
           </Card>
           <Card>
-            <h2 className="text-lg font-bold mb-2" style={{ color: T.text }}>Trajectoire de désendettement</h2>
+            <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Trajectoire de désendettement</h2>
             <p className="text-xs mb-3" style={{ color: T.muted }}>Capital restant total projeté, à mensualités constantes.</p>
             <div ref={areaRef} style={{ width: "100%", height: 200 }}>
               {areaW > 0 && (
@@ -4637,7 +4637,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       {arbitrage && (
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Arbitrage — {arbitrage.label || "crédit immo"}</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Arbitrage — {arbitrage.label || "crédit immo"}</h2>
             <button onClick={() => setArbitrage(null)} aria-label="Fermer"
               style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted }}>
               <X size={14} />
@@ -4678,7 +4678,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
         <Card>
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={18} style={{ color: T.violet }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Conseils</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Conseils</h2>
           </div>
           <div className="flex flex-col gap-2.5">
             {conseils.map((cs, i) => {
@@ -5078,7 +5078,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Home size={18} style={{ color: T.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres du projet</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Paramètres du projet</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
@@ -5153,7 +5153,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} style={{ color: T.amber }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection sur {duration} ans</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Projection sur {duration} ans</h2>
           </div>
           <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
             <input type="checkbox" checked={showRentVsBuy} onChange={(e) => setShowRentVsBuy(e.target.checked)}
@@ -5250,7 +5250,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Building2 size={18} style={{ color: T.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres du bien locatif</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Paramètres du bien locatif</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
@@ -5325,7 +5325,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={18} style={{ color: T.amber }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Rendement locatif</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Rendement locatif</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
@@ -5365,7 +5365,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Wallet size={18} style={{ color: T.cyan }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Cash-flow mensuel</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Cash-flow mensuel</h2>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
@@ -5415,7 +5415,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Key size={18} style={{ color: T.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Paramètres de la mise en location</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Paramètres de la mise en location</h2>
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer text-sm select-none mb-4 rounded-xl px-4 py-3"
@@ -5503,7 +5503,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Landmark size={18} style={{ color: T.violet }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Imposition des revenus locatifs</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Imposition des revenus locatifs</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <Field label={<>Régime fiscal<InfoTooltip text="Déterminé par la case « Bien loué meublé » ci-dessus : micro-foncier (nu, abattement de 30 %) ou micro-BIC (meublé, abattement de 50 %). Le régime réel — déduction des charges réelles (et intérêts d'emprunt) — s'applique quel que soit le mode de location." align="left" /></>}>
@@ -5568,7 +5568,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Wallet size={18} style={{ color: T.cyan }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Cash-flow mensuel de la location</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Cash-flow mensuel de la location</h2>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
@@ -5631,7 +5631,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <FileText size={18} style={{ color: T.green }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Location nue vs meublée (LMNP)</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Location nue vs meublée (LMNP)</h2>
         </div>
         <Field label={<>Majoration du loyer en meublé ({melLoyerMeubleMajorationPct} % = {eur(melLoyerMeuble)}/mois)<InfoTooltip text="Un bien loué meublé se loue généralement 10 à 20 % plus cher qu'un bien loué nu, en contrepartie de l'achat et de l'entretien du mobilier." align="left" /></>}>
           <input type="range" min={0} max={30} step={1} value={melLoyerMeubleMajorationPct} onChange={(e) => setMelLoyerMeubleMajorationPct(+e.target.value)}
@@ -5795,7 +5795,7 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Users size={18} style={{ color: T.blue }} />
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Préférences de l'app</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Préférences de l'app</h2>
         </div>
         <div className="flex items-center justify-between py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
@@ -5826,7 +5826,7 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
 
       <Card style={{ borderColor: "rgba(139,92,246,0.3)" }}>
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-lg font-bold" style={{ color: T.text }}>Données de test</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Données de test</h2>
           <span className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold"
             style={{ background: "rgba(139,92,246,0.15)", color: T.violet }}>Admin Only</span>
         </div>

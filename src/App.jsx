@@ -276,8 +276,8 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
           {details.bullets.map((b, i) => (
             <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div style={{ width: 18, height: 18, borderRadius: 9, background: `${P.color}22`, border: `1px solid ${P.color}55`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                <div style={{ width: 5, height: 5, borderRadius: 9, background: P.color }} />
+              <div style={{ width: 18, height: 18, borderRadius: 10, background: `${P.color}22`, border: `1px solid ${P.color}55`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                <div style={{ width: 5, height: 5, borderRadius: 10, background: P.color }} />
               </div>
               <span style={{ color: "#b0b8c8", fontSize: 13, lineHeight: 1.55 }}>{b}</span>
             </div>
@@ -287,7 +287,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
         <button
           onClick={onUpgrade}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "14px 28px", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: `linear-gradient(135deg, ${P.color}, ${P.color}cc)`, color: "#fff" }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "14px 28px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: `linear-gradient(135deg, ${P.color}, ${P.color}cc)`, color: "#fff" }}
         >
           <Crown size={18} /> Passer à {P.label} — {price}/mois
         </button>
@@ -498,7 +498,7 @@ function PricingPage({ plan, setPlan }) {
         </div>
         <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Gift size={18} style={{ color: "#22c55e" }} />
+            <Gift size={18} style={{ color: T.green }} />
           </div>
           <div>
             <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
@@ -1099,13 +1099,13 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
       <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {/* Metric 1 — IF teaser */}
-        <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#f59e0b", filter: "blur(6px)", userSelect: "none" }}>{ifAgeStr}</div>
           <div style={{ fontSize: 12, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             dans {ifYears != null ? `${ifYears} ans` : "plus de 80 ans"} — scénario base 7%/an
           </div>
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 12 }}>
             <button onClick={() => setView("pricing")} style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "7px 14px", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
               <Lock size={12} /> Voir ma projection
             </button>
@@ -1113,7 +1113,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
         </div>
 
         {/* Metric 2 — Patrimoine projeté 10 ans */}
-        <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#22c55e", filter: "blur(6px)", userSelect: "none" }}>
             {fv10 >= 1e6 ? (fv10 / 1e6).toFixed(1) + " M€" : Math.round(fv10 / 1e3) + " k€"}
@@ -1121,7 +1121,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
           <div style={{ fontSize: 12, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             scénario base — pessimiste et optimiste inclus
           </div>
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 12 }}>
             <button onClick={() => setView("pricing")} style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 10, padding: "7px 14px", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
               <Lock size={12} /> Voir les simulations
             </button>
@@ -1148,7 +1148,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
         <button
           onClick={() => setView("pricing")}
-          style={{ width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          style={{ width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
           <Crown size={16} /> Passer à Pro — 5,99 €/mois · Essai gratuit 7 jours
         </button>
@@ -2268,7 +2268,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
       </div>
 
       {/* Économie d'impôt — le chiffre vedette */}
-      <div style={{ background: T.violet + "12", border: `1px solid ${T.violet}44`, borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
+      <div style={{ background: T.violet + "12", border: `1px solid ${T.violet}44`, borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
         <div style={{ color: T.muted, fontSize: 13 }}>Économie d'impôt dès cette année</div>
         <div style={{ color: T.violet, fontWeight: 800, fontSize: 28 }}>{eur(r.economieImpotAnnuelle)}</div>
         <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
@@ -2951,7 +2951,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                       Mis à jour : <span style={{ color: T.text }}>{liveTs}</span>
                       <span className="ml-3" style={{ color: T.muted }}>· Prochain dans {liveCountdown}s</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs" style={{ color: "#22c55e" }}>
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: T.green }}>
                       <span className="w-2 h-2 rounded-full bg-green-500 inline-block" style={{ animation: "pulse 2s infinite" }} />
                       En direct
                     </div>
@@ -3040,7 +3040,7 @@ function ETFHistoryTooltip() {
         </div>
         <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
           <div className="text-xs mb-0.5" style={{ color: T.muted }}>Depuis le creux 2003</div>
-          <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
+          <div className="font-bold text-sm" style={{ color: T.green }}>+{gainPct.toLocaleString("fr-FR")} %</div>
         </div>
       </div>
 
@@ -3158,7 +3158,7 @@ function CryptoHistoryTooltip({ coin }) {
         </div>
         <div className="rounded-lg p-2.5" style={{ background: "rgba(34,197,94,0.06)" }}>
           <div className="text-xs mb-0.5" style={{ color: T.muted }}>Gain depuis création</div>
-          <div className="font-bold text-sm" style={{ color: "#22c55e" }}>+{gainPct.toLocaleString("fr-FR")} %</div>
+          <div className="font-bold text-sm" style={{ color: T.green }}>+{gainPct.toLocaleString("fr-FR")} %</div>
         </div>
       </div>
 
@@ -3298,7 +3298,7 @@ function ImmoCard({ price, setPrice, horizon }) {
           { label: `Bien vaut dans ${years} ans`, value: eur(last.propValue), sub: "+2 % / an de valorisation",   color: ASSET.immo },
           { label: "Gain net réel",               value: eur(gain),           sub: `capital ${eur(last.equity)} − cash investi`, color: gain >= 0 ? T.green : T.red },
         ].map(k => (
-          <div key={k.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
+          <div key={k.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
             <div style={{ color: T.muted, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
             <div style={{ color: k.color, fontSize: 22, fontWeight: 800 }}>{k.value}</div>
             <div style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>{k.sub}</div>
@@ -6270,7 +6270,7 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss, incomeRef = to
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
       {alerts.map(a => (
         <div key={a.id} style={{
-          display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderRadius: 14,
+          display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderRadius: 12,
           background: a.level === "red" ? "rgba(255,90,95,0.08)" : "rgba(245,158,11,0.08)",
           border: `1px solid ${a.level === "red" ? "rgba(255,90,95,0.25)" : "rgba(245,158,11,0.25)"}`,
         }}>
@@ -6606,7 +6606,7 @@ function FIREInfoModal({ onClose }) {
 
         <button
           onClick={onClose}
-          style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
           <Flame size={16} /> Calculer mon objectif FIRE
         </button>

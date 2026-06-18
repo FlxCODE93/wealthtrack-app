@@ -2878,7 +2878,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           <div
             onClick={(e) => e.stopPropagation()}
             className="wt-scale-in"
-            style={{ background: "#0d1426", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
@@ -2983,7 +2983,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
             left: cryptoTip.x,
             width: 500,
             zIndex: 1000,
-            background: "#111827",
+            background: T.card,
             border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : T.cyan}`,
             borderRadius: 12,
             boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
@@ -3053,7 +3053,7 @@ function ETFHistoryTooltip() {
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
           />
           <Tooltip
-            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: T.card, border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
             formatter={(v, n, { payload }) => [`${v.toLocaleString("fr-FR")} pts`, payload.event]}
             labelFormatter={(l) => l}
           />
@@ -3178,7 +3178,7 @@ function CryptoHistoryTooltip({ coin }) {
             }}
           />
           <Tooltip
-            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: T.card, border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
             formatter={(v, n, { payload }) => [eur(payload.price), payload.event]}
             labelFormatter={(l) => l}
           />
@@ -6319,7 +6319,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
   };
 
   const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
-  const modal   = { background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 480 };
+  const modal   = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 480 };
   const inpO    = { ...inputStyle, marginTop: 6 };
 
   return (
@@ -6583,7 +6583,7 @@ function FIREInfoModal({ onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         className="wt-scale-in"
-        style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 560, position: "relative" }}
+        style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 560, position: "relative" }}
       >
         {/* Close */}
         <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none", color: "#6b7280", cursor: "pointer", lineHeight: 1, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><X size={20} /></button>
@@ -6594,14 +6594,14 @@ function FIREInfoModal({ onClose }) {
             <Flame size={24} style={{ color: "#f59e0b" }} aria-hidden="true" />
           </div>
           <div>
-            <h2 style={{ color: "#f9fafb", fontWeight: 800, fontSize: 22, margin: 0 }}>FIRE</h2>
+            <h2 style={{ color: T.text, fontWeight: 800, fontSize: 22, margin: 0 }}>FIRE</h2>
             <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>Financial Independence, Retire Early</p>
           </div>
         </div>
 
         {/* Définition */}
         <p style={{ color: "#d1d5db", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-          Le mouvement <strong style={{ color: "#f9fafb" }}>FIRE</strong> repose sur une idée simple : accumuler suffisamment de capital pour que les rendements passifs couvrent vos dépenses à vie — vous permettant d'arrêter de travailler quand <em>vous</em> le décidez, pas à 65 ans.
+          Le mouvement <strong style={{ color: T.text }}>FIRE</strong> repose sur une idée simple : accumuler suffisamment de capital pour que les rendements passifs couvrent vos dépenses à vie — vous permettant d'arrêter de travailler quand <em>vous</em> le décidez, pas à 65 ans.
         </p>
 
         <button

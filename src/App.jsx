@@ -2207,13 +2207,11 @@ const TMI_BRACKETS = [
   ["0 %", 0], ["11 %", 0.11], ["30 %", 0.30], ["41 %", 0.41], ["45 %", 0.45],
 ];
 
-function PERSimulator() {
+function PERSimulator({ monthly = 200, years = 20 }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
 
-  const [monthly, setMonthly]         = useState(200);
-  const [years, setYears]             = useState(20);
   const [tmiNow, setTmiNow]           = useState(0.30);
   const [tmiRetraite, setTmiRetraite] = useState(0.11);
   const [returnPct, setReturnPct]     = useState(5);
@@ -2251,15 +2249,10 @@ function PERSimulator() {
       </div>
       <p className="text-sm mb-5" style={{ color: T.muted }}>
         Vos versements sur un Plan Épargne Retraite sont déductibles de votre revenu imposable. Comparez avec un investissement direct (CTO).
+        {" "}Le versement ({eur(monthly)}/mois) et l'horizon ({years} ans) viennent des <b style={{ color: T.text }}>Paramètres</b> ci-dessus.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 18 }}>
-        <Field label="Versement (€/mois)">
-          <input type="number" value={monthly} onChange={e => setMonthly(+e.target.value)} style={inputStyle} />
-        </Field>
-        <Field label="Durée (ans)">
-          <input type="number" value={years} onChange={e => setYears(+e.target.value)} style={inputStyle} />
-        </Field>
         <Field label="Rendement (%/an)">
           <input type="number" step="0.5" value={returnPct} onChange={e => setReturnPct(+e.target.value)} style={inputStyle} />
         </Field>
@@ -2545,7 +2538,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
               onChange={(e) => setInitial(+e.target.value || 0)} />
           </Field>
           <Field label="Horizon">
-            <select value={horizon} style={inputStyle} onChange={(e) => setHorizon(+e.target.value)}>
+            <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
+              style={{ ...inputStyle, height: 44, lineHeight: "22px", paddingTop: 0, paddingBottom: 0, paddingRight: 34,
+                appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#','')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
               <option value={1}>1 an</option>
               <option value={2}>2 ans</option>
               <option value={5}>5 ans</option>
@@ -2678,7 +2675,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       )}
 
       {/* ── TAB: PER ── */}
-      {activeTab === "per" && <PERSimulator />}
+      {activeTab === "per" && <PERSimulator monthly={monthly} years={horizon} />}
 
       {/* ── TAB: BITCOIN ── */}
       {activeTab === "btc" && (

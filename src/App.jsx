@@ -4392,12 +4392,12 @@ function CreditCardItem({ credit, now, onEdit, onDelete, onArbitrage }) {
             </button>
           )}
           <button onClick={() => onEdit(credit)} aria-label="Modifier"
-            style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: T.muted }}>
-            <Pencil size={13} />
+            style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted }}>
+            <Pencil size={15} />
           </button>
           <button onClick={() => onDelete(credit)} aria-label="Supprimer"
-            style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: T.red }}>
-            <Trash2 size={13} />
+            style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.red }}>
+            <Trash2 size={15} />
           </button>
         </div>
       </div>
@@ -4639,7 +4639,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold" style={{ color: T.text }}>Arbitrage — {arbitrage.label || "crédit immo"}</h2>
             <button onClick={() => setArbitrage(null)} aria-label="Fermer"
-              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: T.muted }}>
+              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted }}>
               <X size={14} />
             </button>
           </div>

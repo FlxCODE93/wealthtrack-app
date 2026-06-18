@@ -2234,7 +2234,11 @@ function PERSimulator() {
   );
 
   const TmiSelect = ({ value, onChange }) => (
-    <select value={value} onChange={e => onChange(+e.target.value)} style={inputStyle}>
+    <select value={value} onChange={e => onChange(+e.target.value)}
+      style={{ ...inputStyle, height: 44, lineHeight: "22px", paddingTop: 0, paddingBottom: 0, paddingRight: 34,
+        appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#','')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
       {TMI_BRACKETS.map(([lbl, v]) => <option key={v} value={v}>{lbl}</option>)}
     </select>
   );

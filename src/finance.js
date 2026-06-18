@@ -488,17 +488,145 @@ export function perSimulation(opts) {
   };
 }
 
-/** Série annuelle PER brut vs CTO net (graphe). */
+/* ────────────────────────────────────────────────────────────────────
+   Mes crédits — suivi d'un crédit en cours (amortissable ou revolving)
+   Un crédit :
+     { type, mode: "amortissable"|"revolving", capitalInitial, taux (%/an),
+       dureeMois, dateDebut (ISO), assuranceMensuelle,
+       capitalRestant, paiementMensuel }   // 2 derniers : revolving seulement
+   ──────────────────────────────────────────────────────────────────── */
+
+/** Nombre de mois entiers écoulés entre `startISO` et `now` (borné ≥ 0). */
+export function monthsElapsed(startISO, now = new Date()) {
+  const start = new Date(startISO);
+  if (isNaN(start)) return 0;
+  const m = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  return Math.max(0, m);
+}
+
+/** Durée totale (mois), bornée à ≥ 1 pour éviter toute division par zéro. */
+function dureeMoisSafe(c) {
+  return Math.max(1, +c.dureeMois || 0);
+}
+
+/** Mensualité hors assurance d'un crédit. Revolving → paiement saisi. */
+export function creditMensualite(c) {
+  if (c.mode === "revolving") return +c.paiementMensuel || 0;
+  return loanPayment(+c.capitalInitial || 0, (+c.taux || 0) / 100, dureeMoisSafe(c) / 12);
+}
+
+/** Capital restant dû aujourd'hui.
+   - Revolving → capital saisi.
+   - Amortissable : si `capitalRembourse` est renseigné (> 0), on s'y fie
+     (capital initial − déjà remboursé) ; sinon amortissement par date. */
+export function creditCapitalRestant(c, now = new Date()) {
+  if (c.mode === "revolving") return Math.max(0, +c.capitalRestant || 0);
+  const capital = +c.capitalInitial || 0;
+  if (+c.capitalRembourse > 0) return Math.max(0, capital - (+c.capitalRembourse || 0));
+  const n = dureeMoisSafe(c);
+  const monthsPaid = Math.min(monthsElapsed(c.dateDebut, now), n);
+  return Math.max(0, loanRemaining(capital, (+c.taux || 0) / 100, n / 12, monthsPaid));
+}
+
+/** Nombre de mensualités restantes (amortissable), dérivé du capital restant
+   et de la mensualité — exact, indépendant de la date de début. */
+export function creditRemainingMonths(c, now = new Date()) {
+  if (c.mode === "revolving") return null;
+  const restant = creditCapitalRestant(c, now);
+  if (restant <= 0) return 0;
+  const pmt = creditMensualite(c);
+  if (pmt <= 0) return +c.dureeMois || 0;
+  const i = (+c.taux || 0) / 100 / 12;
+  if (i === 0) return restant / pmt;
+  const ratio = 1 - (restant * i) / pmt;
+  if (ratio <= 0) return dureeMoisSafe(c); // mensualité trop faible pour amortir
+  return -Math.log(ratio) / Math.log(1 + i);
+}
+
+/** Intérêts restant à payer. Revolving → intérêts mensuels au taux (pas d'échéance). */
+export function creditInteretsRestants(c, now = new Date()) {
+  if (c.mode === "revolving") return (Math.max(0, +c.capitalRestant || 0) * (+c.taux || 0) / 100) / 12;
+  const restant = creditCapitalRestant(c, now);
+  const nRem = creditRemainingMonths(c, now);
+  return Math.max(0, creditMensualite(c) * nRem - restant);
+}
+
+/** Coût total des intérêts sur toute la durée (amortissable). Revolving → null. */
+export function creditCoutTotal(c) {
+  if (c.mode === "revolving") return null;
+  return Math.max(0, creditMensualite(c) * dureeMoisSafe(c) - (+c.capitalInitial || 0));
+}
+
+/** Revolving qui ne se rembourse jamais : le paiement mensuel ne couvre pas
+   même les intérêts → le capital ne baisse pas (ou augmente). */
+export function creditRevolvingStuck(c) {
+  if (c.mode !== "revolving") return false;
+  const interetMensuel = (Math.max(0, +c.capitalRestant || 0) * (+c.taux || 0) / 100) / 12;
+  return (+c.paiementMensuel || 0) <= interetMensuel && interetMensuel > 0;
+}
+
+/** Capital restant dû projeté `monthsAhead` mois dans le futur (mensualité
+   constante). Vaut pour amortissable ET revolving (révèle un revolving bloqué
+   dont la dette stagne ou croît). */
+export function creditProjectedRestant(c, monthsAhead, now = new Date()) {
+  let r = creditCapitalRestant(c, now);
+  const i = (+c.taux || 0) / 100 / 12;
+  const pmt = creditMensualite(c);
+  for (let k = 0; k < monthsAhead; k++) {
+    if (r <= 0) return 0;
+    r = r * (1 + i) - pmt;
+  }
+  return Math.max(0, r);
+}
+
+/** Date de fin du crédit (amortissable). Revolving → null.
+   Si `capitalRembourse` est fourni, l'échéance est dérivée des mensualités
+   restantes à partir d'aujourd'hui ; sinon date de début + durée. */
+export function creditDateFin(c, now = new Date()) {
+  if (c.mode === "revolving") return null;
+  if (+c.capitalRembourse > 0) {
+    const d = new Date(now);
+    d.setMonth(d.getMonth() + Math.round(creditRemainingMonths(c, now)));
+    return d;
+  }
+  if (!c.dateDebut) return null;
+  const d = new Date(c.dateDebut);
+  if (isNaN(d)) return null;
+  d.setMonth(d.getMonth() + (+c.dureeMois || 0));
+  return d;
+}
+
+/** Catégorie passif dérivée des crédits, injectable dans patrimoine.passifs.
+   Les crédits archivés (soldés/clôturés) sont exclus. */
+export function creditsToPassifCategory(credits = [], now = new Date(), color = "#ef4444") {
+  return {
+    id: "credits-derived",
+    label: "Crédits",
+    color,
+    items: credits.filter((c) => !c.archived).map((c) => ({
+      id: `credit-${c.id}`,
+      label: c.label || "Crédit",
+      value: Math.round(creditCapitalRestant(c, now)),
+    })),
+  };
+}
+
+/** Série annuelle du capital constitué : PER (versements + économie d'impôt
+   réinvestie) vs CTO (versements seuls). L'écart illustre l'effet de levier de
+   la déduction réinvestie. Montants bruts (la fiscalité de sortie est appliquée
+   aux nets renvoyés par perSimulation). */
 export function perSeries(opts, startYear = new Date().getFullYear()) {
-  const { monthly, years, annualReturn } = opts;
+  const { monthly, years, annualReturn, tmiNow = 0 } = opts;
   const annual = monthly * 12;
+  const refundAnnual = annual * tmiNow;
   const out = [];
-  let capPER = 0, capCTO = 0;
+  let capPER = 0, capCTO = 0, capRefund = 0;
   out.push({ year: startYear, per: 0, cto: 0 });
   for (let y = 1; y <= years; y++) {
     capPER = (capPER + annual) * (1 + annualReturn);
+    capRefund = (capRefund + refundAnnual) * (1 + annualReturn);
     capCTO = (capCTO + annual) * (1 + annualReturn);
-    out.push({ year: startYear + y, per: Math.round(capPER), cto: Math.round(capCTO) });
+    out.push({ year: startYear + y, per: Math.round(capPER + capRefund), cto: Math.round(capCTO) });
   }
   return out;
 }

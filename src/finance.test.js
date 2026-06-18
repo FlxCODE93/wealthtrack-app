@@ -7,6 +7,9 @@ import {
   monthlyPaymentFromRemaining, earlyRepaymentPenalty, repayVsInvest, breakevenInvestRate,
   pmcaCessions, pmcaSummary, SEUIL_EXONERATION_CESSION,
   perSimulation, perSeries,
+  monthsElapsed, creditMensualite, creditCapitalRestant, creditInteretsRestants,
+  creditCoutTotal, creditDateFin, creditsToPassifCategory, creditRemainingMonths,
+  creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 
 /* ── fv (valeur future, intérêts composés mensuels) ──────────────── */
@@ -339,5 +342,146 @@ describe("perSeries", () => {
     const s = perSeries({ monthly: 200, years: 10, annualReturn: 0.05 }, 2026);
     expect(s).toHaveLength(11);
     expect(s[10].per).toBeGreaterThan(s[1].per);
+  });
+  it("avec TMI > 0, PER (avec éco. impôt réinvestie) dépasse le CTO", () => {
+    const s = perSeries({ monthly: 200, years: 10, annualReturn: 0.05, tmiNow: 0.30 }, 2026);
+    expect(s[10].per).toBeGreaterThan(s[10].cto);
+  });
+  it("avec TMI = 0, PER et CTO se rejoignent (pas de levier)", () => {
+    const s = perSeries({ monthly: 200, years: 10, annualReturn: 0.05, tmiNow: 0 }, 2026);
+    expect(s[10].per).toBe(s[10].cto);
+  });
+});
+
+/* ── Mes crédits ──────────────────────────────────────────────────── */
+describe("crédits — amortissable", () => {
+  // Crédit auto : 20 000 € à 4 %/an sur 48 mois, démarré il y a 24 mois.
+  const now = new Date("2026-01-15");
+  const c = { id: 1, type: "auto", mode: "amortissable", label: "Voiture",
+              capitalInitial: 20000, taux: 4, dureeMois: 48, dateDebut: "2024-01-15" };
+
+  it("monthsElapsed compte les mois entiers", () => {
+    expect(monthsElapsed("2024-01-15", now)).toBe(24);
+    expect(monthsElapsed("2030-01-15", now)).toBe(0); // futur → 0
+  });
+
+  it("mensualité = formule d'annuité", () => {
+    expect(creditMensualite(c)).toBeCloseTo(loanPayment(20000, 0.04, 4), 6);
+  });
+
+  it("capital restant au début = capital initial", () => {
+    expect(creditCapitalRestant(c, new Date("2024-01-15"))).toBeCloseTo(20000, 0);
+  });
+
+  it("capital restant à la fin ≈ 0", () => {
+    expect(creditCapitalRestant(c, new Date("2028-02-15"))).toBeCloseTo(0, 6);
+  });
+
+  it("capital restant à mi-parcours est entre 0 et l'initial", () => {
+    const r = creditCapitalRestant(c, now);
+    expect(r).toBeGreaterThan(0);
+    expect(r).toBeLessThan(20000);
+  });
+
+  it("intérêts restants décroissent avec le temps", () => {
+    const tot = creditInteretsRestants(c, new Date("2024-01-15"));
+    const mid = creditInteretsRestants(c, now);
+    expect(mid).toBeLessThan(tot);
+    expect(mid).toBeGreaterThanOrEqual(0);
+  });
+
+  it("coût total = mensualité × durée − capital", () => {
+    expect(creditCoutTotal(c)).toBeCloseTo(creditMensualite(c) * 48 - 20000, 6);
+  });
+
+  it("date de fin = début + durée", () => {
+    expect(creditDateFin(c).getFullYear()).toBe(2028);
+    expect(creditDateFin(c).getMonth()).toBe(0); // janvier
+  });
+});
+
+describe("crédits — revolving", () => {
+  const c = { id: 2, type: "revolving", mode: "revolving", label: "Carte",
+              capitalRestant: 3000, taux: 18, paiementMensuel: 150 };
+
+  it("mensualité = paiement saisi", () => {
+    expect(creditMensualite(c)).toBe(150);
+  });
+  it("capital restant = saisi", () => {
+    expect(creditCapitalRestant(c)).toBe(3000);
+  });
+  it("intérêts mensuels = capital × taux / 12", () => {
+    expect(creditInteretsRestants(c)).toBeCloseTo(3000 * 0.18 / 12, 6);
+  });
+  it("coût total et date de fin = null (pas d'échéance)", () => {
+    expect(creditCoutTotal(c)).toBeNull();
+    expect(creditDateFin(c)).toBeNull();
+  });
+});
+
+describe("creditsToPassifCategory", () => {
+  it("mappe les crédits en items passif avec capital restant arrondi", () => {
+    const cat = creditsToPassifCategory([
+      { id: 2, mode: "revolving", label: "Carte", capitalRestant: 3000, taux: 18, paiementMensuel: 150 },
+    ]);
+    expect(cat.label).toBe("Crédits");
+    expect(cat.items).toHaveLength(1);
+    expect(cat.items[0].value).toBe(3000);
+  });
+  it("liste vide → catégorie sans items", () => {
+    expect(creditsToPassifCategory([]).items).toHaveLength(0);
+  });
+});
+
+describe("crédits — capital déjà remboursé (override)", () => {
+  // 100 000 € à 3 %/an sur 240 mois, 30 000 € déjà remboursés, sans date fiable.
+  const c = { type: "immo", mode: "amortissable", label: "Maison",
+              capitalInitial: 100000, taux: 3, dureeMois: 240,
+              dateDebut: "2099-01-01", capitalRembourse: 30000 };
+
+  it("capital restant = initial − remboursé (ignore la date)", () => {
+    expect(creditCapitalRestant(c)).toBe(70000);
+  });
+  it("mensualités restantes < durée totale et > 0", () => {
+    const n = creditRemainingMonths(c);
+    expect(n).toBeGreaterThan(0);
+    expect(n).toBeLessThan(240);
+  });
+  it("intérêts restants cohérents = mensualité × mois restants − capital restant", () => {
+    const i = creditInteretsRestants(c);
+    expect(i).toBeCloseTo(creditMensualite(c) * creditRemainingMonths(c) - 70000, 4);
+    expect(i).toBeGreaterThan(0);
+  });
+  it("échéance dérivée = aujourd'hui + mois restants (futur)", () => {
+    expect(creditDateFin(c).getTime()).toBeGreaterThan(Date.now());
+  });
+});
+
+describe("crédits — garde-fous & helpers", () => {
+  it("dureeMois = 0 ne produit pas Infinity/NaN", () => {
+    const c = { mode: "amortissable", capitalInitial: 10000, taux: 3, dureeMois: 0 };
+    expect(Number.isFinite(creditMensualite(c))).toBe(true);
+    expect(Number.isFinite(creditCapitalRestant(c, new Date()))).toBe(true);
+  });
+
+  it("creditRevolvingStuck : paiement ≤ intérêts mensuels → bloqué", () => {
+    const stuck = { mode: "revolving", capitalRestant: 3000, taux: 20, paiementMensuel: 40 }; // intérêt ≈ 50/mois
+    const ok    = { mode: "revolving", capitalRestant: 3000, taux: 20, paiementMensuel: 200 };
+    expect(creditRevolvingStuck(stuck)).toBe(true);
+    expect(creditRevolvingStuck(ok)).toBe(false);
+  });
+
+  it("creditProjectedRestant : amortissable décroît jusqu'à 0", () => {
+    const c = { mode: "amortissable", capitalInitial: 20000, taux: 4, dureeMois: 48, dateDebut: new Date().toISOString().slice(0,10) };
+    const now = creditProjectedRestant(c, 0);
+    const mid = creditProjectedRestant(c, 24);
+    const end = creditProjectedRestant(c, 48);
+    expect(mid).toBeLessThan(now);
+    expect(end).toBeCloseTo(0, 0);
+  });
+
+  it("creditProjectedRestant : revolving bloqué ne descend pas à 0", () => {
+    const stuck = { mode: "revolving", capitalRestant: 3000, taux: 20, paiementMensuel: 40 };
+    expect(creditProjectedRestant(stuck, 60)).toBeGreaterThan(0);
   });
 });

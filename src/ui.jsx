@@ -79,11 +79,11 @@ export function Pill({ children, active, onClick }) {
   );
 }
 
-export function Field({ label, children }) {
+export function Field({ label, children, compact = false }) {
   const T = useT();
   return (
-    <div>
-      <label className="block text-sm mb-2" style={{ color: T.muted }}>{label}</label>
+    <div className={compact ? "flex flex-col self-start" : "flex flex-col h-full"}>
+      <label className={`block text-sm mb-2 ${compact ? "" : "flex-grow"}`} style={{ color: T.muted }}>{label}</label>
       {children}
     </div>
   );

@@ -37,6 +37,9 @@ import {
   loanFromPayment, longTermGain,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
   perSimulation, perSeries,
+  creditMensualite, creditCapitalRestant, creditInteretsRestants,
+  creditCoutTotal, creditDateFin, creditsToPassifCategory, creditRemainingMonths,
+  creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
 import { useLocalStorage } from "./storage.js";
@@ -194,9 +197,9 @@ const PLANS = {
 };
 
 const PLAN_ACCESS = {
-  free:   ["dashboard", "finances", "patrimoine", "profil", "pricing", "objectifs"],
-  pro:    ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
-  couple: ["dashboard", "finances", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
+  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
 };
 
 function canAccess(plan, feature) {
@@ -544,6 +547,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   const items = [
     { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "finances",    label: "Finances",           icon: ListTree },
+    { id: "credits",     label: "Mes crédits",        icon: CreditCard },
     { id: "simulations", label: "Simulations",        icon: TrendingUp },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
     { id: "fi",          label: "FIRE",               icon: Flag },
@@ -2213,10 +2217,11 @@ function PERSimulator() {
   const [tmiNow, setTmiNow]           = useState(0.30);
   const [tmiRetraite, setTmiRetraite] = useState(0.11);
   const [returnPct, setReturnPct]     = useState(5);
+  const [chartRef, chartW]            = useElementWidth();
 
   const opts = { monthly, years, tmiNow, tmiRetraite, annualReturn: returnPct / 100 };
   const r      = useMemo(() => perSimulation(opts), [monthly, years, tmiNow, tmiRetraite, returnPct]);
-  const series = useMemo(() => perSeries(opts), [monthly, years, returnPct]);
+  const series = useMemo(() => perSeries(opts), [monthly, years, returnPct, tmiNow]);
 
   const perWins = r.winner === "per";
   const accent  = perWins ? T.green : T.amber;
@@ -2273,7 +2278,7 @@ function PERSimulator() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, marginBottom: 16 }}>
         <Num label={`Net PER (capital, dans ${years} ans)`} val={eur(r.netPER)} color={perWins ? accent : T.text} />
-        <Num label={`Net CTO (même effort)`} val={eur(r.netCTO)} color={!perWins ? accent : T.text} />
+        <Num label={`Net CTO (même versement brut)`} val={eur(r.netCTO)} color={!perWins ? accent : T.text} />
         <Num label="Avantage du meilleur choix" val={eur(Math.abs(r.avantage))} color={accent} />
       </div>
 
@@ -2286,9 +2291,9 @@ function PERSimulator() {
         </span>
       </div>
 
-      <div style={{ width: "100%", height: 240 }}>
-        <ResponsiveContainer>
-          <AreaChart data={series} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
+      <div ref={chartRef} style={{ width: "100%", height: 240 }}>
+        {chartW > 0 && (
+          <AreaChart width={chartW} height={240} data={series} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
             <defs>
               <linearGradient id="perGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={T.violet} stopOpacity={0.35} />
@@ -2298,14 +2303,16 @@ function PERSimulator() {
             <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
             <XAxis dataKey="year" tick={{ fontSize: 11, fill: T.muted }} />
             <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
-            <Tooltip {...chartTip} formatter={v => [eur(v), "Capital brut"]} />
-            <Area type="monotone" dataKey="per" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
+            <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n]} />
+            <Legend />
+            <Area type="monotone" dataKey="per" name="PER + éco. impôt réinvestie" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
+            <Area type="monotone" dataKey="cto" name="CTO (versements seuls)" stroke={T.muted} strokeWidth={2} fill="none" strokeDasharray="5 4" />
           </AreaChart>
-        </ResponsiveContainer>
+        )}
       </div>
       <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.muted }}>
         <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
-        <span>Hypothèse : sortie en capital (versements imposés au barème, plus-values au PFU 30 %), versements dans le plafond épargne retraite, économie d'impôt réinvestie. Estimation pédagogique, pas un conseil fiscal.</span>
+        <span>Hypothèse : sortie en capital (versements imposés au barème, plus-values au PFU 30 %), versements dans le plafond épargne retraite, TMI supposée constante (pas de changement de tranche), économie d'impôt réinvestie. Estimation pédagogique, pas un conseil fiscal.</span>
       </p>
     </Card>
   );
@@ -2478,6 +2485,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
     { id: "immo",     label: "Immobilier", color: ASSET.immo },
     { id: "defensif", label: "Livret A",   color: ASSET.livret },
+    { id: "per",      label: "PER",        color: T.violet },
     { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
     { id: "eth",      label: "Ethereum",   color: ASSET.eth },
     { id: "compare",  label: "Comparatif", color: T.blue },
@@ -2664,6 +2672,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           note="Intérêts composés sur Livret A, LDDS ou épargne de précaution — capital garanti et disponible à tout moment."
         />
       )}
+
+      {/* ── TAB: PER ── */}
+      {activeTab === "per" && <PERSimulator />}
 
       {/* ── TAB: BITCOIN ── */}
       {activeTab === "btc" && (
@@ -4066,15 +4077,15 @@ const FISCALITE_OPTIONS = [
   ["cto",    "CTO / Crypto (PFU 30 %)", 0.30],
 ];
 
-function CreditArbitrage() {
+function CreditArbitrage({ initial } = {}) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
 
-  const [remaining, setRemaining]   = useState(150000); // capital restant dû
-  const [ratePct, setRatePct]       = useState(1.5);    // taux nominal
-  const [insurance, setInsurance]   = useState(30);     // assurance €/mois
-  const [yearsLeft, setYearsLeft]   = useState(15);     // durée restante (ans)
+  const [remaining, setRemaining]   = useState(initial?.remaining ?? 150000); // capital restant dû
+  const [ratePct, setRatePct]       = useState(initial?.ratePct   ?? 1.5);    // taux nominal
+  const [insurance, setInsurance]   = useState(initial?.insurance ?? 30);     // assurance €/mois
+  const [yearsLeft, setYearsLeft]   = useState(initial?.yearsLeft ?? 15);     // durée restante (ans)
   const [lumpSum, setLumpSum]       = useState(50000);  // épargne dispo
   const [returnPct, setReturnPct]   = useState(7);      // rendement placement
   const [envelope, setEnvelope]     = useState("pea");  // fiscalité
@@ -4198,6 +4209,487 @@ function CreditArbitrage() {
         </p>
       </Card>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  MES CRÉDITS — suivi des crédits & prêts en cours                   */
+/* ------------------------------------------------------------------ */
+/** Largeur réelle d'un élément, suivie via ResizeObserver. */
+function useElementWidth() {
+  const ref = useRef(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setW(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+
+const CREDIT_TYPES = {
+  immo:      { label: "Immobilier",   color: "#5b8def", Icon: Building2 },
+  auto:      { label: "Auto",         color: "#22c79a", Icon: Car },
+  conso:     { label: "Consommation", color: "#f5a623", Icon: CreditCard },
+  etudiant:  { label: "Étudiant",     color: "#a855f7", Icon: GraduationCap },
+  perso:     { label: "Personnel",    color: "#06b6d4", Icon: Wallet },
+  revolving: { label: "Revolving",    color: "#ef4444", Icon: Repeat },
+};
+const REVOLVING_ALERT_RATE = 15; // % — au-delà, on signale le coût d'un crédit revolving
+
+function emptyCredit() {
+  return {
+    id: null, type: "immo", mode: "amortissable", label: "",
+    capitalInitial: 100000, taux: 3.5, dureeMois: 240,
+    dateDebut: new Date().toISOString().slice(0, 10), assuranceMensuelle: 0,
+    capitalRembourse: 0, capitalRestant: 0, paiementMensuel: 0,
+  };
+}
+
+/** Durée en mois → "X ans Y mois" lisible. */
+function fmtDuree(months) {
+  const m = Math.max(0, Math.round(months));
+  const y = Math.floor(m / 12);
+  const r = m % 12;
+  if (y === 0) return `${r} mois`;
+  if (r === 0) return `${y} an${y > 1 ? "s" : ""}`;
+  return `${y} an${y > 1 ? "s" : ""} ${r} mois`;
+}
+
+function CreditForm({ credit, onSave, onCancel }) {
+  const T = useT();
+  const inputStyle = makeInputStyle(T);
+  const [c, setC] = useState(credit);
+  // Saisies numériques bornées (jamais négatives ; durée ≥ 1 mois).
+  const setNum = (k, v, { min = 0 } = {}) => setC((p) => ({ ...p, [k]: Math.max(min, +v || 0) }));
+  const set = (k, v) => setC((p) => ({ ...p, [k]: v }));
+  const isRevolving = c.mode === "revolving";
+  // capitalRembourse ne peut pas dépasser le capital emprunté.
+  const rembourseMax = Math.max(0, +c.capitalInitial || 0);
+  const rembourseTrop = (+c.capitalRembourse || 0) > rembourseMax;
+
+  // Le revolving force le mode revolving ; les autres types restent amortissables.
+  const onType = (type) => setC((p) => ({ ...p, type, mode: type === "revolving" ? "revolving" : "amortissable" }));
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-4">
+        <Pencil size={18} style={{ color: T.blue }} />
+        <h2 className="text-lg font-bold" style={{ color: T.text }}>{credit.id ? "Modifier le crédit" : "Nouveau crédit"}</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Field label="Type de crédit">
+          <select value={c.type} style={inputStyle} onChange={(e) => onType(e.target.value)}>
+            {Object.entries(CREDIT_TYPES).map(([id, m]) => <option key={id} value={id}>{m.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Libellé">
+          <input type="text" value={c.label} placeholder={CREDIT_TYPES[c.type]?.label} style={inputStyle}
+            onChange={(e) => set("label", e.target.value)} />
+        </Field>
+        <Field label="Taux (% / an)">
+          <input type="number" step={0.1} min={0} value={c.taux} style={inputStyle} onChange={(e) => setNum("taux", e.target.value)} />
+        </Field>
+
+        {isRevolving ? (
+          <>
+            <Field label="Capital restant dû (€)">
+              <input type="number" min={0} value={c.capitalRestant} style={inputStyle} onChange={(e) => setNum("capitalRestant", e.target.value)} />
+            </Field>
+            <Field label="Paiement mensuel (€)">
+              <input type="number" min={0} value={c.paiementMensuel} style={inputStyle} onChange={(e) => setNum("paiementMensuel", e.target.value)} />
+            </Field>
+          </>
+        ) : (
+          <>
+            <Field label="Capital emprunté (€)">
+              <input type="number" min={0} value={c.capitalInitial} style={inputStyle} onChange={(e) => setNum("capitalInitial", e.target.value)} />
+            </Field>
+            <Field label="Durée totale (mois)">
+              <input type="number" min={1} value={c.dureeMois} style={inputStyle} onChange={(e) => setNum("dureeMois", e.target.value, { min: 1 })} />
+            </Field>
+            <Field label="Date de début">
+              <input type="date" value={c.dateDebut} style={inputStyle} onChange={(e) => set("dateDebut", e.target.value)} />
+            </Field>
+            <Field label="Assurance (€ / mois)">
+              <input type="number" min={0} value={c.assuranceMensuelle} style={inputStyle} onChange={(e) => setNum("assuranceMensuelle", e.target.value)} />
+            </Field>
+            <Field label={<>Capital déjà remboursé (€)<InfoTooltip text="Optionnel. Si vous le renseignez, le capital restant et l'échéance sont calculés à partir de ce montant (pas besoin d'une date de début exacte). Laissez à 0 pour un calcul automatique depuis la date de début." /></>}>
+              <input type="number" min={0} max={rembourseMax} value={c.capitalRembourse} style={{ ...inputStyle, borderColor: rembourseTrop ? T.red : inputStyle.border }} onChange={(e) => setNum("capitalRembourse", e.target.value)} />
+              {rembourseTrop && <span className="text-xs" style={{ color: T.red }}>Ne peut pas dépasser le capital emprunté ({eur(rembourseMax)}).</span>}
+            </Field>
+          </>
+        )}
+      </div>
+      <div className="flex gap-2 mt-4">
+        <button onClick={() => onSave({ ...c, label: c.label || CREDIT_TYPES[c.type]?.label })}
+          disabled={rembourseTrop}
+          className="px-4 py-2 rounded-xl font-semibold text-sm"
+          style={{ background: T.blue, color: "#fff", border: "none", cursor: rembourseTrop ? "not-allowed" : "pointer", opacity: rembourseTrop ? 0.5 : 1 }}>
+          Enregistrer
+        </button>
+        <button onClick={onCancel}
+          className="px-4 py-2 rounded-xl font-semibold text-sm"
+          style={{ background: "transparent", color: T.muted, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+          Annuler
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function CreditCardItem({ credit, now, onEdit, onDelete, onArbitrage }) {
+  const T = useT();
+  const meta = CREDIT_TYPES[credit.type] || CREDIT_TYPES.perso;
+  const { Icon } = meta;
+  const restant = creditCapitalRestant(credit, now);
+  const pmtPI = creditMensualite(credit);
+  const assurance = +credit.assuranceMensuelle || 0;
+  const mensualite = pmtPI + assurance;
+  const dateFin = creditDateFin(credit, now);
+  const isRevolving = credit.mode === "revolving";
+  const coutTotal = creditCoutTotal(credit);
+  const remboursé = Math.max(0, (+credit.capitalInitial || 0) - restant);
+  const moisRestants = isRevolving ? null : creditRemainingMonths(credit, now);
+  const progress = !isRevolving && credit.capitalInitial > 0
+    ? Math.min(100, Math.max(0, (remboursé / credit.capitalInitial) * 100))
+    : null;
+  const soldé = !isRevolving && restant <= 0;
+  const revolvingAlert = isRevolving && (+credit.taux || 0) >= REVOLVING_ALERT_RATE;
+  const revolvingStuck = creditRevolvingStuck(credit);
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <span style={{ width: 38, height: 38, borderRadius: 10, background: `${meta.color}1a`, border: `1px solid ${meta.color}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon size={18} style={{ color: meta.color }} />
+          </span>
+          <div>
+            <div className="font-bold flex items-center gap-2" style={{ color: T.text }}>
+              {credit.label || meta.label}
+              {soldé && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${T.green}1a`, color: T.green, fontWeight: 700 }}>Soldé</span>}
+            </div>
+            <div className="text-xs" style={{ color: T.muted }}>{meta.label} · {credit.taux} %/an</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {credit.type === "immo" && !isRevolving && !soldé && (
+            <button onClick={() => onArbitrage(credit)} title="Rembourser ou investir ?"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: "rgba(91,141,239,0.12)", color: T.blue, border: `1px solid ${T.blue}44`, cursor: "pointer" }}>
+              Rembourser ou investir ?
+            </button>
+          )}
+          <button onClick={() => onEdit(credit)} aria-label="Modifier"
+            style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: T.muted }}>
+            <Pencil size={13} />
+          </button>
+          <button onClick={() => onDelete(credit)} aria-label="Supprimer"
+            style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: T.red }}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        <MiniStat label="Capital restant" value={eur(Math.round(restant))} color={T.text} />
+        <MiniStat label={assurance > 0 ? "Mensualité (assur. incl.)" : "Mensualité"} value={eur(Math.round(mensualite))} color={T.amber} />
+        <MiniStat label={isRevolving ? "Intérêts / mois" : "Intérêts restants"}
+          value={eur(Math.round(creditInteretsRestants(credit, now)))} color={T.red} />
+        <MiniStat label="Échéance"
+          value={isRevolving ? "—" : (moisRestants > 0 ? fmtDuree(moisRestants) : "Soldé")}
+          color={T.muted} />
+      </div>
+
+      {/* Détails secondaires */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs" style={{ color: T.muted }}>
+        {!isRevolving && <span>Capital remboursé : <b style={{ color: T.text }}>{eur(Math.round(remboursé))}</b></span>}
+        {assurance > 0 && <span>Dont assurance : <b style={{ color: T.text }}>{eur(Math.round(assurance))}/mois</b></span>}
+        {coutTotal != null && <span>Coût total du crédit : <b style={{ color: T.text }}>{eur(Math.round(coutTotal))}</b> d'intérêts</span>}
+        {!isRevolving && dateFin && <span>Fin : <b style={{ color: T.text }}>{dateFin.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</b></span>}
+      </div>
+
+      {progress != null && (
+        <div className="mt-4">
+          <div className="flex justify-between text-xs mb-1" style={{ color: T.muted }}>
+            <span>Remboursé</span><span>{progress.toFixed(0)} %</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+            <div style={{ width: `${progress}%`, height: "100%", background: meta.color, borderRadius: 999 }} />
+          </div>
+        </div>
+      )}
+
+      {revolvingStuck && (
+        <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.red }}>
+          <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <span>Votre paiement mensuel ne couvre pas les intérêts ({eur(Math.round(restant * (+credit.taux || 0) / 100 / 12))}/mois) : cette dette ne se rembourse jamais. Augmentez le paiement.</span>
+        </p>
+      )}
+      {revolvingAlert && !revolvingStuck && (
+        <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.red }}>
+          <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <span>Taux revolving élevé ({credit.taux} %). Privilégiez son remboursement avant tout placement.</span>
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function Credits({ credits, setCredits, monthlyIncome = 0, setView }) {
+  const T = useT();
+  const chartTip = makeChartTip(T);
+  const now = new Date();
+  const [editing, setEditing] = useState(null);   // crédit en cours d'édition/ajout
+  const [arbitrage, setArbitrage] = useState(null); // crédit immo pour l'outil rembourser/investir
+
+  // Largeur réelle mesurée (ResizeObserver) → dimensions explicites pour Recharts.
+  // Évite le ResponsiveContainer qui se mesure à 0 selon le timing de layout.
+  const [pieRef, pieW] = useElementWidth();
+  const [areaRef, areaW] = useElementWidth();
+
+  const active = credits;
+
+  const totalRestant = active.reduce((s, c) => s + creditCapitalRestant(c, now), 0);
+  const totalMensualite = active.reduce((s, c) => s + creditMensualite(c) + (+c.assuranceMensuelle || 0), 0);
+  // « Intérêts restants » = intérêts encore à payer sur les crédits amortissables.
+  // (Le revolving n'a pas d'échéance fixe → exclu de ce cumul, son coût mensuel
+  // apparaît sur sa carte.)
+  const totalInterets = active.reduce((s, c) => s + (c.mode === "revolving" ? 0 : creditInteretsRestants(c, now)), 0);
+  const debtRatio = monthlyIncome > 0 ? (totalMensualite / monthlyIncome) * 100 : null;
+  const debtColor = debtRatio == null ? T.muted : debtRatio > 35 ? T.red : debtRatio > 25 ? T.amber : T.green;
+
+  // Répartition du capital restant par type (donut).
+  const typeBreakdown = useMemo(() => {
+    const byType = {};
+    for (const c of active) {
+      const r = creditCapitalRestant(c, now);
+      if (r <= 0) continue;
+      byType[c.type] = (byType[c.type] || 0) + r;
+    }
+    return Object.entries(byType).map(([type, value]) => ({
+      name: CREDIT_TYPES[type]?.label || type, value: Math.round(value), color: CREDIT_TYPES[type]?.color || T.muted,
+    }));
+  }, [active]);
+
+  // Trajectoire de désendettement : capital restant total projeté année par année.
+  const desendettement = useMemo(() => {
+    if (!active.length) return [];
+    const maxMonths = Math.min(360, Math.max(12, ...active.map((c) => c.mode === "revolving" ? 120 : Math.ceil(creditRemainingMonths(c, now)))));
+    const years = Math.ceil(maxMonths / 12);
+    const startY = now.getFullYear();
+    const out = [];
+    for (let y = 0; y <= years; y++) {
+      out.push({ label: String(startY + y), total: Math.round(active.reduce((s, c) => s + creditProjectedRestant(c, y * 12, now), 0)) });
+    }
+    return out;
+  }, [active]);
+
+  // Conseils contextuels selon la situation (niveaux : red > amber > info > good).
+  const conseils = useMemo(() => {
+    if (!active.length) return [];
+    const out = [];
+    const stuck = active.filter(creditRevolvingStuck);
+    const revolvingChers = active.filter((c) => c.mode === "revolving" && (+c.taux || 0) >= REVOLVING_ALERT_RATE);
+    const immoTauxBas = active.filter((c) => c.type === "immo" && c.mode !== "revolving" && (+c.taux || 0) > 0 && (+c.taux || 0) < 3.5 && creditCapitalRestant(c, now) > 0);
+    const immoTauxEleve = active.filter((c) => c.type === "immo" && c.mode !== "revolving" && (+c.taux || 0) > 4 && creditCapitalRestant(c, now) > 0);
+    const consoAuto = active.filter((c) => (c.type === "conso" || c.type === "auto") && creditCapitalRestant(c, now) > 0);
+    const bientotSoldes = active.filter((c) => c.mode !== "revolving" && creditCapitalRestant(c, now) > 0 && creditRemainingMonths(c, now) <= 6);
+
+    if (stuck.length)
+      out.push({ level: "red", text: "Un crédit revolving ne se rembourse pas : son paiement mensuel ne couvre même pas les intérêts. Augmentez le paiement pour stopper la spirale." });
+    else if (revolvingChers.length)
+      out.push({ level: "red", text: `Vous avez ${revolvingChers.length > 1 ? "des crédits revolving" : "un crédit revolving"} à taux élevé. Remboursez-${revolvingChers.length > 1 ? "les" : "le"} en priorité : aucun placement ne rapporte autant que ce taux vous coûte.` });
+
+    if (debtRatio != null && debtRatio > 35)
+      out.push({ level: "red", text: `Votre taux d'endettement (${debtRatio.toFixed(0)} %) dépasse le seuil bancaire de 35 %. Évitez tout nouveau crédit et visez à réduire vos mensualités.` });
+    else if (debtRatio != null && debtRatio > 25)
+      out.push({ level: "amber", text: `Endettement maîtrisé mais notable (${debtRatio.toFixed(0)} %). Gardez de la marge avant d'envisager un nouvel emprunt.` });
+
+    if (consoAuto.length >= 2)
+      out.push({ level: "amber", text: "Plusieurs crédits conso/auto en cours : un rachat de crédits (regroupement) peut réduire votre mensualité totale — comparez les offres." });
+
+    if (immoTauxEleve.length)
+      out.push({ level: "amber", text: "Crédit immobilier à taux élevé (> 4 %) : une renégociation ou un remboursement anticipé peut être rentable. Utilisez « Rembourser ou investir ? » sur la carte." });
+    if (immoTauxBas.length)
+      out.push({ level: "info", text: "Crédit immobilier à taux faible (< 3,5 %) : garder le prêt et investir votre épargne est souvent plus rentable que rembourser. Vérifiez via « Rembourser ou investir ? »." });
+
+    if (bientotSoldes.length)
+      out.push({ level: "info", text: `${bientotSoldes.length > 1 ? "Des crédits seront soldés" : "Un crédit sera soldé"} d'ici 6 mois : prévoyez de réorienter la mensualité libérée vers votre épargne ou vos investissements.` });
+
+    if (!out.length)
+      out.push({ level: "good", text: "Situation saine : endettement maîtrisé, pas de crédit à risque. Continuez ainsi." });
+
+    return out;
+  }, [active, debtRatio]);
+
+  const save = (c) => {
+    setCredits((prev) => c.id && prev.some((p) => p.id === c.id)
+      ? prev.map((p) => (p.id === c.id ? c : p))
+      : [...prev, { ...c, id: c.id || Date.now() }]);
+    setEditing(null);
+  };
+  const remove = (credit) => {
+    if (typeof window !== "undefined" && !window.confirm(`Supprimer le crédit « ${credit.label || "sans nom"} » ? Cette action est définitive.`)) return;
+    setCredits((prev) => prev.filter((p) => p.id !== credit.id));
+  };
+
+  const arbitrageInitial = arbitrage ? {
+    remaining: Math.round(creditCapitalRestant(arbitrage, now)),
+    ratePct: arbitrage.taux,
+    insurance: Math.round(+arbitrage.assuranceMensuelle || 0),
+    yearsLeft: Math.max(1, Math.round(creditRemainingMonths(arbitrage, now) / 12)),
+  } : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Mes crédits</h1>
+          <p style={{ color: T.muted }}>Suivez vos crédits et prêts en cours — ils alimentent vos passifs.</p>
+        </div>
+        {!editing && (
+          <button onClick={() => setEditing(emptyCredit())}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold"
+            style={{ background: T.gradientPrimary, color: "#fff", border: "none", cursor: "pointer", boxShadow: glow(T.violet, 40, "33"), transition: "transform 0.15s, box-shadow 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 56, "55"); }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 40, "33"); }}>
+            <Plus size={16} /> Ajouter un crédit
+          </button>
+        )}
+      </div>
+
+      {/* Résumé */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Capital restant dû" value={eur(Math.round(totalRestant))} valueColor={T.red} />
+        <KpiCard label="Mensualités / mois" value={eur(Math.round(totalMensualite))} valueColor={T.amber} />
+        <KpiCard label="Intérêts restants" value={eur(Math.round(totalInterets))} valueColor={T.muted} />
+        <KpiCard label="Taux d'endettement"
+          value={debtRatio == null ? "—" : `${debtRatio.toFixed(1)} %`}
+          valueColor={debtColor}
+          sub={debtRatio == null
+            ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Finances</button>
+            : <span style={{ color: T.muted }}>seuil bancaire 35 %</span>} />
+      </div>
+
+      {/* Répartition + désendettement */}
+      {active.length > 0 && totalRestant > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <h2 className="text-lg font-bold mb-2" style={{ color: T.text }}>Répartition par type</h2>
+            <div ref={pieRef} style={{ width: "100%", height: 220 }}>
+              {pieW > 0 && (
+                <PieChart width={pieW} height={220}>
+                  <Pie data={typeBreakdown} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
+                    {typeBreakdown.map((s, i) => <Cell key={i} fill={s.color} stroke="none" />)}
+                  </Pie>
+                </PieChart>
+              )}
+            </div>
+            {/* Légende avec montant + part — pas de survol nécessaire */}
+            <div className="flex flex-col gap-1.5 mt-2">
+              {typeBreakdown.map((s) => (
+                <div key={s.name} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2" style={{ color: T.muted }}>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                    {s.name}
+                  </span>
+                  <span style={{ color: T.text, fontWeight: 600 }}>
+                    {eur(s.value)} <span style={{ color: T.muted, fontWeight: 400 }}>· {totalRestant > 0 ? Math.round((s.value / totalRestant) * 100) : 0} %</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card>
+            <h2 className="text-lg font-bold mb-2" style={{ color: T.text }}>Trajectoire de désendettement</h2>
+            <p className="text-xs mb-3" style={{ color: T.muted }}>Capital restant total projeté, à mensualités constantes.</p>
+            <div ref={areaRef} style={{ width: "100%", height: 200 }}>
+              {areaW > 0 && (
+                <AreaChart width={areaW} height={200} data={desendettement} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                  <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 11 }} />
+                  <YAxis tick={{ fill: T.muted, fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
+                  <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+                  <Area type="monotone" dataKey="total" stroke={T.blue} fill={`${T.blue}22`} strokeWidth={2} />
+                </AreaChart>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {editing && (
+        <CreditForm key={editing.id || "new"} credit={editing} onSave={save} onCancel={() => setEditing(null)} />
+      )}
+
+      {arbitrage && (
+        <Card>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Arbitrage — {arbitrage.label || "crédit immo"}</h2>
+            <button onClick={() => setArbitrage(null)} aria-label="Fermer"
+              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: T.muted }}>
+              <X size={14} />
+            </button>
+          </div>
+          <CreditArbitrage key={arbitrage.id} initial={arbitrageInitial} />
+        </Card>
+      )}
+
+      {/* Liste */}
+      {credits.length === 0 && !editing ? (
+        <Card>
+          <div className="flex flex-col items-center text-center py-8 gap-3">
+            <CreditCard size={32} style={{ color: T.muted }} />
+            <p style={{ color: T.muted }}>Aucun crédit enregistré. Ajoutez vos prêts (immo, auto, conso, étudiant, revolving…) pour suivre vos mensualités et votre endettement.</p>
+            <button onClick={() => setEditing(emptyCredit())}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
+              style={{ background: T.gradientPrimary, color: "#fff", border: "none", cursor: "pointer", boxShadow: glow(T.violet, 32, "33"), transition: "transform 0.15s, box-shadow 0.15s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 48, "55"); }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 32, "33"); }}>
+              <Plus size={16} /> Ajouter un crédit
+            </button>
+          </div>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {credits.map((c) => (
+            <CreditCardItem key={c.id} credit={c} now={now}
+              onEdit={(cr) => { setArbitrage(null); setEditing(cr); }}
+              onDelete={remove}
+              onArbitrage={(cr) => { setEditing(null); setArbitrage(cr); }} />
+          ))}
+        </div>
+      )}
+
+      {/* Conseils contextuels */}
+      {conseils.length > 0 && (
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb size={18} style={{ color: T.violet }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Conseils</h2>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {conseils.map((cs, i) => {
+              const col = cs.level === "red" ? T.red : cs.level === "amber" ? T.amber : cs.level === "good" ? T.green : T.blue;
+              const Icon = cs.level === "red" ? AlertCircle : cs.level === "amber" ? AlertTriangle : cs.level === "good" ? Check : Lightbulb;
+              return (
+                <div key={i} className="flex items-start gap-2.5 rounded-xl px-3.5 py-3"
+                  style={{ background: `${col}0d`, border: `1px solid ${col}33` }}>
+                  <Icon size={15} style={{ color: col, flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+                  <span className="text-sm" style={{ color: T.text, lineHeight: 1.5 }}>{cs.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -4461,7 +4953,6 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           ["residence", "Résidence principale", "Le bien que vous habiterez"],
           ["locatif", "Investissement locatif", "Un bien que vous achetez pour le louer"],
           ["location", "Mettre un bien en location", "Un bien que vous possédez déjà"],
-          ["credit", "Mon crédit immobilier", "Rembourser ou investir ?"],
         ].map(([val, lbl]) => (
           <button key={val} onClick={() => setMode(val)} style={{
             padding: "9px 18px", borderRadius: 10, border: `1px solid ${mode === val ? T.blue : T.border}`,
@@ -4474,10 +4965,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         {mode === "residence" && "Résidence principale : le logement que vous occuperez vous-même."}
         {mode === "locatif" && "Investissement locatif : un bien acheté pour être loué — rendement, charges et cash-flow sont calculés séparément."}
         {mode === "location" && "Mise en location d'un bien déjà détenu : simulez le cash-flow si vous le louez, charges et imposition incluses."}
-        {mode === "credit" && "Vous avez déjà un crédit immobilier ? Comparez : rembourser par anticipation, ou garder le prêt et investir votre épargne."}
       </p>
-
-      {mode === "credit" && <CreditArbitrage />}
 
       {/* Capacité d'emprunt */}
       {mode !== "location" && mode !== "credit" && (
@@ -4763,23 +5251,31 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
             <input type="number" value={locPrice} style={inputStyle} onChange={(e) => setLocPrice(+e.target.value || 0)} />
           </Field>
           <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
-            <input type="range" min={5} max={50} step={1} value={locApportPct} onChange={(e) => setLocApportPct(+e.target.value)}
-              className="w-full" style={{ accentColor: T.blue }} />
+            <div className="flex items-center" style={{ minHeight: 44 }}>
+              <input type="range" min={5} max={50} step={1} value={locApportPct} onChange={(e) => setLocApportPct(+e.target.value)}
+                className="w-full" style={{ accentColor: T.blue }} />
+            </div>
+          </Field>
+          <Field label={`Vacance locative (${locVacance} mois/an)`}>
+            <div className="flex items-center" style={{ minHeight: 44 }}>
+              <input type="range" min={0} max={3} step={1} value={locVacance} onChange={(e) => setLocVacance(+e.target.value)}
+                className="w-full" style={{ accentColor: T.amber }} />
+            </div>
           </Field>
           <Field label="Taux crédit (% / an)">
             <input type="number" value={locRate} step={0.1} style={inputStyle} onChange={(e) => setLocRate(+e.target.value || 0)} />
           </Field>
           <Field label="Durée du crédit">
-            <select value={locDuration} style={inputStyle} onChange={(e) => setLocDuration(+e.target.value)}>
+            <select value={locDuration} onChange={(e) => setLocDuration(+e.target.value)}
+              style={{ ...inputStyle, height: 44, lineHeight: "22px", paddingTop: 0, paddingBottom: 0, paddingRight: 34,
+                appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#','')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
               {[10, 15, 20, 25, 30].map((d) => <option key={d} value={d}>{d} ans</option>)}
             </select>
           </Field>
           <Field label="Loyer mensuel attendu, hors charges (€)">
             <input type="number" value={locLoyer} style={inputStyle} onChange={(e) => setLocLoyer(+e.target.value || 0)} />
-          </Field>
-          <Field label={`Vacance locative (${locVacance} mois/an)`}>
-            <input type="range" min={0} max={3} step={1} value={locVacance} onChange={(e) => setLocVacance(+e.target.value)}
-              className="w-full" style={{ accentColor: T.amber }} />
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
             <input type="number" value={locCharges} style={inputStyle} onChange={(e) => setLocCharges(+e.target.value || 0)} />
@@ -4939,16 +5435,18 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
             <input type="number" value={melMensualite} style={inputStyle} onChange={(e) => setMelMensualite(+e.target.value || 0)} />
           </Field>
           <Field label={`Vacance locative (${melVacance} mois/an)`}>
-            <input type="range" min={0} max={3} step={1} value={melVacance} onChange={(e) => setMelVacance(+e.target.value)}
-              className="w-full" style={{ accentColor: T.amber }} />
+            <div className="flex items-center" style={{ minHeight: 44 }}>
+              <input type="range" min={0} max={3} step={1} value={melVacance} onChange={(e) => setMelVacance(+e.target.value)}
+                className="w-full" style={{ accentColor: T.amber }} />
+            </div>
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
             <input type="number" value={melChargesCopro} style={inputStyle} onChange={(e) => setMelChargesCopro(+e.target.value || 0)} />
           </Field>
-          <Field label="Taxe foncière (€/an)">
+          <Field label="Taxe foncière (€/an)" compact>
             <input type="number" value={melTaxeFonciere} style={inputStyle} onChange={(e) => setMelTaxeFonciere(+e.target.value || 0)} />
           </Field>
-          <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." align="left" /></>}>
+          <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." align="left" /></>} compact>
             <input type="number" value={melPNO} style={inputStyle} onChange={(e) => setMelPNO(+e.target.value || 0)} />
           </Field>
           <Field label={<>GLI — Garantie Loyers Impayés (% du loyer)<InfoTooltip text="Assurance qui couvre les loyers impayés et certaines dégradations locatives. Facultative mais recommandée — coût indicatif : 2 % à 3,5 % du loyer mensuel charges comprises." align="left" /></>}>
@@ -5226,241 +5724,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
       </>
       )}
 
-      {/* ---- Recherche d'annonces ---- */}
-      {mode !== "location" && mode !== "credit" && <ImmobilierSearch budget={mode === "locatif" ? locBudgetSearch : loan25} />}
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  RECHERCHE D'ANNONCES IMMOBILIÈRES — deep links multi-plateformes  */
-/* ------------------------------------------------------------------ */
-const faviconUrl = (domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-
-const IMMO_PLATFORMS = [
-  {
-    id: "leboncoin",
-    name: "Leboncoin",
-    color: "#f97316",
-    favicon: faviconUrl("leboncoin.fr"),
-    buildUrl: ({ budget, city, type, surface, rooms }) => {
-      const typeMap = { appartement: "2", maison: "1", tous: "1,2" };
-      let u = `https://www.leboncoin.fr/recherche?category=9&price=0-${budget}`;
-      if (city)              u += `&locations=${encodeURIComponent(city)}`;
-      if (type !== "tous")   u += `&real_estate_type=${typeMap[type]}`;
-      if (rooms > 1)         u += `&rooms=${rooms}-99`;
-      if (surface > 0)       u += `&square=${surface}-700`;
-      return u;
-    },
-  },
-  {
-    id: "seloger",
-    name: "SeLoger",
-    color: "#0070f3",
-    favicon: faviconUrl("seloger.com"),
-    buildUrl: ({ budget, type, surface, rooms }) => {
-      const typeMap = { appartement: "2", maison: "1", tous: "1,2" };
-      let u = `https://www.seloger.com/list.htm?projects=2&types=${typeMap[type]}&price=0/${budget}`;
-      if (surface > 0) u += `&surface=${surface}/700`;
-      if (rooms > 1)   u += `&nb_pieces=${rooms}`;
-      return u;
-    },
-  },
-  {
-    id: "bienici",
-    name: "Bien'ici",
-    color: "#06b6d4",
-    favicon: faviconUrl("bienici.com"),
-    buildUrl: ({ budget, city, type, surface, rooms }) => {
-      const typeMap = { appartement: "appartement", maison: "maison", tous: "appartement,maison" };
-      const citySlug = city ? city.toLowerCase().replace(/\s+/g, "-") : "france";
-      let u = `https://www.bienici.com/recherche/achat/${citySlug}/prix-max-${budget}`;
-      if (type !== "tous")   u += `/typedebien-${typeMap[type]}`;
-      if (surface > 0)       u += `/surface-min-${surface}`;
-      if (rooms > 1)         u += `/nb-pieces-min-${rooms}`;
-      return u;
-    },
-  },
-  {
-    id: "pap",
-    name: "PAP",
-    color: "#6366f1",
-    favicon: faviconUrl("pap.fr"),
-    buildUrl: ({ budget, city, type, surface }) => {
-      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
-      let u = `https://www.pap.fr/annonce/ventes-immobilieres-france`;
-      const params = [`prix_max=${budget}`];
-      if (typeMap[type])   params.push(`typebien=${typeMap[type]}`);
-      if (surface > 0)     params.push(`surface_min=${surface}`);
-      if (city)            params.push(`localisation=${encodeURIComponent(city)}`);
-      return u + "?" + params.join("&");
-    },
-  },
-  {
-    id: "century21",
-    name: "Century 21",
-    color: "#c8a04a",
-    favicon: faviconUrl("century21.fr"),
-    buildUrl: ({ budget, city, type }) => {
-      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
-      let u = `https://www.century21.fr/annonces/achat/?prix_max=${budget}`;
-      if (city)            u += `&localisation=${encodeURIComponent(city)}`;
-      if (typeMap[type])   u += `&typebien=${typeMap[type]}`;
-      return u;
-    },
-  },
-  {
-    id: "orpi",
-    name: "Orpi",
-    color: "#e63946",
-    favicon: faviconUrl("orpi.com"),
-    buildUrl: ({ budget, city, type, surface, rooms }) => {
-      const typeMap = { appartement: "appartement", maison: "maison", tous: "" };
-      let u = `https://www.orpi.com/recherche/buy/?budget_max=${budget}`;
-      if (city)            u += `&location=${encodeURIComponent(city)}`;
-      if (typeMap[type])   u += `&type=${typeMap[type]}`;
-      if (surface > 0)     u += `&area_min=${surface}`;
-      if (rooms > 1)       u += `&rooms_min=${rooms}`;
-      return u;
-    },
-  },
-];
-
-function ImmobilierSearch({ budget: defaultBudget }) {
-  const T = useT();
-  const [searchBudget, setSearchBudget] = useState(defaultBudget || 250000);
-  const [city, setCity]         = useState("");
-  const [type, setType]         = useState("tous");
-  const [surface, setSurface]   = useState(0);
-  const [rooms, setRooms]       = useState(1);
-
-  // Estimation indicative m² moyen France (prix médian ~3 200 €/m² en province, ~10 000 à Paris)
-  const moy = city.toLowerCase().includes("paris") ? 10000
-            : city.toLowerCase().includes("lyon") || city.toLowerCase().includes("bordeaux") || city.toLowerCase().includes("marseille") ? 5000
-            : 3200;
-  const m2Est = Math.round(searchBudget / moy);
-
-  const inputSt = { width: "100%", padding: "8px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: "#181e2c", color: T.text, fontSize: 13, outline: "none" };
-  const labelSt = { fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" };
-
-  return (
-    <Card>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <Search size={18} style={{ color: T.blue }} />
-        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 18, margin: 0 }}>Rechercher des annonces</h2>
-        <span style={{ fontSize: 11, borderRadius: 20, padding: "3px 10px", background: "rgba(91,141,239,0.1)", color: T.blue, fontWeight: 600 }}>
-          Budget auto depuis votre capacite
-        </span>
-      </div>
-
-      {/* Filtres */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
-        <div>
-          <label style={labelSt}>Budget max</label>
-          <input
-            type="number"
-            style={inputSt}
-            value={searchBudget}
-            onChange={e => setSearchBudget(Math.max(0, +e.target.value))}
-          />
-        </div>
-        <div>
-          <label style={labelSt}>Ville / Code postal</label>
-          <input
-            type="text"
-            style={inputSt}
-            placeholder="Paris, Lyon, 69001..."
-            value={city}
-            onChange={e => setCity(e.target.value)}
-          />
-        </div>
-        <div>
-          <label style={labelSt}>Type de bien</label>
-          <select style={inputSt} value={type} onChange={e => setType(e.target.value)}>
-            <option value="tous">Tous les biens</option>
-            <option value="appartement">Appartement</option>
-            <option value="maison">Maison</option>
-          </select>
-        </div>
-        <div>
-          <label style={labelSt}>Surface min (m2)</label>
-          <input
-            type="number"
-            style={inputSt}
-            placeholder="0 = pas de min"
-            value={surface || ""}
-            onChange={e => setSurface(Math.max(0, +e.target.value || 0))}
-          />
-        </div>
-        <div>
-          <label style={labelSt}>Pieces min</label>
-          <select style={inputSt} value={rooms} onChange={e => setRooms(+e.target.value)}>
-            <option value={1}>1+</option>
-            <option value={2}>2+</option>
-            <option value={3}>3+</option>
-            <option value={4}>4+</option>
-            <option value={5}>5+</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Indicateur budgetaire */}
-      <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}22`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <Home size={16} style={{ color: T.blue, flexShrink: 0 }} />
-        <span style={{ color: T.muted, fontSize: 13 }}>
-          Avec <strong style={{ color: T.text }}>{eur(searchBudget)}</strong>,
-          vous visez environ{" "}
-          <strong style={{ color: T.blue }}>{m2Est} m2</strong>{" "}
-          {city ? `a ${city}` : "en province"}
-          {city.toLowerCase().includes("paris") ? " (marche tres tendu)" : city.toLowerCase().includes("lyon") || city.toLowerCase().includes("bordeaux") ? " (marche dynamique)" : " (prix median ~3 200 EUR/m2)"}.
-          {surface > 0 && m2Est < surface && (
-            <span style={{ color: T.amber }}>{" "}Attention : votre budget semble insuffisant pour {surface} m2 dans cette zone.</span>
-          )}
-        </span>
-      </div>
-
-      {/* Boutons plateformes */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
-        {IMMO_PLATFORMS.map(p => {
-          const url = p.buildUrl({ budget: searchBudget, city, type, surface, rooms });
-          return (
-            <a
-              key={p.id}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "11px 14px", borderRadius: 12, border: `1px solid ${p.color}44`, background: `${p.color}0d`, textDecoration: "none", transition: "opacity 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.75"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.06)", border: `1px solid ${p.color}33`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
-                  <img
-                    src={p.favicon}
-                    alt={p.name}
-                    width={20}
-                    height={20}
-                    style={{ objectFit: "contain", borderRadius: 4 }}
-                    onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
-                  />
-                  <span style={{ display: "none", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 800, color: p.color, width: "100%", height: "100%" }}>
-                    {p.name.slice(0, 2).toUpperCase()}
-                  </span>
-                </span>
-                <span style={{ color: T.text, fontWeight: 600, fontSize: 13 }}>{p.name}</span>
-              </span>
-              <ExternalLink size={13} style={{ color: T.muted, flexShrink: 0 }} />
-            </a>
-          );
-        })}
-      </div>
-
-      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-        <span style={{ fontSize: 11, color: T.muted }}>
-          Les liens ouvrent les plateformes avec vos filtres pre-remplis. Les annonces sont en temps reel sur chaque site.
-        </span>
-      </div>
-    </Card>
   );
 }
 
@@ -5676,6 +5940,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
 
   const renderCategory = (cat, side) => {
     const isPassif = side === "passifs";
+    const isDerived = cat.id === "credits-derived"; // alimentée par "Mes crédits" — lecture seule
     const total = cat.items.reduce((s, i) => s + (i.value || 0), 0);
     const isOpen = !!openCats[cat.id];
     return (
@@ -5698,9 +5963,14 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
             {cat.items.length === 0 && (
               <p className="text-sm py-2" style={{ color: T.muted }}>Aucun élément</p>
             )}
+            {isDerived && (
+              <p className="text-xs py-1" style={{ color: T.muted }}>
+                Alimenté automatiquement par <b style={{ color: T.text }}>Mes crédits</b> — modifiez-les là-bas.
+              </p>
+            )}
             {cat.items.map((item, idx) => (
               <div key={idx} className="py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
-                {editMode ? (
+                {editMode && !isDerived ? (
                   <div className="flex flex-wrap gap-2 items-center">
                     <input
                       value={item.label}
@@ -5751,7 +6021,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                 )}
               </div>
             ))}
-            {editMode && (
+            {editMode && !isDerived && (
               <button onClick={() => addItem(side, cat.id)}
                 className="flex items-center gap-2 mt-2 text-sm"
                 style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: "4px 0" }}>
@@ -6352,6 +6622,17 @@ export default function App() {
   const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false });
   const [simParams,  setSimParams]  = useLocalStorage("wt_simParams", { monthly: 500, initial: 10000, price: 200000, horizon: 20 });
   const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", DEFAULT_PATRIMOINE);
+  const [credits,    setCredits]    = useLocalStorage("wt_credits", []);
+  // Patrimoine enrichi : les crédits saisis alimentent les passifs (source unique),
+  // sans dupliquer la saisie. La catégorie dérivée "Crédits" remplace toute version
+  // précédemment injectée (id stable "credits-derived").
+  const patrimoineDerived = useMemo(() => ({
+    ...patrimoine,
+    passifs: [
+      ...(patrimoine.passifs || []).filter((c) => c.id !== "credits-derived"),
+      ...(credits.length ? [creditsToPassifCategory(credits)] : []),
+    ],
+  }), [patrimoine, credits]);
   // Nouvelles features
   const [budgets,    setBudgets]    = useLocalStorage("wt_budgets", {});
   const [goals,      setGoals]      = useLocalStorage("wt_goals", []);
@@ -6422,10 +6703,10 @@ export default function App() {
   /* ── Suivi du patrimoine dans le temps : snapshot mensuel auto ──────── */
   const [snapshots, setSnapshots] = useLocalStorage("wt_networth_snapshots", []);
   const netWorthNow = useMemo(() => {
-    const a = (patrimoine?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
-    const p = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
+    const a = (patrimoineDerived?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
+    const p = (patrimoineDerived?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
     return a - p;
-  }, [patrimoine]);
+  }, [patrimoineDerived]);
   useEffect(() => {
     const now = new Date();
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -6498,20 +6779,20 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", assistant: "IA", couple: "Couple", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", assistant: "IA", couple: "Couple", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
 
         {/* Alertes in-app (tous vues sauf pricing) */}
         {view !== "pricing" && view !== "importer" && (
-          <AlertsBanner totals={totals} patrimoine={patrimoine} dismissed={dismissed} onDismiss={handleDismissAlert} />
+          <AlertsBanner totals={totals} patrimoine={patrimoineDerived} dismissed={dismissed} onDismiss={handleDismissAlert} />
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoine} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} />}
+        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}
@@ -6521,28 +6802,29 @@ export default function App() {
             plan={plan}
           />}
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
-        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoine} setPatrimoine={setPatrimoine} />}
+        {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={totals.revenus} setView={setView} />}
+        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
-        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoine} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}
-        {view === "simulations"  && (canAccess(plan, "simulations") ? <div className="flex flex-col gap-6"><Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /><PERSimulator /></div> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoine} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoine} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "defi"         && (canAccess(plan, "defi")        ? <DeFi />   : <PaywallBanner feature="defi"  plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 
         {/* Vues Pro */}
-        {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoine} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
 
         <LegalDisclaimer />
       </main>
 
       {/* Assistant IA — popup flottant (remplace l'ancien onglet Assistant) */}
-      <AIChatWidget ctx={{ totals, patrimoine, profile, simParams, profileType: detectProfileType(transactions || []) }} />
+      <AIChatWidget ctx={{ totals, patrimoine: patrimoineDerived, credits, profile, simParams, profileType: detectProfileType(transactions || []) }} />
     </div>
   );
 }

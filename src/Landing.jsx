@@ -786,7 +786,7 @@ export default function Landing({ onStart }) {
             style={{ color: T.muted }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
-            <NeonGlow color={T.blue} />
+            <NeonGlow color={T.violet} />
             Se connecter
           </button>
           <ThemeToggle />

@@ -630,3 +630,35 @@ export function perSeries(opts, startYear = new Date().getFullYear()) {
   }
   return out;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   Revenu lissé — base de référence pour les ratios quand le revenu varie
+   (intérim, freelance). S'appuie sur l'historique mensuel `histo` (champ rev).
+   ──────────────────────────────────────────────────────────────────── */
+export const INCOME_CV_THRESHOLD = 0.25; // coefficient de variation au-delà duquel le revenu est dit variable
+export const INCOME_MIN_MONTHS   = 4;    // minimum de mois de données pour juger de la variabilité
+
+/** Moyenne des revenus mensuels sur les `months` dernières entrées (zéros inclus). */
+export function smoothedMonthlyIncome(histo = [], months = 12) {
+  const revs = histo.slice(-months).map((h) => +h.rev || 0);
+  if (!revs.length) return 0;
+  return revs.reduce((s, r) => s + r, 0) / revs.length;
+}
+
+/** Coefficient de variation (écart-type ÷ moyenne) des revenus sur la fenêtre. */
+export function incomeCV(histo = [], months = 12) {
+  const revs = histo.slice(-months).map((h) => +h.rev || 0);
+  if (!revs.length) return 0;
+  const mean = revs.reduce((s, r) => s + r, 0) / revs.length;
+  if (mean === 0) return 0;
+  const variance = revs.reduce((s, r) => s + (r - mean) ** 2, 0) / revs.length;
+  return Math.sqrt(variance) / mean;
+}
+
+/** Revenu variable si CV > seuil sur ≥ INCOME_MIN_MONTHS mois, OU profil interim/indépendant. */
+export function isIncomeVariable(histo = [], profileType = "", months = 12) {
+  if (profileType === "interimaire" || profileType === "independant") return true;
+  const n = Math.min(histo.length, months);
+  if (n < INCOME_MIN_MONTHS) return false;
+  return incomeCV(histo, months) > INCOME_CV_THRESHOLD;
+}

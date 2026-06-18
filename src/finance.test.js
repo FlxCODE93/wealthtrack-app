@@ -10,6 +10,8 @@ import {
   monthsElapsed, creditMensualite, creditCapitalRestant, creditInteretsRestants,
   creditCoutTotal, creditDateFin, creditsToPassifCategory, creditRemainingMonths,
   creditRevolvingStuck, creditProjectedRestant,
+  smoothedMonthlyIncome, incomeCV, isIncomeVariable,
+  INCOME_CV_THRESHOLD, INCOME_MIN_MONTHS,
 } from "./finance.js";
 
 /* ── fv (valeur future, intérêts composés mensuels) ──────────────── */
@@ -483,5 +485,41 @@ describe("crédits — garde-fous & helpers", () => {
   it("creditProjectedRestant : revolving bloqué ne descend pas à 0", () => {
     const stuck = { mode: "revolving", capitalRestant: 3000, taux: 20, paiementMensuel: 40 };
     expect(creditProjectedRestant(stuck, 60)).toBeGreaterThan(0);
+  });
+});
+
+describe("revenu lissé", () => {
+  // 12 mois, dont 3 à 0 € (freelance creux)
+  const histoVar = [4000,0,3000,5000,0,4500,3500,0,4200,3800,5000,4000]
+    .map((rev, i) => ({ m: `M${i}`, rev, dep: 1500, inv: 0 }));
+  const histoStable = Array.from({ length: 12 }, (_, i) => ({ m: `M${i}`, rev: 3000, dep: 1500, inv: 0 }));
+
+  it("smoothedMonthlyIncome = moyenne des rev sur la fenêtre (zéros inclus)", () => {
+    const total = 4000+0+3000+5000+0+4500+3500+0+4200+3800+5000+4000;
+    expect(smoothedMonthlyIncome(histoVar, 12)).toBeCloseTo(total / 12, 6);
+  });
+  it("smoothedMonthlyIncome ne prend que les N derniers mois", () => {
+    expect(smoothedMonthlyIncome(histoStable, 3)).toBeCloseTo(3000, 6);
+  });
+  it("smoothedMonthlyIncome histo vide → 0", () => {
+    expect(smoothedMonthlyIncome([], 12)).toBe(0);
+  });
+  it("incomeCV élevé pour revenus en dents de scie, ~0 pour constant", () => {
+    expect(incomeCV(histoVar, 12)).toBeGreaterThan(INCOME_CV_THRESHOLD);
+    expect(incomeCV(histoStable, 12)).toBeCloseTo(0, 6);
+  });
+  it("isIncomeVariable : vrai si CV > seuil sur ≥ 4 mois", () => {
+    expect(isIncomeVariable(histoVar, "salarie_stable")).toBe(true);
+  });
+  it("isIncomeVariable : faux pour salarié stable régulier", () => {
+    expect(isIncomeVariable(histoStable, "salarie_stable")).toBe(false);
+  });
+  it("isIncomeVariable : vrai par fallback profil même si CV faible", () => {
+    expect(isIncomeVariable(histoStable, "independant")).toBe(true);
+    expect(isIncomeVariable(histoStable, "interimaire")).toBe(true);
+  });
+  it("isIncomeVariable : faux si < 4 mois de données et profil stable", () => {
+    const court = histoVar.slice(0, 3);
+    expect(isIncomeVariable(court, "salarie_stable")).toBe(false);
   });
 });

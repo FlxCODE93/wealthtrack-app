@@ -2886,7 +2886,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 <TrendingUp size={20} style={{ color: T.blue }} />
                 <span className="text-lg font-bold" style={{ color: T.text }}>Cours en temps réel</span>
               </div>
-              <button onClick={() => setLiveOpen(false)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 8, padding: "6px 8px", cursor: "pointer", display: "flex" }}><X size={16} /></button>
+              <button onClick={() => setLiveOpen(false)} aria-label="Fermer" style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={18} /></button>
             </div>
 
             {liveLoading && !liveData && (
@@ -6008,7 +6008,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                       <span style={{ fontSize: 11, color: T.muted }}>= {eur(item.value)}</span>
                     )}
                     <button onClick={() => deleteItem(side, cat.id, idx)} aria-label="Supprimer la ligne"
-                      style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "4px 8px", cursor: "pointer", color: T.red, marginLeft: "auto" }}>
+                      style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.red, marginLeft: "auto" }}>
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -6586,7 +6586,7 @@ function FIREInfoModal({ onClose }) {
         style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 560, position: "relative" }}
       >
         {/* Close */}
-        <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#6b7280", cursor: "pointer", lineHeight: 1, display: "inline-flex" }}><X size={20} /></button>
+        <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none", color: "#6b7280", cursor: "pointer", lineHeight: 1, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><X size={20} /></button>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>

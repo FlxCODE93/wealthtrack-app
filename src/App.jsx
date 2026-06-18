@@ -37,6 +37,7 @@ import {
   loanFromPayment, longTermGain,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
   perSimulation, perSeries,
+  smoothedMonthlyIncome, isIncomeVariable,
   creditMensualite, creditCapitalRestant, creditInteretsRestants,
   creditCoutTotal, creditDateFin, creditsToPassifCategory, creditRemainingMonths,
   creditRevolvingStuck, creditProjectedRestant,
@@ -640,7 +641,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : TABLEAU DE BORD                                            */
 /* ------------------------------------------------------------------ */
-function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [] }) {
+function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
@@ -1036,6 +1037,8 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
           profile={profile}
           healthScore={healthScore}
           setView={setView}
+          incomeRef={incomeRef}
+          incomeIsSmoothed={incomeIsSmoothed}
         />
       )}
     </div>
@@ -1045,7 +1048,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
 /* ------------------------------------------------------------------ */
 /*  PREMIUM TEASER — affiché en Free dans le Dashboard                */
 /* ------------------------------------------------------------------ */
-function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, setView }) {
+function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, setView, incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const netWorth = useMemo(() => {
     const a = (patrimoine?.actifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
@@ -1079,7 +1082,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
   else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ level: "amber", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
   if (healthScore.breakdown.diversification.score < 20) alerts.push({ level: "red", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
   if (healthScore.breakdown.investment.score < 15) alerts.push({ level: "amber", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
-  if (totals.revenus > 0 && totals.chargesFixes > totals.revenus * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
+  if (incomeRef > 0 && totals.chargesFixes > incomeRef * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${Math.round((totals.chargesFixes / incomeRef) * 100)}% des revenus${incomeIsSmoothed ? ", moyenne 12 mois" : ""}) — marge de manœuvre réduite`, feature: "simulations" });
   if (netWorth < 0) alerts.push({ level: "red", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
   if (alerts.length < 2) alerts.push({ level: "info", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
 
@@ -4444,7 +4447,7 @@ function CreditCardItem({ credit, now, onEdit, onDelete, onArbitrage }) {
   );
 }
 
-function Credits({ credits, setCredits, monthlyIncome = 0, setView }) {
+function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = false, setView }) {
   const T = useT();
   const chartTip = makeChartTip(T);
   const now = new Date();
@@ -4577,7 +4580,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, setView }) {
           valueColor={debtColor}
           sub={debtRatio == null
             ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Finances</button>
-            : <span style={{ color: T.muted }}>mensualités ÷ revenus · seuil 35 %</span>} />
+            : <span style={{ color: T.muted }}>{incomeIsSmoothed ? "basé sur votre revenu moyen (12 mois) · seuil 35 %" : "mensualités ÷ revenus · seuil 35 %"}</span>} />
       </div>
 
       {/* Répartition + désendettement */}
@@ -6242,7 +6245,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
 /* ------------------------------------------------------------------ */
 /*  ALERTES IN-APP — bannières dismissibles basées sur les données    */
 /* ------------------------------------------------------------------ */
-function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
+function AlertsBanner({ totals, patrimoine, dismissed, onDismiss, incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const totalActifs  = (patrimoine?.actifs  || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
   const totalPassifs = (patrimoine?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
 
@@ -6256,10 +6259,10 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
       out.push({ id: "deficit",          level: "red",   msg: `Déficit mensuel de ${eur(Math.abs(totals.restant))} — vous dépensez plus que vous ne gagnez ce mois.` });
     if (totalPassifs > totalActifs * 0.5 && totalActifs > 0)
       out.push({ id: "high_debt",        level: "amber", msg: `Endettement élevé (${Math.round((totalPassifs / totalActifs) * 100)}% de vos actifs) — priorisez le remboursement des crédits.` });
-    if (totals.revenus > 0 && totals.chargesFixes > totals.revenus * 0.6)
-      out.push({ id: "heavy_charges",    level: "amber", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — peu de marge de manœuvre.` });
+    if (incomeRef > 0 && totals.chargesFixes > incomeRef * 0.6)
+      out.push({ id: "heavy_charges",    level: "amber", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / incomeRef) * 100)}% des revenus${incomeIsSmoothed ? ", moyenne 12 mois" : ""}) — peu de marge de manœuvre.` });
     return out.filter(a => !dismissed.includes(a.id));
-  }, [totals, totalActifs, totalPassifs, dismissed]);
+  }, [totals, totalActifs, totalPassifs, dismissed, incomeRef, incomeIsSmoothed]);
 
   if (alerts.length === 0) return null;
 
@@ -6695,6 +6698,15 @@ export default function App() {
     return { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne };
   }, [transactions]);
 
+  // Revenu de référence : lissé (moyenne 12 mois) quand le revenu est variable
+  // (intérim/freelance), sinon le mois courant. Sert aux ratios de capacité/effort.
+  const incomeProfileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
+  const incomeIsSmoothed  = useMemo(() => isIncomeVariable(histo, incomeProfileType), [histo, incomeProfileType]);
+  const incomeRef = useMemo(
+    () => (incomeIsSmoothed ? Math.round(smoothedMonthlyIncome(histo, 12)) : totals.revenus),
+    [incomeIsSmoothed, histo, totals.revenus]
+  );
+
   const breakdown = useMemo(() => {
     const map = {};
     transactions.filter((t) => t.amount < 0).forEach((t) => {
@@ -6809,11 +6821,11 @@ export default function App() {
 
         {/* Alertes in-app (tous vues sauf pricing) */}
         {view !== "pricing" && view !== "importer" && (
-          <AlertsBanner totals={totals} patrimoine={patrimoineDerived} dismissed={dismissed} onDismiss={handleDismissAlert} />
+          <AlertsBanner totals={totals} patrimoine={patrimoineDerived} dismissed={dismissed} onDismiss={handleDismissAlert} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} />}
+        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}
@@ -6823,7 +6835,7 @@ export default function App() {
             plan={plan}
           />}
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
-        {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={totals.revenus} setView={setView} />}
+        {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}

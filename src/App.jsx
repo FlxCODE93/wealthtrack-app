@@ -394,7 +394,7 @@ function PricingPage({ plan, setPlan }) {
         }}>
           Annuel
           <span style={{
-            fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 10,
+            fontSize: 12, fontWeight: 800, padding: "2px 7px", borderRadius: 10,
             background: billing === "annual" ? "rgba(255,255,255,0.22)" : `${T.green}22`,
             color: billing === "annual" ? "#fff" : T.green,
           }}>
@@ -421,12 +421,12 @@ function PricingPage({ plan, setPlan }) {
               boxShadow: tier.id === "pro" ? `0 0 32px ${tier.color}18` : "none",
             }}>
               {tier.badge && (
-                <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: tier.color, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: tier.color, color: "#fff", fontSize: 12, fontWeight: 700, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap" }}>
                   {tier.badge}
                 </div>
               )}
               {active && (
-                <div style={{ position: "absolute", top: 16, right: 16, background: tier.color + "22", border: `1px solid ${tier.color}`, borderRadius: 8, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: tier.color }}>
+                <div style={{ position: "absolute", top: 16, right: 16, background: tier.color + "22", border: `1px solid ${tier.color}`, borderRadius: 8, padding: "2px 8px", fontSize: 12, fontWeight: 700, color: tier.color }}>
                   ACTIF
                 </div>
               )}
@@ -444,7 +444,7 @@ function PricingPage({ plan, setPlan }) {
                   </div>
                 )}
                 {tier.trial && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, padding: "3px 10px", borderRadius: 20, background: `${tier.color}18`, color: tier.color, fontSize: 11, fontWeight: 700 }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, padding: "3px 10px", borderRadius: 20, background: `${tier.color}18`, color: tier.color, fontSize: 12, fontWeight: 700 }}>
                     <Gift size={11} /> {tier.trial}
                   </div>
                 )}
@@ -536,7 +536,7 @@ function PricingPage({ plan, setPlan }) {
         </div>
       </div>
 
-      <p style={{ color: T.muted, fontSize: 11, textAlign: "center" }}>
+      <p style={{ color: T.muted, fontSize: 12, textAlign: "center" }}>
         WealthTrack n'est pas un Conseiller en Investissement Financier. Les simulations sont fournies à titre indicatif.
       </p>
     </div>
@@ -749,8 +749,8 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} />
-                <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: T.muted }} />
+                <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
                 <Tooltip {...makeChartTip(T)} formatter={v => [eur(v), "Patrimoine net"]} />
                 <Area type="monotone" dataKey="v" stroke={T.green} strokeWidth={2.5} fill="url(#nwGrad)" />
               </AreaChart>
@@ -799,7 +799,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                   <span style={{ color: T.amber, fontWeight: 800, fontSize: 13 }}>
                     <AnimatedNumber value={savingsStreak} />
                   </span>
-                  <span style={{ color: T.muted, fontSize: 11 }}>
+                  <span style={{ color: T.muted, fontSize: 12 }}>
                     mois d'épargne {isNewStreakRecord && <b style={{ color: T.amber }}>· record !</b>}
                   </span>
                 </div>
@@ -905,7 +905,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
                   <div className="text-sm font-medium" style={{ color: T.text }}>{w.label}</div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="text-sm font-semibold" style={{ color: T.green }}>+{w.gain} €/mois</span>
-                    <span style={{ color: T.muted, fontSize: 11 }}>·</span>
+                    <span style={{ color: T.muted, fontSize: 12 }}>·</span>
                     <span className="text-xs flex items-center gap-1" style={{ color: T.muted }}>
                       <TrendingUp size={10} /> 20 ans : +{eur(longTermGain(w.gain))}
                     </span>
@@ -1100,9 +1100,9 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
       <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {/* Metric 1 — IF teaser */}
         <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
-          <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
+          <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#f59e0b", filter: "blur(6px)", userSelect: "none" }}>{ifAgeStr}</div>
-          <div style={{ fontSize: 11, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             dans {ifYears != null ? `${ifYears} ans` : "plus de 80 ans"} — scénario base 7%/an
           </div>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
@@ -1114,11 +1114,11 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
 
         {/* Metric 2 — Patrimoine projeté 10 ans */}
         <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
-          <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
+          <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Votre patrimoine dans 10 ans (3 scénarios)</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#22c55e", filter: "blur(6px)", userSelect: "none" }}>
             {fv10 >= 1e6 ? (fv10 / 1e6).toFixed(1) + " M€" : Math.round(fv10 / 1e3) + " k€"}
           </div>
-          <div style={{ fontSize: 11, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 4, filter: "blur(5px)", userSelect: "none" }}>
             scénario base — pessimiste et optimiste inclus
           </div>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(14,18,27,0.5)", borderRadius: 14 }}>
@@ -1139,7 +1139,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", padding: "10px 14px" }}>
               <span style={{ flexShrink: 0, marginTop: 1 }}><AlertLevelIcon level={a.level} size={14} /></span>
               <span style={{ fontSize: 13, color: "#8a97b0", lineHeight: 1.5, flex: 1 }}>{a.msg}</span>
-              <button onClick={() => setView("pricing")} style={{ background: "none", border: "none", color: "#f59e0b", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", padding: "2px 0", flexShrink: 0 }}>
+              <button onClick={() => setView("pricing")} style={{ background: "none", border: "none", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", padding: "2px 0", flexShrink: 0 }}>
                 Corriger →
               </button>
             </div>
@@ -1994,7 +1994,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             style={{ border: "1px solid rgba(139,92,246,0.5)", color: "#a78bfa", background: "rgba(139,92,246,0.08)" }}>
             <Landmark size={18} /> Connexion Bancaire
             {plan === "free" && <span className="text-xs font-bold px-1.5 py-0.5 rounded-md ml-1"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", fontSize: 9, letterSpacing: 0.5 }}>PREMIUM</span>}
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", fontSize: 12, letterSpacing: 0.5 }}>PREMIUM</span>}
           </button>
           <button onClick={() => setShowAdd((s) => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
             style={{ background: T.blue, color: "#fff" }}>
@@ -2124,7 +2124,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold truncate text-sm" style={{ color: T.text }}>
                           {t.label}
-                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 10, color: T.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
+                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 12, color: T.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
                         </div>
                         <div className="text-xs" style={{ color: T.muted }}>{t.cat}</div>
                       </div>
@@ -2186,10 +2186,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                         <div className="h-1.5 rounded-full transition-all" style={{ width: `${pctUsed}%`, background: color }} />
                       </div>
                       <div className="flex justify-between mt-1">
-                        <span style={{ fontSize: 11, color: T.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
+                        <span style={{ fontSize: 12, color: T.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
                         {pctUsed >= 100
-                          ? <span style={{ fontSize: 11, color: T.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
-                          : <span style={{ fontSize: 11, color: T.muted }}>Reste {eur(limit - spent)}</span>}
+                          ? <span style={{ fontSize: 12, color: T.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
+                          : <span style={{ fontSize: 12, color: T.muted }}>Reste {eur(limit - spent)}</span>}
                       </div>
                     </div>
                   )}
@@ -2229,7 +2229,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
 
   const Num = ({ label, val, color }) => (
     <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
-      <div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>{label}</div>
       <div style={{ color: color || T.text, fontWeight: 800, fontSize: 18 }}>{val}</div>
     </div>
   );
@@ -2301,8 +2301,8 @@ function PERSimulator({ monthly = 200, years = 20 }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-            <XAxis dataKey="year" tick={{ fontSize: 11, fill: T.muted }} />
-            <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+            <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
+            <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
             <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n]} />
             <Legend />
             <Area type="monotone" dataKey="per" name="PER + éco. impôt réinvestie" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
@@ -2590,7 +2590,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 cursor: hasHoverChart ? "help" : "pointer",
               }}>
               {t.label}
-              {hasHoverChart && <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.5 }}>ℹ</span>}
+              {hasHoverChart && <span style={{ fontSize: 12, marginLeft: 4, opacity: 0.5 }}>ℹ</span>}
             </button>
           );
         })}
@@ -2775,7 +2775,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                     : l.color,
                 }} />
                 <span style={{ color: T.muted }}>{l.label}</span>
-                <span style={{ color: T.muted, opacity: 0.45, fontSize: 10 }}>{l.axis}</span>
+                <span style={{ color: T.muted, opacity: 0.45, fontSize: 12 }}>{l.axis}</span>
               </span>
             ))}
           </div>
@@ -2784,7 +2784,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           <ResponsiveContainer width="100%" height={340}>
             <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
 
               {/* Axe gauche — scénarios sûrs */}
               <YAxis
@@ -2793,7 +2793,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 domain={[0, nonCryptoDomMax]}
                 ticks={nonCryptoTicks}
                 stroke={T.muted}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 12 }}
                 tickFormatter={simsYFmt}
                 width={54}
               />
@@ -2805,7 +2805,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                 domain={[logDomMin, logDomMax]}
                 ticks={logTicks}
                 stroke={`${ASSET.btc}44`}
-                tick={{ fontSize: 10, fill: `${ASSET.btc}99` }}
+                tick={{ fontSize: 12, fill: `${ASSET.btc}99` }}
                 tickFormatter={logFmt}
                 width={58}
               />
@@ -3047,13 +3047,13 @@ function ETFHistoryTooltip() {
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={MSCI_HISTORY} margin={{ top: 5, right: 10, bottom: 5, left: 52 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} />
+          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
           <YAxis
-            domain={[0, 4000]} stroke={T.muted} tick={{ fontSize: 10 }}
+            domain={[0, 4000]} stroke={T.muted} tick={{ fontSize: 12 }}
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
           />
           <Tooltip
-            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
             formatter={(v, n, { payload }) => [`${v.toLocaleString("fr-FR")} pts`, payload.event]}
             labelFormatter={(l) => l}
           />
@@ -3076,8 +3076,8 @@ function ETFHistoryTooltip() {
                 style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
                 {d.label}
               </div>
-              <div className="font-semibold" style={{ color: T.text, fontSize: 10 }}>{d.price.toLocaleString("fr-FR")} pts</div>
-              <div style={{ color: T.muted, fontSize: 9 }}>{d.event}</div>
+              <div className="font-semibold" style={{ color: T.text, fontSize: 12 }}>{d.price.toLocaleString("fr-FR")} pts</div>
+              <div style={{ color: T.muted, fontSize: 12 }}>{d.event}</div>
             </div>
           ))}
         </div>
@@ -3166,10 +3166,10 @@ function CryptoHistoryTooltip({ coin }) {
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={logData} margin={{ top: 5, right: 10, bottom: 5, left: 48 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} />
+          <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
           <YAxis
             domain={[yMin, yMax]} ticks={yTicks}
-            stroke={T.muted} tick={{ fontSize: 10 }}
+            stroke={T.muted} tick={{ fontSize: 12 }}
             tickFormatter={(v) => {
               const val = Math.pow(10, v);
               if (val < 1)    return "€" + val.toFixed(1);
@@ -3178,7 +3178,7 @@ function CryptoHistoryTooltip({ coin }) {
             }}
           />
           <Tooltip
-            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "#0d1426", border: `1px solid ${color}55`, borderRadius: 8, fontSize: 12 }}
             formatter={(v, n, { payload }) => [eur(payload.price), payload.event]}
             labelFormatter={(l) => l}
           />
@@ -3202,8 +3202,8 @@ function CryptoHistoryTooltip({ coin }) {
                 style={{ color: d.type === "peak" ? "#ef4444" : d.type === "bottom" ? "#22c55e" : color }}>
                 {d.label}
               </div>
-              <div className="font-semibold" style={{ color: T.text, fontSize: 10 }}>{eur(d.price)}</div>
-              <div style={{ color: T.muted, fontSize: 9 }}>{d.event}</div>
+              <div className="font-semibold" style={{ color: T.text, fontSize: 12 }}>{eur(d.price)}</div>
+              <div style={{ color: T.muted, fontSize: 12 }}>{d.event}</div>
             </div>
           ))}
         </div>
@@ -3299,9 +3299,9 @@ function ImmoCard({ price, setPrice, horizon }) {
           { label: "Gain net réel",               value: eur(gain),           sub: `capital ${eur(last.equity)} − cash investi`, color: gain >= 0 ? T.green : T.red },
         ].map(k => (
           <div key={k.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
+            <div style={{ color: T.muted, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
             <div style={{ color: k.color, fontSize: 22, fontWeight: 800 }}>{k.value}</div>
-            <div style={{ color: T.muted, fontSize: 11, marginTop: 4 }}>{k.sub}</div>
+            <div style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>{k.sub}</div>
           </div>
         ))}
       </div>
@@ -3332,8 +3332,8 @@ function ImmoCard({ price, setPrice, horizon }) {
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={fmt} width={58} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<CustomTooltip />} />
             <Line type="monotone" dataKey="propValue"     name="Valeur du bien"    stroke={ASSET.immo} strokeWidth={2.5} dot={false} />
             <Line type="monotone" dataKey="loanRemaining" name="Crédit restant"    stroke="#ef4444"   strokeWidth={2}   dot={false} strokeDasharray="5 3" />
@@ -3358,7 +3358,7 @@ function ImmoCard({ price, setPrice, horizon }) {
         </div>
       </Card>
 
-      <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+      <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
         Modèle simplifié · Taux fixe 3,5 % · Valorisation +2 %/an · Apport 10 % · Hors frais de notaire (~8 %), taxe foncière, charges de copropriété et fiscalité des loyers.
         À affiner avec un courtier pour votre situation réelle.
       </div>
@@ -3499,8 +3499,8 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 11 }}
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={logFmt} width={64} />
             <Tooltip {...chartTip}
               formatter={(v, name, props) => {
@@ -3538,8 +3538,8 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={T.muted} tick={{ fontSize: 11 }}
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} labelFormatter={(y) => `Année ${y}`} />
             {hasBand && (
@@ -3835,8 +3835,8 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={projSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
-              <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+              <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
               <Line type="monotone" dataKey="Ensemble" stroke={T.blue} strokeWidth={2.5} dot={false} />
               <Line type="monotone" dataKey="Séparément" stroke={T.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
@@ -4117,7 +4117,7 @@ function CreditArbitrage({ initial } = {}) {
 
   const Num = ({ label, val, color }) => (
     <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
-      <div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>{label}</div>
       <div style={{ color: color || T.text, fontWeight: 800, fontSize: 18 }}>{val}</div>
     </div>
   );
@@ -4200,8 +4200,8 @@ function CreditArbitrage({ initial } = {}) {
           <ResponsiveContainer>
             <LineChart data={series} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: T.muted }} />
-              <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+              <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
+              <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
               <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "keep" ? "Garder + investir" : "Rembourser"]} />
               <Legend formatter={v => v === "keep" ? "Garder + investir" : "Rembourser + investir mensualité"} />
               <Line type="monotone" dataKey="keep" stroke={T.green} strokeWidth={2.5} dot={false} />
@@ -4619,8 +4619,8 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
               {areaW > 0 && (
                 <AreaChart width={areaW} height={200} data={desendettement} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                  <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 11 }} />
-                  <YAxis tick={{ fill: T.muted, fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
+                  <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 12 }} />
+                  <YAxis tick={{ fill: T.muted, fontSize: 12 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
                   <Tooltip {...chartTip} formatter={(v) => eur(v)} />
                   <Area type="monotone" dataKey="total" stroke={T.blue} fill={`${T.blue}22`} strokeWidth={2} />
                 </AreaChart>
@@ -5192,8 +5192,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={ownershipSeries}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 11 }} interval={0} />
-            <YAxis stroke={T.muted} tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} />
             <Line type="monotone" dataKey="Propriété nette" stroke={T.amber} strokeWidth={2.5} dot={false} />
             <Line type="monotone" dataKey="propValue" name="Valeur du bien" stroke={T.muted} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
@@ -5479,14 +5479,14 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
                 <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: T.muted }}>
                   <span>Taxe foncière estimée : <b style={{ color: T.text }}>{eur(melTaxeFonciereEstimee)}/an</b> (taux moyen ~{melTauxTFDept} %)</span>
                   <button onClick={() => setMelTaxeFonciere(melTaxeFonciereEstimee)}
-                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                     Utiliser
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: T.muted }}>
                   <span>Assurance PNO estimée : <b style={{ color: T.text }}>{eur(melPNOEstimee)}/an</b> (selon surface{melGeoInfo.population > 100000 ? " et taille de la ville" : ""})</span>
                   <button onClick={() => setMelPNO(melPNOEstimee)}
-                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    style={{ padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.blue}55`, background: "rgba(91,141,239,0.12)", color: T.blue, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                     Utiliser
                   </button>
                 </div>
@@ -5961,7 +5961,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
             <span className="font-bold text-sm" style={{ color: isPassif ? T.red : catColor(cat) }}>
               {isPassif ? "−" : ""}{eur(total)}
             </span>
-            <span style={{ color: T.muted, fontSize: 11 }}>{isOpen ? "▲" : "▼"}</span>
+            <span style={{ color: T.muted, fontSize: 12 }}>{isOpen ? "▲" : "▼"}</span>
           </span>
         </button>
         {isOpen && (
@@ -6005,7 +6005,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                       style={{ ...inp, width: 120, padding: "4px 10px", fontSize: 13 }}
                     />
                     {(item.currency && item.currency !== "EUR") && (
-                      <span style={{ fontSize: 11, color: T.muted }}>= {eur(item.value)}</span>
+                      <span style={{ fontSize: 12, color: T.muted }}>= {eur(item.value)}</span>
                     )}
                     <button onClick={() => deleteItem(side, cat.id, idx)} aria-label="Supprimer la ligne"
                       style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.red, marginLeft: "auto" }}>
@@ -6020,7 +6020,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                         {isPassif ? "−" : ""}{eur(item.value)}
                       </span>
                       {item.currency && item.currency !== "EUR" && (
-                        <div style={{ fontSize: 10, color: T.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
+                        <div style={{ fontSize: 12, color: T.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
                       )}
                     </div>
                   </div>
@@ -6143,8 +6143,8 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} interval={histRange > 12 ? 2 : 0} />
-              <YAxis stroke={T.muted} tick={{ fontSize: 11 }}
+              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 12 }} interval={histRange > 12 ? 2 : 0} />
+              <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
               <Area type="monotone" dataKey="v" name="Net Worth" stroke={T.violet} strokeWidth={2.5}
@@ -6332,7 +6332,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
               <div key={i} style={{ height: 4, flex: 1, borderRadius: 4, background: i <= step ? T.blue : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
             ))}
           </div>
-          <button onClick={onDone} style={{ fontSize: 11, color: T.muted, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", padding: "2px 4px" }}>
+          <button onClick={onDone} style={{ fontSize: 12, color: T.muted, background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", padding: "2px 4px" }}>
             Passer ›
           </button>
         </div>
@@ -6364,7 +6364,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
               <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>
                 {eur(Math.round(fvMonthly(epargne, RATE_A, 20)))}
               </div>
-              <div style={{ fontSize: 10, color: T.muted, marginTop: 6, display: "flex", alignItems: "flex-start", gap: 5 }}><AlertTriangle size={11} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span></div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 6, display: "flex", alignItems: "flex-start", gap: 5 }}><AlertTriangle size={11} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span></div>
             </div>
           </div>
         )}
@@ -6544,15 +6544,15 @@ function ObjectifsView({ goals, setGoals, totals }) {
               {/* Métriques */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
                 <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Reste à épargner</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Reste à épargner</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>{eur(Math.max(0, g.target - g.saved))}</div>
                 </div>
                 <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Versement mensuel</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Versement mensuel</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: g.color }}>{eur(g.monthly)}</div>
                 </div>
                 <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 2 }}>Temps restant</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Temps restant</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: done ? T.green : T.text }}>{done ? "Atteint ✓" : formatMonths(months)}</div>
                 </div>
               </div>
@@ -6903,7 +6903,7 @@ function LegalDisclaimer() {
                 <p>
                   <strong style={{ color: T.text }}>Conseil professionnel :</strong> Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation.
                 </p>
-                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
                   WealthTrack n'est pas un prestataire de services d'investissement (PSI) au sens de la directive MIF II. Cette application ne fait pas l'objet d'un enregistrement auprès de l'AMF ou de l'ACPR en tant que conseiller en investissements financiers (CIF). © WealthTrack — Tous droits réservés.
                 </p>
               </div>

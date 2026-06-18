@@ -6,7 +6,7 @@ import InfoTooltip from "./InfoTooltip.jsx";
 import { useLocalStorage } from "./storage.js";
 
 /* ─── Helpers ───────────────────────────────────────────────────────── */
-const pct  = (n) => (n != null && !isNaN(n)) ? `${(+n).toFixed(2)} %` : "—";
+const pct  = (n) => (n != null && !isNaN(n)) ? `${(+n).toFixed(2).replace(".", ",")} %` : "—";
 const tvlFmt = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(1)} Md$` : n >= 1e6 ? `${(n / 1e6).toFixed(0)} M$` : `${(n / 1e3).toFixed(0)} k$`;
 
 const CHAINS = ["ethereum", "polygon", "arbitrum", "optimism", "base", "avalanche", "bsc"];

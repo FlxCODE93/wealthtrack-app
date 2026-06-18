@@ -85,8 +85,8 @@ const toEUR = (native, cur) => (native || 0) * (FX_RATES[cur] || 1);
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 const eur = (n) =>
-  new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n)) + " €";
-const pct = (n) => n.toFixed(1).replace(".", ",") + " %";
+  new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(Number.isFinite(n) ? n : 0)) + " €";
+const pct = (n) => (Number.isFinite(n) ? n : 0).toFixed(1).replace(".", ",") + " %";
 
 // Décale un libellé "Mois AAAA" (ex: "Juil 2025") de `delta` mois (peut être négatif)
 const MOIS_ABBR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
@@ -1079,7 +1079,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
   else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ level: "amber", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
   if (healthScore.breakdown.diversification.score < 20) alerts.push({ level: "red", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
   if (healthScore.breakdown.investment.score < 15) alerts.push({ level: "amber", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
-  if (totals.chargesFixes > totals.revenus * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${((totals.chargesFixes / totals.revenus) * 100).toFixed(0)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
+  if (totals.revenus > 0 && totals.chargesFixes > totals.revenus * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — marge de manœuvre réduite`, feature: "simulations" });
   if (netWorth < 0) alerts.push({ level: "red", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
   if (alerts.length < 2) alerts.push({ level: "info", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
 
@@ -2254,7 +2254,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 18 }}>
         <Field label="Rendement (%/an)">
-          <input type="number" step="0.5" value={returnPct} onChange={e => setReturnPct(+e.target.value)} style={inputStyle} />
+          <input type="number" step="0.5" min={0} value={returnPct} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
         </Field>
         <Field label="Votre TMI aujourd'hui">
           <TmiSelect value={tmiNow} onChange={setTmiNow} />
@@ -2349,7 +2349,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
         "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=eur,usd&include_24hr_change=true",
         { signal: ctrl.signal }
       );
+      if (!res.ok) throw new Error(res.status === 429 ? "rate-limit" : "network");
       const data = await res.json();
+      if (!data?.bitcoin?.eur) throw new Error("payload");
       setLiveData(data);
       setLiveTs(new Date().toLocaleTimeString("fr-FR"));
       setLiveCountdown(30);
@@ -2911,7 +2913,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
                   {coins.map((coin) => {
                     const d = liveData[coin.key];
                     if (!d) return null;
-                    const chg = d.eur_24h_change;
+                    const chg = Number.isFinite(d.eur_24h_change) ? d.eur_24h_change : 0;
                     const up = chg >= 0;
                     return (
                       <div key={coin.key} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${coin.color}33` }}>
@@ -4127,22 +4129,22 @@ function CreditArbitrage({ initial } = {}) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
           <Field label="Capital restant dû (€)">
-            <input type="number" value={remaining} onChange={e => setRemaining(+e.target.value)} style={inputStyle} />
+            <input type="number" min={0} value={remaining} onChange={e => setRemaining(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Taux du prêt (%)">
-            <input type="number" step="0.1" value={ratePct} onChange={e => setRatePct(+e.target.value)} style={inputStyle} />
+            <input type="number" step="0.1" min={0} value={ratePct} onChange={e => setRatePct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Assurance (€/mois)">
-            <input type="number" value={insurance} onChange={e => setInsurance(+e.target.value)} style={inputStyle} />
+            <input type="number" min={0} value={insurance} onChange={e => setInsurance(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Durée restante (ans)">
-            <input type="number" step="1" value={yearsLeft} onChange={e => setYearsLeft(+e.target.value)} style={inputStyle} />
+            <input type="number" step="1" min={1} value={yearsLeft} onChange={e => setYearsLeft(Math.max(1, +e.target.value || 1))} style={inputStyle} />
           </Field>
           <Field label="Épargne dispo (€)">
-            <input type="number" value={lumpSum} onChange={e => setLumpSum(+e.target.value)} style={inputStyle} />
+            <input type="number" min={0} value={lumpSum} onChange={e => setLumpSum(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Rendement visé (%/an)">
-            <input type="number" step="0.5" value={returnPct} onChange={e => setReturnPct(+e.target.value)} style={inputStyle} />
+            <input type="number" step="0.5" min={0} value={returnPct} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Fiscalité">
             <select value={envelope} onChange={e => setEnvelope(e.target.value)} style={inputStyle}>
@@ -4570,12 +4572,12 @@ function Credits({ credits, setCredits, monthlyIncome = 0, setView }) {
         <KpiCard label="Capital restant dû" value={eur(Math.round(totalRestant))} valueColor={T.red} />
         <KpiCard label="Mensualités / mois" value={eur(Math.round(totalMensualite))} valueColor={T.amber} />
         <KpiCard label="Intérêts restants" value={eur(Math.round(totalInterets))} valueColor={T.muted} />
-        <KpiCard label="Taux d'endettement"
-          value={debtRatio == null ? "—" : `${debtRatio.toFixed(1)} %`}
+        <KpiCard label="Taux d'effort (endettement bancaire)"
+          value={debtRatio == null ? "—" : `${debtRatio.toFixed(1).replace(".", ",")} %`}
           valueColor={debtColor}
           sub={debtRatio == null
             ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Finances</button>
-            : <span style={{ color: T.muted }}>seuil bancaire 35 %</span>} />
+            : <span style={{ color: T.muted }}>mensualités ÷ revenus · seuil 35 %</span>} />
       </div>
 
       {/* Répartition + désendettement */}
@@ -6254,7 +6256,7 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss }) {
       out.push({ id: "deficit",          level: "red",   msg: `Déficit mensuel de ${eur(Math.abs(totals.restant))} — vous dépensez plus que vous ne gagnez ce mois.` });
     if (totalPassifs > totalActifs * 0.5 && totalActifs > 0)
       out.push({ id: "high_debt",        level: "amber", msg: `Endettement élevé (${Math.round((totalPassifs / totalActifs) * 100)}% de vos actifs) — priorisez le remboursement des crédits.` });
-    if (totals.chargesFixes > totals.revenus * 0.6)
+    if (totals.revenus > 0 && totals.chargesFixes > totals.revenus * 0.6)
       out.push({ id: "heavy_charges",    level: "amber", msg: `Charges fixes très lourdes (${Math.round((totals.chargesFixes / totals.revenus) * 100)}% des revenus) — peu de marge de manœuvre.` });
     return out.filter(a => !dismissed.includes(a.id));
   }, [totals, totalActifs, totalPassifs, dismissed]);
@@ -6339,21 +6341,21 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre prénom</label>
               <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre âge</label>
-              <input type="number" value={age} onChange={e => setAge(+e.target.value)} style={inpO} /></div>
+              <input type="number" min={16} max={100} value={age} onChange={e => setAge(Math.min(100, Math.max(16, +e.target.value || 16)))} style={inpO} /></div>
           </div>
         )}
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Revenus mensuels nets (€)</label>
-              <input type="number" value={revenus} onChange={e => setRevenus(+e.target.value)} style={inpO} /></div>
+              <input type="number" min={0} value={revenus} onChange={e => setRevenus(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Loyer / charge principale (€/mois)</label>
-              <input type="number" value={loyer} onChange={e => setLoyer(+e.target.value)} style={inpO} /></div>
+              <input type="number" min={0} value={loyer} onChange={e => setLoyer(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
           </div>
         )}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Épargne / investissement mensuel (€)</label>
-              <input type="number" value={epargne} onChange={e => setEpargne(+e.target.value)} style={inpO} /></div>
+              <input type="number" min={0} value={epargne} onChange={e => setEpargne(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${T.blue}22` }}>
               <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>

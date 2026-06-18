@@ -4,6 +4,34 @@
    ──────────────────────────────────────────────────────────────────── */
 import React from "react";
 import { useT } from "./ThemeProvider.jsx";
+import { glow } from "./theme.js";
+
+/* Bouton unifié — DA WealthTrack. Centralise radius, padding, hover, focus et
+   cibles tactiles (≥40px). variant: primary | secondary | danger ; size: sm | md | icon. */
+export function Button({ variant = "primary", size = "md", children, style, ...props }) {
+  const T = useT();
+  const sizes = {
+    sm:   { padding: "8px 14px", fontSize: 13 },
+    md:   { padding: "11px 18px", fontSize: 14 },
+    icon: { padding: 10, minWidth: 40, minHeight: 40 },
+  };
+  const variants = {
+    primary:   { background: T.gradientPrimary, color: "#fff", border: "none", boxShadow: glow(T.violet, 40, "33") },
+    secondary: { background: "transparent", color: T.muted, border: `1px solid ${T.border}` },
+    danger:    { background: "transparent", color: T.red, border: "1px solid rgba(239,68,68,0.3)" },
+  };
+  return (
+    <button
+      className="inline-flex items-center justify-center gap-2 rounded-xl font-bold"
+      style={{ cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s", ...sizes[size], ...variants[variant], ...style }}
+      onMouseEnter={(e) => { if (variant === "primary") { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 56, "55"); } }}
+      onMouseLeave={(e) => { if (variant === "primary") { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 40, "33"); } }}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function Card({ children, style, className = "" }) {
   const T = useT();

@@ -216,3 +216,22 @@ code, pre, .type-mono {
     line-height: 1.5;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Accessibilité & lisibilité — audit UI/UX                         */
+/* ─────────────────────────────────────────────────────────────── */
+
+/* Anneau de focus clavier global (WCAG 2.4.7). :where() = spécificité 0,
+   donc les styles de focus spécifiques (ex. .wt-button-press) priment. */
+:where(button, a, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Plancher de lisibilité : remonte le plus petit texte (12px -> 13px) pour
+   la cible 50 ans et le mobile. Couvre tous les usages de text-xs. */
+.text-xs {
+  font-size: 0.8125rem !important;
+  line-height: 1.1rem !important;
+}

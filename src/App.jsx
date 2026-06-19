@@ -9,6 +9,7 @@ import Crypto  from "./Crypto.jsx";
 import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
 import Or      from "./Or.jsx";
+import Frais   from "./Frais.jsx";
 import {
   FinTechLineChart, FinTechAreaChart, FinTechBarChart,
   FinTechPieChart, FinTechScatterChart, FinTechComposedChart,
@@ -23,7 +24,7 @@ import {
   Crown, Star, FileText, ChevronRight, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
-  Plane, Palmtree, Car, GraduationCap, Coins,
+  Plane, Palmtree, Car, GraduationCap, Coins, Percent,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -200,9 +201,9 @@ const PLANS = {
 };
 
 const PLAN_ACCESS = {
-  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "objectifs", "plans"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "couple", "objectifs", "plans"],
+  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "objectifs", "plans", "frais"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais"],
 };
 
 function canAccess(plan, feature) {
@@ -579,6 +580,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "crypto",      label: "Crypto",             icon: Bitcoin },
     { id: "immobilier",  label: "Immobilier",         icon: Building2 },
     { id: "or",          label: "Or",                 icon: Coins },
+    { id: "frais",       label: "Analyse des frais",  icon: Percent },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
@@ -1681,7 +1683,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : SIMULATIONS                                                */
 /* ------------------------------------------------------------------ */
-function Simulations({ totals, simParams, setSimParams, age, transactions }) {
+function Simulations({ totals, simParams, setSimParams, age, transactions, setView }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
@@ -1690,7 +1692,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
   const setInitial = (v) => setSimParams((p) => ({ ...p, initial: v }));
   const setPrice = (v) => setSimParams((p) => ({ ...p, price: v }));
   const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
-  const [fee, setFee] = useState(1.8);
   const [activeTab, setActiveTab] = useState("etf");
   const [inflationRate, setInflationRate] = useState(0.02);
   const [cryptoTip, setCryptoTip] = useState(null);
@@ -1777,13 +1778,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
       detailedA, detailedB, detailedC, detailedBTC, detailedETH,
     };
   }, [monthly, initial, price, horizon, immoSeries]);
-
-  // Détecteur de frais cachés
-  const fees = useMemo(() => {
-    const wpea = initial * Math.pow(1 + RATE_A, horizon);
-    const bank = initial * Math.pow(1 + (RATE_A - fee / 100), horizon);
-    return { wpea, bank, manque: wpea - bank };
-  }, [initial, fee, horizon]);
 
   // Capacité d'emprunt — détection profil + règles bancaires françaises
   const profileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
@@ -1971,52 +1965,17 @@ function Simulations({ totals, simParams, setSimParams, age, transactions }) {
           note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
         />
 
-        {/* Détecteur de frais cachés */}
-        <Card style={{ borderColor: "rgba(255,90,95,0.3)" }}>
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold" style={{ color: T.text }}>Analyse des frais</h2>
-            </div>
-            <span className="text-sm" style={{ color: T.muted }}>vs WPEA sur {horizon} ans</span>
+        {/* Teaser → Analyse des frais */}
+        <div style={{ borderRadius: 14, padding: 16, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Analyse des frais — simulateur complet</div>
+            <div style={{ color: T.muted, fontSize: 13 }}>Comparez ETF PEA, AV, PER, OPCVM, SCPI — et mesurez le coût réel des frais sur votre capital.</div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <Field label="Capital investi (€)">
-                <input type="number" value={initial} style={inputStyle}
-                  onChange={(e) => setInitial(+e.target.value || 0)} />
-              </Field>
-              <div className="mt-5">
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm" style={{ color: T.muted }}>Frais annuels de votre banque</span>
-                  <span className="font-bold" style={{ color: T.red }}>{fee.toFixed(1).replace(".", ",")} %</span>
-                </div>
-                <input type="range" min={0} max={3} step={0.1} value={fee}
-                  onChange={(e) => setFee(+e.target.value)}
-                  className="w-full" style={{ accentColor: T.blue }} />
-                <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
-                  <span>0 %</span><span>1,5 %</span><span>3 %</span>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl p-5"
-              style={{ background: "rgba(255,90,95,0.06)", border: "1px solid rgba(255,90,95,0.3)" }}>
-              <div className="text-sm font-semibold mb-1" style={{ color: T.red }}>
-                MANQUE À GAGNER SUR {horizon} ANS
-              </div>
-              <div className="text-4xl font-bold mb-4" style={{ color: T.red }}>− {eur(fees.manque)}</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
-                  <div className="text-xs" style={{ color: T.muted }}>Avec votre banque</div>
-                  <div className="font-bold" style={{ color: T.text }}>{eur(fees.bank)}</div>
-                </div>
-                <div className="rounded-lg p-3" style={{ background: "rgba(34,199,154,0.08)" }}>
-                  <div className="text-xs" style={{ color: T.green }}>Avec le WPEA</div>
-                  <div className="font-bold" style={{ color: T.green }}>{eur(fees.wpea)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
+          <button onClick={() => setView("frais")}
+            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "10px 18px", color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+            Ouvrir →
+          </button>
+        </div>
 
       </>}
 
@@ -6293,9 +6252,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "crypto", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "frais", "crypto", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", crypto: "Crypto", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", frais: "Frais", crypto: "Crypto", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -6324,10 +6283,11 @@ export default function App() {
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}
-        {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "or"           && (canAccess(plan, "or")          ? <Or patrimoine={patrimoineDerived} /> : <PaywallBanner feature="or" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "frais"        && <Frais />}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 

@@ -2,8 +2,9 @@ import React, { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle } from "lucide-react";
 import { C, eur } from "./theme.js";
-import { API_URL } from "./config.js";
-import { authHeader } from "./supabaseClient.js";
+import { authHeader, supabase } from "./supabaseClient.js";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 
 /* ─── Catégories ────────────────────────────────────────────────────── */
 export const IMPORT_CATS = {
@@ -206,14 +207,16 @@ export default function TransactionImportTab({ onImport }) {
       const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
       let parsed;
       if (isPdf) {
-        // PDF : non parsable côté navigateur → le serveur extrait le texte
-        // et le structure via l'IA. On re-catégorise localement pour rester
-        // cohérent avec le reste de l'onglet.
+        // PDF → Edge Function Supabase (import-pdf) qui extrait le texte
+        // via unpdf + structure via Claude Haiku. Indépendant du backend Express.
+        if (!SUPABASE_URL) throw new Error("Service d'import non configuré (VITE_SUPABASE_URL manquant).");
         const form = new FormData();
         form.append("file", file);
-        const res = await fetch(`${API_URL}/api/import-transactions`, {
+        const headers = await authHeader();
+        headers["apikey"] = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/import-pdf`, {
           method: "POST",
-          headers: { ...(await authHeader()) },
+          headers,
           body: form,
         });
         const data = await res.json().catch(() => ({}));

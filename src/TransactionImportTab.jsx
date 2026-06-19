@@ -2,9 +2,25 @@ import React, { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle } from "lucide-react";
 import { C, eur } from "./theme.js";
-import { authHeader, supabase } from "./supabaseClient.js";
+import { authHeader } from "./supabaseClient.js";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+
+async function extractPDFText(file) {
+  const buffer = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+  const pages = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((i) => i.str).join(" "));
+  }
+  return pages.join("\n");
+}
 
 /* ─── Catégories ────────────────────────────────────────────────────── */
 export const IMPORT_CATS = {
@@ -207,17 +223,18 @@ export default function TransactionImportTab({ onImport }) {
       const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
       let parsed;
       if (isPdf) {
-        // PDF → Edge Function Supabase (import-pdf) qui extrait le texte
-        // via unpdf + structure via Claude Haiku. Indépendant du backend Express.
+        // PDF : extraction texte dans le navigateur (pdfjs-dist),
+        // puis structuration via Edge Function Supabase (Claude Haiku).
         if (!SUPABASE_URL) throw new Error("Service d'import non configuré (VITE_SUPABASE_URL manquant).");
-        const form = new FormData();
-        form.append("file", file);
+        const pdfText = await extractPDFText(file);
+        if (!pdfText.trim()) throw new Error("Aucun texte lisible dans ce PDF (relevé scanné non supporté).");
         const headers = await authHeader();
         headers["apikey"] = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+        headers["Content-Type"] = "application/json";
         const res = await fetch(`${SUPABASE_URL}/functions/v1/import-pdf`, {
           method: "POST",
           headers,
-          body: form,
+          body: JSON.stringify({ text: pdfText }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) throw new Error(data.error || "Échec de l'import du PDF.");

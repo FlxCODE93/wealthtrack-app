@@ -1,18 +1,15 @@
 /* ────────────────────────────────────────────────────────────────────
    Edge Function : import-pdf
-   Reçoit un relevé bancaire PDF (multipart form-data, champ "file"),
-   extrait le texte avec unpdf (pdfjs-dist edge-compatible),
+   Reçoit le texte extrait d'un relevé bancaire (JSON { text: string }),
    structure les transactions via Claude Haiku, retourne JSON.
 
-   Secrets requis dans Supabase Dashboard → Settings → Edge Functions :
+   Secrets requis :
      ANTHROPIC_API_KEY
-     SUPABASE_URL  (auto-injectée par Supabase)
-     SUPABASE_ANON_KEY (auto-injectée)
+     SUPABASE_URL  (auto-injectée)
      SUPABASE_SERVICE_ROLE_KEY
    ──────────────────────────────────────────────────────────────────── */
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractText } from "npm:unpdf@0.11.0";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -53,32 +50,17 @@ serve(async (req) => {
     && ["pro", "couple"].includes(sub.plan);
   if (!hasPro) return json({ success: false, error: "L'import PDF est réservé au plan Pro." }, 403);
 
-  // ── Extraction du fichier PDF ─────────────────────────────────────
-  let pdfBuffer: Uint8Array;
-  try {
-    const form = await req.formData();
-    const file = form.get("file") as File | null;
-    if (!file) return json({ success: false, error: "Aucun fichier reçu." }, 400);
-    if (file.size > 5 * 1024 * 1024) return json({ success: false, error: "PDF trop grand (max 5 Mo)." }, 413);
-    pdfBuffer = new Uint8Array(await file.arrayBuffer());
-  } catch {
-    return json({ success: false, error: "Impossible de lire le fichier envoyé." }, 400);
-  }
-
-  // ── Extraction du texte via unpdf ────────────────────────────────
+  // ── Lecture du texte extrait côté client ─────────────────────────
   let pdfText: string;
   try {
-    const { text } = await extractText(pdfBuffer, { mergePages: true });
-    pdfText = text?.trim() ?? "";
+    const body = await req.json();
+    pdfText = (body?.text ?? "").trim();
   } catch {
-    return json({ success: false, error: "PDF illisible ou corrompu." }, 422);
+    return json({ success: false, error: "Corps JSON invalide." }, 400);
   }
 
   if (!pdfText) {
-    return json({
-      success: false,
-      error: "Aucun texte trouvé dans le PDF. Vérifiez que ce n'est pas un relevé scanné (image).",
-    }, 422);
+    return json({ success: false, error: "Aucun texte reçu." }, 400);
   }
 
   // ── Structuration via Claude Haiku ───────────────────────────────

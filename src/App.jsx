@@ -5761,7 +5761,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 /*  ÉCRAN : PROFIL                                                     */
 /* ------------------------------------------------------------------ */
 
-function Profil({ profile, setProfile, onInject, setTransactions, isAdmin = false }) {
+function Profil({ profile, setProfile, onInject, setTransactions }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -5844,42 +5844,6 @@ function Profil({ profile, setProfile, onInject, setTransactions, isAdmin = fals
         </div>
       </Card>
 
-      {isAdmin && (
-      <Card style={{ borderColor: "rgba(139,92,246,0.3)" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Données de test</h2>
-          <span className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: "rgba(139,92,246,0.15)", color: T.violet }}>Admin Only</span>
-        </div>
-        <p className="text-sm mb-5" style={{ color: T.muted }}>
-          Charge un profil fictif complet — remplace le profil, les transactions et les paramètres de simulation,
-          puis redirige vers le tableau de bord.
-          <span style={{ color: T.amber }}> Écrase les données actuelles.</span>
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {TEST_PROFILES.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => onInject(p)}
-              className="text-left rounded-xl p-4 flex flex-col gap-2 transition"
-              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, cursor: "pointer" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.violet; e.currentTarget.style.background = "rgba(139,92,246,0.06)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-            >
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
-                {p.profile.firstName[0]}
-              </div>
-              <span className="font-semibold text-sm" style={{ color: T.text }}>{p.label}</span>
-              <span className="text-xs leading-relaxed" style={{ color: T.muted }}>{p.description}</span>
-              <span className="text-xs mt-1 font-medium" style={{ color: T.violet }}>
-                {p.profile.firstName} {p.profile.lastName}, {p.profile.age} ans →
-              </span>
-            </button>
-          ))}
-        </div>
-      </Card>
-      )}
 
     </div>
   );
@@ -6640,10 +6604,7 @@ function FIREInfoModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 /*  APP                                                                */
 /* ------------------------------------------------------------------ */
-const ADMIN_EMAIL = "johnsnowabdou@gmail.com";
-
-export default function App({ userEmail }) {
-  const isAdmin = userEmail === ADMIN_EMAIL;
+export default function App() {
   const T = useT();
   const [showApp,    setShowApp]    = useState(false);
   const [view,       setView]       = useState("dashboard");
@@ -6878,7 +6839,7 @@ export default function App({ userEmail }) {
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} />}
-        {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} isAdmin={isAdmin} />}
+        {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
         {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "portefeuille" && <Portefeuille />}

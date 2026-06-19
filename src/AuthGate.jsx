@@ -33,5 +33,5 @@ export default function AuthGate() {
   }
 
   if (isRecovery) return <Auth onAuthSuccess={() => setIsRecovery(false)} />;
-  return user ? <App userEmail={user.email} /> : <Auth onAuthSuccess={() => {}} />;
+  return user ? <App /> : <Auth onAuthSuccess={() => {}} />;
 }

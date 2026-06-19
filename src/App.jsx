@@ -6554,6 +6554,7 @@ function ObjectifsView({ goals, setGoals, totals }) {
 /*  FIRE INFO MODAL                                                    */
 /* ------------------------------------------------------------------ */
 function FIREInfoModal({ onClose }) {
+  const T = useT();
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);

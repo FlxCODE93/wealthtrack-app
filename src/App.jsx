@@ -9,6 +9,7 @@ import Crypto  from "./Crypto.jsx";
 import DeFi    from "./DeFi.jsx";
 import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
+import Or      from "./Or.jsx";
 import {
   FinTechLineChart, FinTechAreaChart, FinTechBarChart,
   FinTechPieChart, FinTechScatterChart, FinTechComposedChart,
@@ -23,7 +24,7 @@ import {
   Crown, Star, FileText, ChevronRight, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
-  Plane, Palmtree, Car, GraduationCap,
+  Plane, Palmtree, Car, GraduationCap, Coins,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -201,8 +202,8 @@ const PLANS = {
 
 const PLAN_ACCESS = {
   free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
 };
 
 function canAccess(plan, feature) {
@@ -226,6 +227,11 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
       title: "Simulateur Immobilier",
       hook: "Achat ou location : un arbitrage patrimonial qui se chiffre en dizaines de milliers d'euros.",
       bullets: ["Capacité d'emprunt calculée selon les normes bancaires en vigueur (HCSF, taux d'endettement 35 %)", "Comparatif achat vs location sur 20 ans, visualisé graphiquement", "Rentabilité nette après charges, fiscalité et remboursement de crédit"],
+    },
+    or: {
+      title: "Simulateur Or & Métaux précieux",
+      hook: "L'or, valeur refuge peu corrélée aux actions, protège votre patrimoine en période de crise.",
+      bullets: ["Projection d'accumulation d'or physique : capital initial + versements mensuels", "Rendement net des frais de stockage (coffre, assurance), avec bande d'incertitude", "Trajectoire visualisée sur votre horizon, du scénario prudent au favorable"],
     },
     fiscalite: {
       title: "Fiscalité Patrimoniale",
@@ -264,7 +270,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
     },
   };
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
-  const needed = ["simulations","fi","immobilier","crypto","defi","fiscalite","plans"].includes(feature) ? "pro" : "couple";
+  const needed = ["simulations","fi","immobilier","or","crypto","defi","fiscalite","plans"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
   const price = needed === "pro" ? "5,99 €" : "8,99 €";
   return (
@@ -585,6 +591,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "fi",          label: "FIRE",               icon: Flag },
     { id: "crypto",      label: "Crypto",             icon: Bitcoin },
     { id: "immobilier",  label: "Immobilier",         icon: Building2 },
+    { id: "or",          label: "Or",                 icon: Coins },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "defi",        label: "DeFi Yield",         icon: Zap },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
@@ -6964,9 +6971,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -6998,6 +7005,7 @@ export default function App() {
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "or"           && (canAccess(plan, "or")          ? <Or patrimoine={patrimoineDerived} /> : <PaywallBanner feature="or" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "defi"         && (canAccess(plan, "defi")        ? <DeFi />   : <PaywallBanner feature="defi"  plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}

@@ -22,6 +22,7 @@ export const RATE_LEP       = 0.035; // Livret d'Épargne Populaire
 export const RATE_BTC       = 0.30;  // Bitcoin — extrêmement volatil, valeur indicative uniquement
 export const RATE_ETH       = 0.25;  // Ethereum — extrêmement volatil, valeur indicative uniquement
 export const RATE_IMMO_APPRECIATION = 0.02; // Appréciation immobilière annuelle moyenne
+export const RATE_GOLD      = 0.05;  // Or — appréciation nominale annuelle moyenne long terme (valeur refuge)
 
 /* Hypothèse PRUDENTE retenue pour les positions crypto dans le calcul du
    rendement pondéré du patrimoine (planification retraite / FI). Volontairement
@@ -40,6 +41,7 @@ export const RATE_SCENARIOS = {
   etf:    { pess: 0.04,  base: RATE_ETF_WORLD, opt: 0.12 },  // krach long / médiane / cycle porteur
   livret: { pess: 0.01,  base: RATE_LIVRET_A,  opt: 0.03 },  // taux administré, faible amplitude
   immo:   { pess: -0.01, base: RATE_IMMO_APPRECIATION, opt: 0.04 },
+  or:     { pess: 0.00,  base: RATE_GOLD,        opt: 0.09 },  // or : valeur refuge, peu corrélée aux actions
   btc:    { pess: -0.10, base: 0.12,           opt: RATE_BTC }, // base ≪ historique : l'historique = borne haute
   eth:    { pess: -0.12, base: 0.10,           opt: RATE_ETH },
 };

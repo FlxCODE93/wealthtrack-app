@@ -283,7 +283,7 @@ function CryptoDefiCard() {
 
 function AssistantCard() {
   return (
-    <Card title="Assistant IA personnel">
+    <Card title="Assistant financier">
       <div className="flex flex-col gap-2">
         <div className="text-xs px-3 py-2 rounded-xl self-end" style={{ background: `${C.blue}1a`, color: C.text }}>
           Comment optimiser mon PEA ?
@@ -387,7 +387,7 @@ export function FreeDashboardFrame() {
       <LockedCard title="Simulateur Immobilier" tier="premium" />
 
       <LockedCard title="Crypto" tier="premium" />
-      <LockedCard title="Assistant IA" tier="premium" />
+      <LockedCard title="Assistant financier" tier="premium" />
       <LockedCard title="Or / Métaux précieux" tier="pro" />
     </FrameShell>
   );

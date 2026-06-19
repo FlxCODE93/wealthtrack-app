@@ -243,7 +243,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
       bullets: ["Suivi en temps réel de votre portefeuille — valorisation, plus-values et performance par actif", "Cours et marchés en direct sur l'ensemble des crypto-actifs majeurs", "Comparatif des meilleures offres de staking et suivi de vos positions"],
     },
     assistant: {
-      title: "Assistant IA",
+      title: "Assistant financier",
       hook: "Un conseiller patrimonial disponible à tout moment, qui connaît vos chiffres mieux que quiconque.",
       bullets: ["Réponses personnalisées fondées sur votre budget et votre patrimoine réels", "Recommandations d'optimisation de votre allocation mensuelle", "Calculs instantanés : capacité d'emprunt, indépendance financière, fiscalité"],
     },
@@ -344,7 +344,7 @@ function PricingPage({ plan, setPlan }) {
         "Patrimoine (consultation)",
         "Simulation ETF basique",
       ],
-      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto", "Immobilier", "Simulations avancées", "Assistant IA", "Mode Couple"],
+      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto", "Immobilier", "Simulations avancées", "Assistant financier", "Mode Couple"],
       cta: "Plan actuel",
     },
     {
@@ -363,7 +363,7 @@ function PricingPage({ plan, setPlan }) {
         "Fiscalité patrimoniale",
         "Crypto",
         "Simulateur Immobilier",
-        "Assistant IA personnel",
+        "Assistant financier",
         "Historique illimité",
         "Support prioritaire",
       ],
@@ -1265,7 +1265,7 @@ function TrialPopup({ onDiscover, onClose }) {
         </div>
         <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Essayez Pro gratuitement</h2>
         <p className="text-sm mb-4" style={{ color: T.muted }}>
-          7 jours d'accès complet aux simulations avancées, à la fiscalité, au suivi crypto et à l'assistant IA. Carte bancaire requise (pré-autorisation), débit automatique à l'issue de l'essai sauf annulation.
+          7 jours d'accès complet aux simulations avancées, à la fiscalité, au suivi crypto et à l'assistant financier. Carte bancaire requise (pré-autorisation), débit automatique à l'issue de l'essai sauf annulation.
         </p>
         <div className="flex flex-col gap-3">
           <button onClick={onDiscover} className="rounded-xl py-3 font-bold flex items-center justify-center gap-2"
@@ -6337,7 +6337,7 @@ export default function App() {
         <LegalDisclaimer />
       </main>
 
-      {/* Assistant IA — popup flottant (remplace l'ancien onglet Assistant) */}
+      {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}
       <AIChatWidget ctx={{ totals, patrimoine: patrimoineDerived, credits, profile, simParams, profileType: detectProfileType(transactions || []) }} />
     </div>
   );

@@ -231,7 +231,7 @@ export default function AIChatWidget({ ctx, onSignup }) {
           whileHover={{ scale: 1.05 }}
           className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
           style={{ background: C.gradientPrimary }}
-          aria-label="Ouvrir l'assistant IA"
+          aria-label="Ouvrir l'assistant financier"
         >
           {open ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-6 h-6 text-white" />}
         </motion.button>

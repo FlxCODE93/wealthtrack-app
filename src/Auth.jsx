@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient.js";
 import { useT } from "./ThemeProvider.jsx";
 import { LogIn, Mail, Lock, AlertCircle } from "lucide-react";
@@ -11,6 +11,40 @@ export default function Auth({ onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
+  // Détecte le flow de recovery Supabase (lien email → #type=recovery)
+  useEffect(() => {
+    if (!supabase) return;
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      setIsRecovery(true);
+      // Supabase détecte le token automatiquement via detectSessionInUrl
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setIsRecovery(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSetNewPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) { setError("Minimum 6 caractères."); return; }
+    setLoading(true); setError("");
+    try {
+      const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+      if (err) throw err;
+      setIsRecovery(false);
+      setInfo("Mot de passe mis à jour. Vous êtes connecté.");
+      window.history.replaceState({}, "", window.location.pathname);
+      onAuthSuccess?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -57,6 +91,34 @@ export default function Auth({ onAuthSuccess }) {
       setLoading(false);
     }
   };
+
+  if (isRecovery) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.bg, padding: 16 }}>
+      <div style={{ maxWidth: 400, width: "100%", padding: 32, borderRadius: 16, border: `1px solid ${T.border}`, background: T.panel }}>
+        <div style={{ marginBottom: 28, textAlign: "center" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: 0 }}>Nouveau mot de passe</h1>
+          <p style={{ fontSize: 13, color: T.muted, margin: "8px 0 0 0" }}>Choisissez un mot de passe sécurisé</p>
+        </div>
+        <form onSubmit={handleSetNewPassword} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+            <Lock size={16} style={{ color: T.muted, flexShrink: 0 }} />
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nouveau mot de passe" required minLength={6}
+              style={{ flex: 1, border: "none", background: "transparent", color: T.text, outline: "none", fontSize: 14 }} />
+          </div>
+          {error && (
+            <div style={{ display: "flex", gap: 8, padding: 12, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+              <AlertCircle size={16} style={{ color: "#ef4444", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: "#fca5a5" }}>{error}</span>
+            </div>
+          )}
+          <button type="submit" disabled={loading} style={{ padding: "11px 16px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>
+            {loading ? "Mise à jour..." : "Enregistrer"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 
   return (
     <div

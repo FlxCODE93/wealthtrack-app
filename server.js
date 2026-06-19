@@ -5,12 +5,11 @@
  *   - Les transactions, lots et ventes fiscales vivent côté client + Supabase
  *     (avec RLS). Le calcul fiscal FIFO est fait dans le front.
  *   - Le serveur ne fait que : catégorisation (heuristique + IA), parsing de
- *     fichiers importés, et proxy/cache de données PUBLIQUES (DeFi, staking).
+ *     fichiers importés, et proxy/cache de données PUBLIQUES (staking).
  *
  * Endpoints :
  *   POST /api/import-transactions  — parse CSV/OFX → transactions catégorisées
  *   POST /api/categorize           — catégorise une transaction (IA Tier 3)
- *   GET  /api/defi/opportunities   — cache DefiLlama (public)
  *   GET  /api/staking-offers       — offres staking (public, scrape + fallback)
  *   GET  /api/tax/ping             — health check (badge "serveur connecté")
  *   GET  /api/health               — health check
@@ -296,37 +295,13 @@ function parseDate(str) {
   return s;
 }
 
-/* ─── DeFi — cache DefiLlama (données publiques, actualisé chaque heure) ── */
-let defiCache = { data: null, fetchedAt: null };
-
-async function refreshDefiCache() {
-  try {
-    const res  = await fetch("https://yields.llama.fi/pools", { signal: AbortSignal.timeout(10000) });
-    const json = await res.json();
-    defiCache  = {
-      data: (json.data || [])
-        .filter(p => p.apy > 0 && p.apy < 150 && p.tvlUsd > 1_000_000)
-        .filter(p => ["ethereum","polygon","arbitrum","optimism","base","avalanche","bsc"].includes(p.chain?.toLowerCase()))
-        .sort((a, b) => b.tvlUsd - a.tvlUsd)
-        .slice(0, 200),
-      fetchedAt: new Date().toISOString(),
-    };
-    console.log(`  DeFi cache → ${defiCache.data.length} pools`);
-  } catch (e) {
-    console.error("  DeFi cache refresh failed:", e.message);
-  }
-}
-
-refreshDefiCache();
-setInterval(refreshDefiCache, 60 * 60 * 1000);
-
 /* ════════════════════════════════════════════════════════════════════
    ROUTES — stateless (aucune donnée utilisateur stockée serveur)
    ════════════════════════════════════════════════════════════════════ */
 
 /* GET /api/health · GET /api/tax/ping — health checks */
 app.get("/api/health", (_req, res) =>
-  res.json({ ok: true, ai: Boolean(process.env.ANTHROPIC_API_KEY), defi: Boolean(defiCache.data) }));
+  res.json({ ok: true, ai: Boolean(process.env.ANTHROPIC_API_KEY) }));
 app.get("/api/tax/ping", (_req, res) => res.json({ ok: true }));
 
 /**
@@ -432,20 +407,6 @@ app.post("/api/categorize", requireAuth, requirePlan(["pro", "couple"]), aiLimit
   } catch (err) {
     next(err);
   }
-});
-
-/**
- * GET /api/defi/opportunities — cache DefiLlama (données publiques)
- */
-app.get("/api/defi/opportunities", (req, res) => {
-  if (!defiCache.data) {
-    return res.status(503).json({ success: false, error: "Cache en cours d'initialisation, réessayez dans quelques secondes." });
-  }
-  const { chain, minApy, limit = 100 } = req.query;
-  let data = defiCache.data;
-  if (chain)  data = data.filter(p => p.chain?.toLowerCase() === chain.toLowerCase());
-  if (minApy) data = data.filter(p => p.apy >= parseFloat(minApy));
-  res.json({ success: true, count: data.length, fetchedAt: defiCache.fetchedAt, data: data.slice(0, Math.min(parseInt(limit) || 100, 500)) });
 });
 
 /* ─── Staking Crypto.com (données publiques) ─────────────────────────

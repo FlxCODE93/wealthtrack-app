@@ -2,7 +2,7 @@ import React from "react";
 import { C, eur } from "./theme.js";
 import {
   BarChart3, LayoutDashboard, ListTree, TrendingUp, Wallet, Flag, Bitcoin,
-  Building2, Target, Zap, Calculator, MessageCircle, Users, User, Lock, Crown,
+  Building2, Target, Zap, Calculator, MessageCircle, Users, User, Lock, Crown, Coins,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
@@ -70,7 +70,7 @@ const NAV_ITEMS = [
   { id: "crypto",      label: "Crypto",          icon: Bitcoin,       tier: "premium" },
   { id: "immobilier",  label: "Immobilier",      icon: Building2,     tier: "premium" },
   { id: "objectifs",   label: "Objectifs",       icon: Target },
-  { id: "defi",        label: "DeFi Yield",      icon: Zap,           tier: "premium" },
+  { id: "or",          label: "Or",              icon: Coins,         tier: "premium" },
   { id: "fiscalite",   label: "Fiscalité",       icon: Calculator,    tier: "premium" },
   { id: "assistant",   label: "Assistant",       icon: MessageCircle, tier: "premium" },
   { id: "couple",      label: "Couple / Famille",icon: Users,         tier: "pro" },
@@ -267,12 +267,12 @@ function ImmobilierCard() {
 
 function CryptoDefiCard() {
   return (
-    <Card title="Crypto & DeFi Yield">
+    <Card title="Crypto">
       <div className="flex items-center gap-2 mb-3">
         <Bitcoin size={18} style={{ color: "#f7931a" }} />
-        <span className="text-2xl font-black" style={{ color: C.text }}>4,2 %</span>
+        <span className="text-2xl font-black" style={{ color: C.text }}>+4,2 %</span>
       </div>
-      <div className="text-[10px] mb-3" style={{ color: C.muted }}>Rendement DeFi estimé (annualisé)</div>
+      <div className="text-[10px] mb-3" style={{ color: C.muted }}>Performance estimée (annualisée)</div>
       <div className="flex gap-2 text-[10px]">
         <span className="px-2 py-1 rounded-full font-semibold" style={{ background: "#f7931a1a", color: "#f7931a" }}>BTC 60 %</span>
         <span className="px-2 py-1 rounded-full font-semibold" style={{ background: `${C.blue}1a`, color: C.blue }}>ETH 40 %</span>
@@ -386,7 +386,7 @@ export function FreeDashboardFrame() {
       <LockedCard title="Fiscalité patrimoniale" tier="premium" />
       <LockedCard title="Simulateur Immobilier" tier="premium" />
 
-      <LockedCard title="Crypto & DeFi" tier="premium" />
+      <LockedCard title="Crypto" tier="premium" />
       <LockedCard title="Assistant IA" tier="premium" />
       <LockedCard title="Bilan PDF patrimonial" tier="pro" />
     </FrameShell>

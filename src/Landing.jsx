@@ -9,7 +9,7 @@ import AIChatWidget from "./AIChatWidget.jsx";
 import NeonGlow from "./NeonGlow.jsx";
 import { useTheme } from "./ThemeProvider.jsx";
 import {
-  BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target,
+  BarChart3, TrendingUp, Shield, Zap, Wallet, Home, Users, Target, Coins,
   Building2, ChevronDown, ArrowRight,
   Star, Database, EyeOff,
   ShieldCheck, Award, Briefcase, UserCheck, PiggyBank, Activity,
@@ -53,7 +53,7 @@ const SIDEBAR_PREVIEW_ITEMS = [
   { label: "Crypto", icon: Bitcoin },
   { label: "Immobilier", icon: Building2 },
   { label: "Objectifs", icon: Target },
-  { label: "DeFi Yield", icon: Zap },
+  { label: "Or / Métaux précieux", icon: Coins },
   { label: "Fiscalité", icon: Calculator },
   { label: "Mode couple", icon: Users },
   { label: "Plan d'action", icon: Star },
@@ -264,7 +264,7 @@ const LEGAL_CONTENT = {
       },
       {
         heading: "Sécurité",
-        body: ["Par défaut, aucune donnée financière n'est envoyée à un serveur tiers. Les éventuels appels à des services externes (cours de marché, rendements DeFi) sont anonymes et ne contiennent aucune information personnelle."],
+        body: ["Par défaut, aucune donnée financière n'est envoyée à un serveur tiers. Les éventuels appels à des services externes (cours de marché) sont anonymes et ne contiennent aucune information personnelle."],
       },
     ],
   },
@@ -1206,7 +1206,7 @@ export default function Landing({ onStart }) {
                 <li><FooterLink href="#fonctionnalites">Simulations patrimoniales</FooterLink></li>
                 <li><FooterLink href="#fonctionnalites">Indépendance financière (FIRE)</FooterLink></li>
                 <li><FooterLink href="#fonctionnalites">Immobilier</FooterLink></li>
-                <li><FooterLink href="#fonctionnalites">Crypto & DeFi</FooterLink></li>
+                <li><FooterLink href="#fonctionnalites">Crypto</FooterLink></li>
                 <li><FooterLink href="#fonctionnalites">Mode Couple</FooterLink></li>
                 <li><FooterLink href="#comment-ca-marche">Comment ça marche</FooterLink></li>
               </ul>

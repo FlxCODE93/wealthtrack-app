@@ -305,7 +305,7 @@ function mkCryptoFisc(ctx, params) {
         : `Cessions < 305 €/an → **aucun impôt** à déclarer.`,
       "**Échanges crypto-to-crypto** (BTC → ETH) : non imposables — seuls les échanges vers euros le sont.",
       "**Tax-loss harvesting** : vendre en moins-value pour effacer des gains — légal et très efficace avant le 31 décembre.",
-      "**Staking / DeFi** : revenus potentiellement traités comme BNC — consultez un expert-comptable.",
+      "**Staking** : revenus potentiellement traités comme BNC — consultez un expert-comptable.",
     ],
     note: "Utilisez la section Fiscalité Crypto de WealthTrack pour simuler vos gains, pertes et opportunités de tax-loss harvesting.",
     chips: ["Tax-loss harvesting", "PFU vs PEA", "Tranches d'impôts IR"],

@@ -6,7 +6,6 @@ import Landing from "./Landing.jsx";
 import TransactionImportTab from "./TransactionImportTab.jsx";
 import Plans   from "./Plans.jsx";
 import Crypto  from "./Crypto.jsx";
-import DeFi    from "./DeFi.jsx";
 import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
 import Or      from "./Or.jsx";
@@ -202,8 +201,8 @@ const PLANS = {
 
 const PLAN_ACCESS = {
   free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "pdf", "objectifs", "plans"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "couple", "pdf", "objectifs", "plans"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "pdf", "objectifs", "plans"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "couple", "pdf", "objectifs", "plans"],
 };
 
 function canAccess(plan, feature) {
@@ -243,11 +242,6 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
       hook: "Vos crypto-actifs méritent le même niveau de suivi que le reste de votre patrimoine.",
       bullets: ["Suivi en temps réel de votre portefeuille — valorisation, plus-values et performance par actif", "Cours et marchés en direct sur l'ensemble des crypto-actifs majeurs", "Comparatif des meilleures offres de staking et suivi de vos positions"],
     },
-    defi: {
-      title: "DeFi Yield",
-      hook: "Des rendements potentiellement supérieurs au Livret A — pour un profil de risque radicalement différent.",
-      bullets: ["Comparatif des protocoles DeFi et de leurs rendements actuels", "Niveau de risque détaillé par protocole — liquidité, perte impermanente", "Suivi de vos positions et de vos revenus passifs estimés"],
-    },
     assistant: {
       title: "Assistant IA",
       hook: "Un conseiller patrimonial disponible à tout moment, qui connaît vos chiffres mieux que quiconque.",
@@ -270,7 +264,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
     },
   };
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
-  const needed = ["simulations","fi","immobilier","or","crypto","defi","fiscalite","plans"].includes(feature) ? "pro" : "couple";
+  const needed = ["simulations","fi","immobilier","or","crypto","fiscalite","plans"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
   const price = needed === "pro" ? "5,99 €" : "8,99 €";
   return (
@@ -355,7 +349,7 @@ function PricingPage({ plan, setPlan }) {
         "Patrimoine (consultation)",
         "Simulation ETF basique",
       ],
-      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto & DeFi", "Immobilier", "Simulations avancées", "Assistant IA", "Bilan PDF", "Mode Couple"],
+      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto", "Immobilier", "Simulations avancées", "Assistant IA", "Bilan PDF", "Mode Couple"],
       cta: "Plan actuel",
     },
     {
@@ -372,7 +366,7 @@ function PricingPage({ plan, setPlan }) {
         "Indépendance Financière",
         "Simulations (tous scénarios)",
         "Fiscalité patrimoniale",
-        "Crypto & DeFi Yield",
+        "Crypto",
         "Simulateur Immobilier",
         "Assistant IA personnel",
         "Bilan PDF patrimonial",
@@ -593,7 +587,6 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "immobilier",  label: "Immobilier",         icon: Building2 },
     { id: "or",          label: "Or",                 icon: Coins },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
-    { id: "defi",        label: "DeFi Yield",         icon: Zap },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "plans",       label: "Plan d'action",      icon: Star },
@@ -6971,9 +6964,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "crypto", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", crypto: "Crypto", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -7007,7 +7000,6 @@ export default function App() {
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "or"           && (canAccess(plan, "or")          ? <Or patrimoine={patrimoineDerived} /> : <PaywallBanner feature="or" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "defi"         && (canAccess(plan, "defi")        ? <DeFi />   : <PaywallBanner feature="defi"  plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 
         {/* Vues Pro */}

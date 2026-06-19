@@ -6141,12 +6141,23 @@ export default function App() {
     setPlan(active ? data.plan : "free");
   }, [setPlan]);
 
+  // Session persistante : si l'utilisateur est déjà connecté, bypass la landing.
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setShowApp(true);
+    });
+  }, []);
+
   // Hydrate au montage + à chaque changement d'auth (login/logout).
   useEffect(() => {
     hydratePlanFromDb();
     if (!supabase) return;
     const { data: { subscription } } =
-      supabase.auth.onAuthStateChange(() => hydratePlanFromDb());
+      supabase.auth.onAuthStateChange((event, session) => {
+        hydratePlanFromDb();
+        if (session?.user) setShowApp(true);
+      });
     return () => subscription?.unsubscribe();
   }, [hydratePlanFromDb]);
 

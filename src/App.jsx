@@ -5761,11 +5761,65 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
 /*  ÉCRAN : PROFIL                                                     */
 /* ------------------------------------------------------------------ */
 
+/* Redimensionne une image (≤ maxPx) en blob JPEG pour limiter le poids stocké. */
+function downscaleImage(file, maxPx = 512) {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Compression échouée"))), "image/jpeg", 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image illisible")); };
+    img.src = url;
+  });
+}
+
 function Profil({ profile, setProfile, onInject, setTransactions }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const initials = ((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "?";
+
+  // Pré-remplit l'email avec celui du compte (l'adresse renseignée à l'inscription).
+  useEffect(() => {
+    if (!supabase || profile.email) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) setProfile((p) => ({ ...p, email: data.user.email }));
+    });
+  }, []);
+
+  async function handleAvatarFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permet de re-choisir le même fichier
+    if (!file) return;
+    if (!supabase) { alert("Connexion requise pour ajouter une photo."); return; }
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { alert("Connectez-vous pour ajouter une photo."); return; }
+      const blob = await downscaleImage(file, 512);
+      const path = `${user.id}/avatar.jpg`;
+      const { error } = await supabase.storage
+        .from("avatars")
+        .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      // cache-bust : force l'<img> à recharger la nouvelle version
+      setProfile((p) => ({ ...p, avatar: `${data.publicUrl}?t=${Date.now()}` }));
+    } catch (err) {
+      alert("Échec de l'envoi de la photo : " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
@@ -5773,10 +5827,30 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
 
       <Card>
         <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold"
-            style={{ background: "rgba(139,92,246,0.15)", color: T.blue }}>{initials}</div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            title="Changer la photo de profil"
+            aria-label="Changer la photo de profil"
+            style={{ position: "relative", width: 64, height: 64, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: "rgba(139,92,246,0.15)" }}
+          >
+            {profile.avatar ? (
+              <img src={profile.avatar} alt="Photo de profil"
+                style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block" }} />
+            ) : (
+              <span className="flex items-center justify-center text-2xl font-bold"
+                style={{ width: 64, height: 64, color: T.blue }}>{initials}</span>
+            )}
+            {/* badge d'upload en bas à droite */}
+            <span style={{ position: "absolute", bottom: -2, right: -2, width: 24, height: 24, borderRadius: "50%", background: T.blue, border: `2px solid ${T.card}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {uploading
+                ? <RefreshCw size={12} color="#fff" className="animate-spin" />
+                : <Upload size={12} color="#fff" />}
+            </span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarFile} style={{ display: "none" }} />
           <div>
-            <div className="text-lg font-bold" style={{ color: T.text }}>{profile.email || "—"}</div>
+            <div className="text-lg font-bold" style={{ color: T.text }}>{profile.pseudo || profile.firstName || profile.email || "—"}</div>
             <div className="flex gap-2 mt-2">
               <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
                 {profile.age} ans</span>
@@ -5791,6 +5865,17 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           <Field label="Nom">
             <input value={profile.lastName} placeholder="Votre nom" style={inputStyle}
               onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <Field label="Pseudo">
+            <input value={profile.pseudo || ""} placeholder="Votre pseudo" style={inputStyle}
+              onChange={(e) => setProfile((p) => ({ ...p, pseudo: e.target.value }))} />
+          </Field>
+          <Field label="Mon adresse email">
+            <input value={profile.email || ""} readOnly disabled
+              style={{ ...inputStyle, opacity: 0.7, cursor: "not-allowed" }}
+              title="Adresse de connexion — non modifiable ici" />
           </Field>
         </div>
         <Field label="Âge actuel">

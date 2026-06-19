@@ -16,6 +16,7 @@ export default function Auth({ onAuthSuccess }) {
     e.preventDefault();
     setError("");
     setInfo("");
+    if (!supabase) { setError("Supabase non configuré — vérifiez les variables d'environnement."); return; }
     setLoading(true);
 
     try {
@@ -38,6 +39,7 @@ export default function Auth({ onAuthSuccess }) {
   const handleResetPassword = async () => {
     setError("");
     setInfo("");
+    if (!supabase) { setError("Supabase non configuré."); return; }
     if (!email) {
       setError("Saisissez votre email d'abord.");
       return;

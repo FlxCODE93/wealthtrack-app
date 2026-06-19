@@ -5778,9 +5778,6 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           <div>
             <div className="text-lg font-bold" style={{ color: T.text }}>{profile.email || "—"}</div>
             <div className="flex gap-2 mt-2">
-              <span className="px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
-                style={{ background: "rgba(139,92,246,0.15)", color: T.violet }}>
-                <Shield size={12} /> Admin</span>
               <span className="px-3 py-1 rounded-lg text-xs font-semibold"
                 style={{ background: "rgba(245,166,35,0.15)", color: T.amber }}>Premium</span>
               <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
@@ -5847,6 +5844,7 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
         </div>
       </Card>
 
+      {import.meta.env.DEV && (
       <Card style={{ borderColor: "rgba(139,92,246,0.3)" }}>
         <div className="flex items-center gap-2 mb-3">
           <h2 className="text-xl font-bold" style={{ color: T.text }}>Données de test</h2>
@@ -5881,6 +5879,7 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           ))}
         </div>
       </Card>
+      )}
 
     </div>
   );

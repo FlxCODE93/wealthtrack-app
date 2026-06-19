@@ -44,6 +44,8 @@ import {
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
 import { useLocalStorage } from "./storage.js";
+import { API_URL } from "./config.js";
+import { authHeader } from "./supabaseClient.js";
 import { TX, HISTO, WHATIF, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge, calculateWhatIfScenarios } from "./healthScore.js";
@@ -305,6 +307,26 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
 function PricingPage({ plan, setPlan }) {
   const T = useT();
   const [billing, setBilling] = useState("monthly"); // "monthly" | "annual"
+  const [loading, setLoading] = useState(null); // tier.id en cours de chargement
+
+  async function handleCheckout(tier) {
+    if (tier.id === "free") { setPlan("free"); return; }
+    setLoading(tier.id);
+    try {
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+      const res = await fetch(fnUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY },
+        body: JSON.stringify({ plan: tier.id, billing }),
+      });
+      const data = await res.json();
+      if (data.url) { window.location.href = data.url; }
+      else { alert(data.error || "Erreur Stripe"); setLoading(null); }
+    } catch (e) {
+      alert("Erreur réseau : " + e.message);
+      setLoading(null);
+    }
+  }
   const tiers = [
     {
       id: "free",
@@ -468,17 +490,18 @@ function PricingPage({ plan, setPlan }) {
 
               {/* CTA */}
               <button
-                onClick={() => setPlan(tier.id)}
-                disabled={active}
+                onClick={() => handleCheckout(tier)}
+                disabled={active || loading === tier.id}
                 style={{
-                  padding: "13px 20px", borderRadius: 12, border: "none", cursor: active ? "default" : "pointer",
+                  padding: "13px 20px", borderRadius: 12, border: "none", cursor: (active || loading === tier.id) ? "default" : "pointer",
                   fontWeight: 700, fontSize: 14,
                   background: active ? tier.color + "22" : `linear-gradient(135deg, ${tier.color}, ${tier.color}bb)`,
                   color: active ? tier.color : "#fff",
                   transition: "all 0.2s",
+                  opacity: loading && loading !== tier.id ? 0.5 : 1,
                 }}
               >
-                {active ? "✓ Plan actuel" : tier.cta}
+                {active ? "✓ Plan actuel" : loading === tier.id ? "Chargement…" : tier.cta}
               </button>
             </div>
           );
@@ -6623,6 +6646,22 @@ export default function App() {
   const [showApp,    setShowApp]    = useState(false);
   const [view,       setView]       = useState("dashboard");
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
+
+  // Retour Stripe Checkout → ?payment=success&plan=pro
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    const paidPlan = params.get("plan");
+    if (payment === "success" && (paidPlan === "pro" || paidPlan === "couple")) {
+      setPlan(paidPlan);
+      setView("dashboard");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("view") === "pricing") {
+      setView("pricing");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const [transactions, setTransactions] = useLocalStorage("wt_transactions", TX);
   const [histo,      setHisto]      = useLocalStorage("wt_histo", HISTO);
   const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false });

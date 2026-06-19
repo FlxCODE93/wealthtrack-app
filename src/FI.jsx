@@ -276,8 +276,8 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
   /* ── Valeurs réelles calculées depuis l'app ── */
   const appNetWorth = useMemo(() => {
     if (!patrimoine) return null;
-    const a = patrimoine.actifs.flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
-    const p = patrimoine.passifs.flatMap(c => c.items).reduce((s, i) => s + i.value, 0);
+    const a = (patrimoine.actifs  || []).flatMap(c => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
+    const p = (patrimoine.passifs || []).flatMap(c => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
     return a - p;
   }, [patrimoine]);
 

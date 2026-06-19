@@ -6292,7 +6292,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
   ];
 
   const finish = () => {
-    setProfile(p => ({ ...p, firstName: prenom, age }));
+    setProfile(p => ({ ...p, firstName: prenom, age: Math.min(100, Math.max(16, +age || 30)) }));
     const ts = Date.now();
     setTransactions([
       { id: ts+1, label: "Salaire / Revenus",  cat: "Freelance",    type: "revenu",            amount:  revenus,  recurring: true },
@@ -6328,7 +6328,9 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre prénom</label>
               <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
             <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre âge</label>
-              <input type="number" min={16} max={100} value={age} onChange={e => setAge(Math.min(100, Math.max(16, +e.target.value || 16)))} style={inpO} /></div>
+              <input type="number" min={16} max={100} value={age}
+                onChange={e => setAge(e.target.value === "" ? "" : Math.min(100, +e.target.value || 0))}
+                onBlur={e => setAge(Math.min(100, Math.max(16, +e.target.value || 16)))} style={inpO} /></div>
           </div>
         )}
         {step === 1 && (
@@ -6812,9 +6814,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", ...(profile.coupleMode ? ["couple"] : []), "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", assistant: "IA", couple: "Couple", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>

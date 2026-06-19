@@ -203,12 +203,34 @@ export default function TransactionImportTab({ onImport }) {
     setError(null);
     setFileName(file.name);
     try {
-      const text = await file.text();
+      const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
       let parsed;
-      if (file.name.toLowerCase().endsWith(".ofx")) {
-        parsed = parseOFXText(text);
+      if (isPdf) {
+        // PDF : non parsable côté navigateur → le serveur extrait le texte
+        // et le structure via l'IA. On re-catégorise localement pour rester
+        // cohérent avec le reste de l'onglet.
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`${API_URL}/api/import-transactions`, {
+          method: "POST",
+          headers: { ...(await authHeader()) },
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error(data.error || "Échec de l'import du PDF.");
+        parsed = (data.transactions || []).map((t, i) => {
+          const { category, confidence } = categorize(t.description || "", t.amount || 0);
+          return {
+            id: `pdf_${i}_${Date.now()}`,
+            date: t.date || "",
+            description: t.description || `Ligne ${i + 1}`,
+            amount: typeof t.amount === "number" ? t.amount : 0,
+            category, confidence, userConfirmed: false,
+          };
+        });
       } else {
-        parsed = parseCSVText(text);
+        const text = await file.text();
+        parsed = file.name.toLowerCase().endsWith(".ofx") ? parseOFXText(text) : parseCSVText(text);
       }
       if (!parsed.length) throw new Error("Aucune transaction trouvée dans le fichier.");
       setTransactions(parsed);
@@ -327,7 +349,7 @@ export default function TransactionImportTab({ onImport }) {
             }}
           >
             <input
-              ref={fileRef} type="file" accept=".csv,.ofx"
+              ref={fileRef} type="file" accept=".csv,.ofx,.pdf,application/pdf"
               onChange={handleFileInput} style={{ display: "none" }}
             />
             <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
@@ -337,7 +359,7 @@ export default function TransactionImportTab({ onImport }) {
               Glissez votre relevé ici
             </div>
             <div className="text-sm" style={{ color: C.muted }}>
-              Formats acceptés : CSV, OFX — exportez depuis votre espace bancaire
+              Formats acceptés : CSV, OFX, PDF — exportez depuis votre espace bancaire
             </div>
 
             <div className="flex gap-3 justify-center flex-wrap" style={{ marginTop: 24 }}>

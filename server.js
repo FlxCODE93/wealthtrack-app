@@ -21,12 +21,17 @@
  *   PORT                port d'écoute (défaut 3001)
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config({ path: ".env" }); // fallback
+
 import express    from "express";
 import cors       from "cors";
 import multer     from "multer";
 import Papa       from "papaparse";
 import rateLimit  from "express-rate-limit";
 import path       from "path";
+import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 
 const app    = express();
@@ -94,8 +99,43 @@ async function requireAuth(req, res, next) {
   }
 }
 
+/* ─── Vérification de plan (service_role) ────────────────────────────
+   Lit le plan AUTORITATIF depuis la table `subscriptions` (écrite par le
+   seul webhook Stripe). Bloque l'accès aux endpoints payants si le user
+   n'a pas le plan requis. Protège les coûts API (IA) contre les abus.
+   Env : SUPABASE_SERVICE_ROLE_KEY (clé service, JAMAIS exposée au front).
+   ──────────────────────────────────────────────────────────────────── */
+const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const planEnabled  = Boolean(authEnabled && serviceKey);
+const supabaseAdmin = planEnabled ? createClient(supabaseUrl, serviceKey) : null;
+const PAID_STATUS  = new Set(["active", "trialing", "past_due"]);
+
+if (authEnabled && !serviceKey) {
+  console.warn("  ⚠ SUPABASE_SERVICE_ROLE_KEY absente — vérif de plan désactivée (endpoints payants ouverts aux comptes free).");
+}
+
+/** Middleware : exige que le user ait un des plans de `allowed` (set/array). */
+function requirePlan(allowed) {
+  const allow = new Set(allowed);
+  return async (req, res, next) => {
+    if (!planEnabled) return next(); // dev local / non configuré : pass-through
+    try {
+      const { data } = await supabaseAdmin
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", req.user.id)
+        .maybeSingle();
+      const active = data && PAID_STATUS.has(data.status);
+      if (active && allow.has(data.plan)) return next();
+      return res.status(403).json({ success: false, error: "Plan insuffisant pour cette fonctionnalité.", code: "PLAN_REQUIRED" });
+    } catch {
+      return res.status(403).json({ success: false, error: "Plan non vérifiable.", code: "PLAN_REQUIRED" });
+    }
+  };
+}
+
 /* ─── MIME / extension helper ────────────────────────────────────── */
-const ALLOWED_EXTS = new Set([".csv", ".ofx"]);
+const ALLOWED_EXTS = new Set([".csv", ".ofx", ".pdf"]);
 function validateUpload(file) {
   const ext = path.extname(file.originalname).toLowerCase();
   return ALLOWED_EXTS.has(ext);
@@ -169,6 +209,65 @@ async function categorizeWithAI(description, amount, date) {
   return { category, confidence: parseFloat(conf) || 0.75 };
 }
 
+/* ─── Import PDF — extraction texte + structuration par Claude ───────
+   Un relevé PDF n'est pas structuré : on extrait le texte brut, puis on
+   demande à Claude de le transformer en transactions JSON. Gère la grande
+   variété de mises en page des banques françaises.
+   Retourne [{ date, description, amount }]. amount < 0 = débit. */
+async function extractTransactionsFromPDF(buffer) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Import PDF indisponible (ANTHROPIC_API_KEY non configurée côté serveur).");
+
+  let text = "";
+  try {
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    text = (result.text || "").trim();
+  } catch {
+    throw new Error("PDF illisible ou corrompu.");
+  }
+  if (!text) throw new Error("Aucun texte trouvé dans le PDF (relevé scanné ? l'OCR n'est pas supporté).");
+
+  const clipped = text.slice(0, 30000); // borne les coûts/latence
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:  "POST",
+    headers: {
+      "x-api-key":         apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type":      "application/json",
+    },
+    body: JSON.stringify({
+      model:      "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      messages: [{
+        role: "user",
+        content: `Voici le texte brut d'un relevé bancaire français extrait d'un PDF. Extrais TOUTES les transactions.\n\nRéponds UNIQUEMENT avec un JSON valide : un tableau d'objets {"date":"YYYY-MM-DD","description":"libellé","amount":nombre}. Règles : amount NÉGATIF pour un débit/retrait, POSITIF pour un crédit/dépôt. Aucune transaction inventée. Aucun texte hors du JSON.\n\n---DÉBUT RELEVÉ---\n${clipped}\n---FIN RELEVÉ---`,
+      }],
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) throw new Error(`Extraction IA échouée (Claude API ${res.status}).`);
+  const data = await res.json();
+  let out = (data.content?.[0]?.text || "").trim();
+  out = out.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+
+  let arr;
+  try { arr = JSON.parse(out); }
+  catch { throw new Error("Le PDF n'a pas pu être interprété (format de relevé non reconnu)."); }
+  if (!Array.isArray(arr)) throw new Error("Extraction PDF : format inattendu.");
+
+  return arr
+    .filter((t) => t && typeof t.amount === "number" && isFinite(t.amount))
+    .slice(0, 5000)
+    .map((t) => ({
+      date:        String(t.date || "").slice(0, 10),
+      description: String(t.description || "").trim().slice(0, 200) || "Transaction",
+      amount:      t.amount,
+    }));
+}
+
 /* ─── Helpers CSV ────────────────────────────────────────────────── */
 function detectCols(headers) {
   const find = (patterns) =>
@@ -235,44 +334,51 @@ app.get("/api/tax/ping", (_req, res) => res.json({ ok: true }));
  * multipart/form-data { file: <CSV/OFX> } → { success, count, transactions }
  * Parse + catégorise. Ne stocke rien : le front persiste via Supabase.
  */
-app.post("/api/import-transactions", requireAuth, importLimiter, upload.single("file"), async (req, res, next) => {
+app.post("/api/import-transactions", requireAuth, requirePlan(["pro", "couple"]), importLimiter, upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: "Aucun fichier." });
     if (!validateUpload(req.file)) {
-      return res.status(400).json({ success: false, error: "Format non supporté. Utilisez CSV ou OFX." });
+      return res.status(400).json({ success: false, error: "Format non supporté. Utilisez CSV, OFX ou PDF." });
     }
 
-    const text   = req.file.buffer.toString("utf-8");
-    const parsed = Papa.parse(text.trim(), {
-      header: true, skipEmptyLines: true, dynamicTyping: false,
-      delimitersToGuess: [",", ";", "\t", "|"],
-      transformHeader: (h) => h.trim(),
-    });
+    const isPdf = /pdf/i.test(req.file.mimetype || "") || /\.pdf$/i.test(req.file.originalname || "");
 
-    if (!parsed.data.length) return res.status(400).json({ success: false, error: "Fichier vide." });
-    if (parsed.data.length > 5000) return res.status(400).json({ success: false, error: "Fichier trop volumineux (max 5000 lignes)." });
+    // Normalise tous les formats vers une liste { date, description, amount }.
+    let rows;
+    if (isPdf) {
+      rows = await extractTransactionsFromPDF(req.file.buffer);
+      if (!rows.length) return res.status(400).json({ success: false, error: "Aucune transaction détectée dans le PDF." });
+    } else {
+      const text   = req.file.buffer.toString("utf-8");
+      const parsed = Papa.parse(text.trim(), {
+        header: true, skipEmptyLines: true, dynamicTyping: false,
+        delimitersToGuess: [",", ";", "\t", "|"],
+        transformHeader: (h) => h.trim(),
+      });
 
-    const headers = parsed.meta.fields || [];
-    const cols    = detectCols(headers);
+      if (!parsed.data.length) return res.status(400).json({ success: false, error: "Fichier vide." });
+      if (parsed.data.length > 5000) return res.status(400).json({ success: false, error: "Fichier trop volumineux (max 5000 lignes)." });
 
-    const transactions = await Promise.all(
-      parsed.data.map(async (row, i) => {
-        let amount = cols.amount
+      const headers = parsed.meta.fields || [];
+      const cols    = detectCols(headers);
+      rows = parsed.data.map((row, i) => ({
+        amount: cols.amount
           ? parseAmt(row[cols.amount])
-          : parseAmt(row[cols.credit]) - parseAmt(row[cols.debit]);
+          : parseAmt(row[cols.credit]) - parseAmt(row[cols.debit]),
+        description: cols.desc ? String(row[cols.desc] || "").trim() : `Transaction ${i + 1}`,
+        date:        cols.date ? parseDate(String(row[cols.date] || "")) : "",
+      }));
+    }
 
-        const description = cols.desc ? String(row[cols.desc] || "").trim() : `Transaction ${i + 1}`;
-        const date        = cols.date ? parseDate(String(row[cols.date] || "")) : "";
-
+    // Catégorisation commune (mots-clés + IA Tier 3 sur les faibles confiances).
+    const transactions = await Promise.all(
+      rows.map(async ({ date, description, amount }) => {
         let result = categorize(description, amount);
-
-        // Tier 3 (IA) pour les faibles confiances
         if (result.confidence < 0.7 && process.env.ANTHROPIC_API_KEY) {
           try {
             result = await categorizeWithAI(description, amount, date);
           } catch (_) { /* garde le résultat Tier 1/2 */ }
         }
-
         return {
           date, description, amount,
           category:      result.category,
@@ -294,7 +400,7 @@ app.post("/api/import-transactions", requireAuth, importLimiter, upload.single("
  * POST /api/categorize
  * Body: { description, amount, date } → { category, confidence, source }
  */
-app.post("/api/categorize", requireAuth, aiLimiter, async (req, res, next) => {
+app.post("/api/categorize", requireAuth, requirePlan(["pro", "couple"]), aiLimiter, async (req, res, next) => {
   try {
     const { description = "", amount = 0, date = "" } = req.body;
 
@@ -425,6 +531,12 @@ app.get("/api/staking-offers", async (req, res) => {
     return res.json({ success: true, source: "fallback", ts: stakingCache.ts, data: STAKING_OFFERS_FALLBACK });
   }
 });
+
+/* ─── Stripe ──────────────────────────────────────────────────────────
+   L'intégration Stripe (checkout + webhook) vit dans les Edge Functions
+   Supabase (supabase/functions/stripe-*), co-localisées avec la DB/auth.
+   Ce serveur Express ne gère QUE la vérification de plan (cf. requirePlan).
+   ──────────────────────────────────────────────────────────────────── */
 
 /* ─── 404 + gestionnaire d'erreurs global ────────────────────────── */
 app.use("/api", (_req, res) => res.status(404).json({ success: false, error: "Endpoint introuvable." }));

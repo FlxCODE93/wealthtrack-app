@@ -588,7 +588,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "defi",        label: "DeFi Yield",         icon: Zap },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
-    ...(profile?.coupleMode ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
+    ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "pricing",     label: "Tarifs",             icon: Crown },
     { id: "profil",      label: "Profil",             icon: User },
@@ -5788,7 +5788,7 @@ function downscaleImage(file, maxPx = 512) {
   });
 }
 
-function Profil({ profile, setProfile, onInject, setTransactions }) {
+function Profil({ profile, setProfile, onInject, setTransactions, plan = "free", setView }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -5908,31 +5908,55 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           <Users size={18} style={{ color: T.blue }} />
           <h2 className="text-xl font-bold" style={{ color: T.text }}>Préférences de l'app</h2>
         </div>
+        {(() => {
+          const coupleAllowed = plan === "couple";
+          const on = profile.coupleMode && coupleAllowed;
+          return (
         <div className="flex items-center justify-between py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
-            <div className="font-medium text-sm" style={{ color: T.text }}>Mode Couple / Famille</div>
+            <div className="font-medium text-sm flex items-center gap-2" style={{ color: T.text }}>
+              Mode Couple / Famille
+              {!coupleAllowed && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md" style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>
+                  Plan Couple
+                </span>
+              )}
+            </div>
             <div className="text-xs mt-1" style={{ color: T.muted }}>
-              Affiche l'onglet de gestion patrimoniale commune dans la navigation
+              {coupleAllowed
+                ? "Affiche l'onglet de gestion patrimoniale commune dans la navigation"
+                : (
+                  <>Réservé au plan Couple.{" "}
+                    <button onClick={() => setView?.("pricing")} style={{ background: "none", border: "none", padding: 0, color: "#a855f7", fontWeight: 700, cursor: "pointer", fontSize: "inherit" }}>
+                      Passer à Couple →
+                    </button>
+                  </>
+                )}
             </div>
           </div>
           <button
-            onClick={() => setProfile((p) => ({ ...p, coupleMode: !p.coupleMode }))}
+            onClick={() => { if (coupleAllowed) setProfile((p) => ({ ...p, coupleMode: !p.coupleMode })); else setView?.("pricing"); }}
+            aria-disabled={!coupleAllowed}
+            title={coupleAllowed ? "" : "Disponible avec le plan Couple"}
             style={{
               position: "relative", flexShrink: 0,
               width: 44, height: 24, borderRadius: 12,
-              background: profile.coupleMode ? T.blue : "rgba(255,255,255,0.12)",
+              background: on ? T.blue : "rgba(255,255,255,0.12)",
               border: "none", cursor: "pointer", transition: "background 0.25s",
+              opacity: coupleAllowed ? 1 : 0.5,
             }}
           >
             <span style={{
               position: "absolute", top: 3,
-              left: profile.coupleMode ? 23 : 3,
+              left: on ? 23 : 3,
               width: 18, height: 18, borderRadius: "50%",
               background: "#fff", transition: "left 0.25s",
               display: "block",
             }} />
           </button>
         </div>
+          );
+        })()}
       </Card>
 
 
@@ -6940,7 +6964,7 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "crypto", "defi", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", crypto: "Crypto", defi: "DeFi", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
@@ -6965,7 +6989,7 @@ export default function App() {
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} />}
-        {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} />}
+        {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
         {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "portefeuille" && <Portefeuille />}

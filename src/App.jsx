@@ -8,7 +8,6 @@ import Plans   from "./Plans.jsx";
 import Crypto  from "./Crypto.jsx";
 import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
-import Or      from "./Or.jsx";
 import Frais   from "./Frais.jsx";
 import {
   FinTechLineChart, FinTechAreaChart, FinTechBarChart,
@@ -31,7 +30,7 @@ import {
   Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
 import {
-  RATE_A, RATE_C, RATE_DISCLAIMER,
+  RATE_A, RATE_C, RATE_DISCLAIMER, RATE_GOLD,
   SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET, RATE_SCENARIOS,
   IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
@@ -202,8 +201,8 @@ const PLANS = {
 
 const PLAN_ACCESS = {
   free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "objectifs", "plans", "frais"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "or", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais"],
 };
 
 function canAccess(plan, feature) {
@@ -260,7 +259,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
     },
   };
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
-  const needed = ["simulations","fi","immobilier","or","crypto","fiscalite","plans"].includes(feature) ? "pro" : "couple";
+  const needed = ["simulations","fi","immobilier","crypto","fiscalite","plans"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
   const price = needed === "pro" ? "5,99 €" : "8,99 €";
   return (
@@ -579,7 +578,6 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "fi",          label: "FIRE",               icon: Flag },
     { id: "crypto",      label: "Crypto",             icon: Bitcoin },
     { id: "immobilier",  label: "Immobilier",         icon: Building2 },
-    { id: "or",          label: "Or",                 icon: Coins },
     { id: "frais",       label: "Analyse des frais",  icon: Percent },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
@@ -1477,34 +1475,40 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 py-3">
-                      <div className="rounded-xl w-10 h-10 flex items-center justify-center shrink-0"
+                      <div className="rounded-xl w-9 h-9 flex items-center justify-center shrink-0"
                         style={{ background: "rgba(139,92,246,0.08)" }}>
-                        {t.type === "revenu" ? <TrendingUp size={18} style={{ color: T.green }} />
-                          : t.type === "investissement" ? <PiggyBank size={18} style={{ color: T.cyan }} />
-                          : <Home size={18} style={{ color: T.muted }} />}
+                        {t.type === "revenu" ? <TrendingUp size={16} style={{ color: T.green }} />
+                          : t.type === "investissement" ? <PiggyBank size={16} style={{ color: T.cyan }} />
+                          : <Home size={16} style={{ color: T.muted }} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold truncate text-sm" style={{ color: T.text }}>
-                          {t.label}
-                          {t.recurring && <span style={{ marginLeft: 6, fontSize: 12, color: T.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 6px" }}><Repeat size={9} className="inline" /> récurrente</span>}
+                        {/* Ligne 1 : label + montant */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-semibold truncate text-sm" style={{ color: T.text }}>
+                            {t.label}
+                            {t.recurring && <span className="hidden sm:inline" style={{ marginLeft: 6, fontSize: 11, color: T.blue, background: "rgba(91,141,239,0.12)", borderRadius: 6, padding: "1px 5px" }}><Repeat size={8} className="inline" /> récurrente</span>}
+                          </div>
+                          <span className="font-bold text-sm shrink-0"
+                            style={{ color: t.amount >= 0 ? T.green : T.text }}>
+                            {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
+                          </span>
                         </div>
-                        <div className="text-xs" style={{ color: T.muted }}>{t.cat}</div>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-medium shrink-0"
-                        style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>
-                      <span className="font-bold text-base shrink-0 w-24 text-right"
-                        style={{ color: t.amount >= 0 ? T.green : T.text }}>
-                        {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
-                      </span>
-                      <div className="flex gap-1 shrink-0">
-                        <button onClick={() => startEdit(t)}
-                          style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: T.muted }}>
-                          <Pencil size={13} />
-                        </button>
-                        <button onClick={() => onDelete?.(t.id)} aria-label="Supprimer la transaction"
-                          style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: T.red }}>
-                          <Trash2 size={13} />
-                        </button>
+                        {/* Ligne 2 : cat + badge type + boutons */}
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-xs" style={{ color: T.muted }}>{t.cat}</span>
+                          <span className="px-2 py-0.5 rounded-md text-xs font-medium"
+                            style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>
+                          <div className="flex gap-1 ml-auto">
+                            <button onClick={() => startEdit(t)}
+                              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.muted }}>
+                              <Pencil size={12} />
+                            </button>
+                            <button onClick={() => onDelete?.(t.id)} aria-label="Supprimer la transaction"
+                              style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.red }}>
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1694,6 +1698,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
   const [activeTab, setActiveTab] = useState("etf");
   const [inflationRate, setInflationRate] = useState(0.02);
+  const [orRate, setOrRate] = useState(+(RATE_GOLD * 100).toFixed(1));
+  const [orStorageFee, setOrStorageFee] = useState(0.5);
   const [cryptoTip, setCryptoTip] = useState(null);
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveData, setLiveData] = useState(null);
@@ -1779,6 +1785,14 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     };
   }, [monthly, initial, price, horizon, immoSeries]);
 
+  // Or — simulation dans onglet Simulations
+  const orNetRate = useMemo(() => Math.max(-0.05, (orRate - orStorageFee) / 100), [orRate, orStorageFee]);
+  const orScenario = useMemo(() => ({ pess: Math.max(-0.05, orNetRate - 0.03), base: orNetRate, opt: orNetRate + 0.04 }), [orNetRate]);
+  const orSeries = useMemo(() => fvBandSeries(initial, monthly, orScenario, horizon, SIM_START_YEAR), [initial, monthly, orScenario, horizon]);
+  const orCapFinal = useMemo(() => Math.round(fv(initial, monthly, orNetRate, horizon)), [initial, monthly, orNetRate, horizon]);
+  const orTotalVerse = Math.round(initial + monthly * 12 * horizon);
+  const orGain = orCapFinal - orTotalVerse;
+
   // Capacité d'emprunt — détection profil + règles bancaires françaises
   const profileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
   const bCfg = PROFILE_CONFIG[profileType];
@@ -1839,8 +1853,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
   const TABS = [
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
-    { id: "immo",     label: "Immobilier", color: ASSET.immo },
+    { id: "or",       label: "Or",         color: "#f59e0b" },
     { id: "defensif", label: "Livret A",   color: ASSET.livret },
+    { id: "immo",     label: "Immobilier", color: ASSET.immo },
     { id: "per",      label: "PER",        color: T.violet },
     { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
     { id: "eth",      label: "Ethereum",   color: ASSET.eth },
@@ -1889,11 +1904,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Investissement mensuel (€)">
-            <input type="number" value={monthly} style={inputStyle}
+            <input type="number" value={monthly || ""} placeholder="0" style={inputStyle}
               onChange={(e) => setMonthly(+e.target.value || 0)} />
           </Field>
           <Field label="Épargne / apport initial (€)">
-            <input type="number" value={initial} style={inputStyle}
+            <input type="number" value={initial || ""} placeholder="0" style={inputStyle}
               onChange={(e) => setInitial(+e.target.value || 0)} />
           </Field>
           <Field label="Horizon">
@@ -1977,6 +1992,98 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           </button>
         </div>
 
+      </>}
+
+      {/* ── TAB: OR ── */}
+      {activeTab === "or" && <>
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <div style={{ borderRadius: 10, padding: "6px 8px", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+              <Coins size={18} style={{ color: "#f59e0b" }} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold" style={{ color: T.text }}>Or — Métaux précieux</h2>
+              <p className="text-xs" style={{ color: T.muted }}>Valeur refuge · rendement net des frais de stockage</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm" style={{ color: T.muted }}>Rendement annuel estimé</span>
+                <span className="font-bold" style={{ color: "#f59e0b" }}>{orRate.toFixed(1).replace(".", ",")} %</span>
+              </div>
+              <input type="range" min={0} max={12} step={0.1} value={orRate}
+                onChange={(e) => setOrRate(+e.target.value)}
+                className="w-full" style={{ accentColor: "#f59e0b" }} />
+              <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
+                <span>0 %</span><span>6 %</span><span>12 %</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm" style={{ color: T.muted }}>Frais de stockage / an</span>
+                <span className="font-bold" style={{ color: T.muted }}>{orStorageFee.toFixed(1).replace(".", ",")} %</span>
+              </div>
+              <input type="range" min={0} max={2} step={0.1} value={orStorageFee}
+                onChange={(e) => setOrStorageFee(+e.target.value)}
+                className="w-full" style={{ accentColor: T.muted }} />
+              <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
+                <span>0 %</span><span>1 %</span><span>2 %</span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}>
+            Rendement net retenu : <strong>{(orNetRate * 100).toFixed(2).replace(".", ",")} %/an</strong>
+            &nbsp;(taux brut − frais de stockage)
+          </div>
+        </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: `Capital à ${SIM_START_YEAR + horizon}`, value: eur(orCapFinal), color: "#f59e0b" },
+            { label: "Total versé", value: eur(orTotalVerse), color: T.muted },
+            { label: "Plus-value estimée", value: eur(orGain), color: orGain >= 0 ? T.green : T.red },
+            { label: "Performance", value: (orTotalVerse > 0 ? (orGain / orTotalVerse * 100) : 0).toFixed(0) + " %", color: orGain >= 0 ? T.green : T.red },
+          ].map((s) => (
+            <Card key={s.label} className="flex-1">
+              <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
+              <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} style={{ color: "#f59e0b" }} />
+            <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection de l'or</h2>
+          </div>
+          <p className="text-xs mb-4" style={{ color: T.muted }}>Trajectoire centrale et bande d'incertitude (scénarios prudent → favorable). Paramètres communs (capital, mensuel, horizon) partagés avec les autres actifs.</p>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={orSeries} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="goldFillSim" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.04} />
+                </linearGradient>
+                <linearGradient id="goldBandSim" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.15} />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTip.contentStyle?.border?.replace?.(/\s.*/, "") || "#334155"} vertical={false} />
+              <XAxis dataKey="year" tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} />
+              <YAxis tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} axisLine={false} width={48} />
+              <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "capital" ? "Or (net)" : n === "apports" ? "Versé" : n]} />
+              <Area type="monotone" dataKey="range" stroke="none" fill="url(#goldBandSim)" isAnimationActive={false} />
+              <Area type="monotone" dataKey="apports" stroke={T.muted} strokeDasharray="4 4" strokeWidth={1.5} fill="none" />
+              <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+        <div style={{ borderRadius: 12, padding: 14, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <Info size={15} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
+          <p className="text-sm" style={{ color: T.muted, lineHeight: 1.6 }}>
+            L'or est une <span style={{ color: T.text, fontWeight: 600 }}>valeur refuge</span> peu corrélée aux actions : il protège en période de crise mais ne verse aucun revenu (ni dividende, ni loyer). Les <span style={{ color: T.text, fontWeight: 600 }}>frais de stockage</span> (coffre, assurance) réduisent le rendement net. Hypothèse indicative, non un conseil en investissement.
+          </p>
+        </div>
       </>}
 
       {/* ── TAB: IMMO ── */}
@@ -5536,7 +5643,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-              <Area type="monotone" dataKey="v" name="Net Worth" stroke={T.violet} strokeWidth={2.5}
+              <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.violet} strokeWidth={2.5}
                 fill="url(#gradNW)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
@@ -5562,7 +5669,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
-              <span className="text-xs" style={{ color: T.muted }}>Net Worth</span>
+              <span className="text-xs" style={{ color: T.muted }}>Patrimoine</span>
               <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
             </div>
           </div>
@@ -5603,7 +5710,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                {["Mois", "Net Worth", "Variation", "% Croissance"].map((h) => (
+                {["Mois", "Patrimoine", "Variation", "% Croissance"].map((h) => (
                   <th key={h} className="py-3 px-3 text-left font-semibold" style={{ color: T.muted }}>{h}</th>
                 ))}
               </tr>
@@ -6252,9 +6359,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "objectifs", "simulations", "patrimoine", "fi", "immobilier", "or", "frais", "crypto", "fiscalite", "plans", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "simulations", "patrimoine", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", objectifs: "Objectifs", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", immobilier: "Immo", or: "Or", frais: "Frais", crypto: "Crypto", fiscalite: "Fiscalité", plans: "Plan", assistant: "IA", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -6286,7 +6393,6 @@ export default function App() {
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "or"           && (canAccess(plan, "or")          ? <Or patrimoine={patrimoineDerived} /> : <PaywallBanner feature="or" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "frais"        && <Frais />}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
@@ -6324,7 +6430,7 @@ function LegalDisclaimer() {
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
               Informations légales — non contractuel
             </span>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: T.muted }}>
+            <p className={`text-xs mt-1 leading-relaxed ${expanded ? "" : "hidden sm:block"}`} style={{ color: T.muted }}>
               WealthTrack est un outil de simulation et de suivi patrimonial personnel à titre purement informatif. Les informations, calculs, projections et simulations présentés sur cette plateforme <strong style={{ color: T.text }}>ne constituent en aucun cas un conseil en investissement, un conseil financier, fiscal ou juridique</strong> au sens des articles L. 321-1 et suivants du Code monétaire et financier.
             </p>
             {expanded && (

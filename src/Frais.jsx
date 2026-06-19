@@ -123,11 +123,13 @@ function FeeImpactBar({ horizon, capital, feeRate }) {
   }, [capital, horizon, feeRate]);
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} margin={{ top: 8, right: 12, left: 8, bottom: 4 }}>
+    <div style={{ width: "100%", overflowX: "auto" }}>
+    <div style={{ minWidth: 320 }}>
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 11, fill: T.muted }} />
-        <YAxis tickFormatter={(v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : Math.round(v / 1e3) + "k"} tick={{ fontSize: 11, fill: T.muted }} width={48} />
+        <XAxis dataKey="name" tick={{ fontSize: 10, fill: T.muted }} angle={-15} textAnchor="end" interval={0} />
+        <YAxis tickFormatter={(v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : Math.round(v / 1e3) + "k"} tick={{ fontSize: 10, fill: T.muted }} width={44} />
         <Tooltip
           {...makeChartTip(T)}
           formatter={(v) => [eur(v), "Capital final"]}
@@ -137,6 +139,8 @@ function FeeImpactBar({ horizon, capital, feeRate }) {
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+    </div>
+    </div>
   );
 }
 
@@ -201,7 +205,7 @@ export default function Frais() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
           <Field label="Capital initial (€)">
-            <input type="number" value={capital} style={inputStyle}
+            <input type="number" value={capital || ""} placeholder="0" style={inputStyle}
               onChange={(e) => setCapital(+e.target.value || 0)} />
           </Field>
           <Field label="Horizon">

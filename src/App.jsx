@@ -314,9 +314,17 @@ function PricingPage({ plan, setPlan }) {
     setLoading(tier.id);
     try {
       const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+      // L'Edge Function identifie l'utilisateur via ce JWT (header obligatoire,
+      // sinon 401). L'identité ne transite jamais par le corps de la requête.
+      const auth = await authHeader();
+      if (!auth.Authorization) { alert("Connectez-vous pour vous abonner."); setLoading(null); return; }
       const res = await fetch(fnUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY },
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+          ...auth,
+        },
         body: JSON.stringify({ plan: tier.id, billing }),
       });
       const data = await res.json();
@@ -6696,20 +6704,52 @@ export default function App() {
   const [view,       setView]       = useState("dashboard");
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
 
-  // Retour Stripe Checkout → ?payment=success&plan=pro
+  // ── Plan : SOURCE DE VÉRITÉ = table `subscriptions` (écrite par le seul
+  //    webhook Stripe). On NE FAIT JAMAIS confiance à l'URL ni au localStorage
+  //    pour accorder un plan payant. `wt_plan` ne sert que de cache d'affichage,
+  //    systématiquement écrasé par la valeur DB ci-dessous.
+  const hydratePlanFromDb = useCallback(async () => {
+    if (!supabase) return; // dev local sans Supabase : reste sur le cache
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setPlan("free"); return; }
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) return; // en cas d'erreur réseau on garde l'état courant
+    const active = data && ["active", "trialing", "past_due"].includes(data.status);
+    setPlan(active ? data.plan : "free");
+  }, [setPlan]);
+
+  // Hydrate au montage + à chaque changement d'auth (login/logout).
+  useEffect(() => {
+    hydratePlanFromDb();
+    if (!supabase) return;
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(() => hydratePlanFromDb());
+    return () => subscription?.unsubscribe();
+  }, [hydratePlanFromDb]);
+
+  // Retour Stripe Checkout → ?payment=success (DRAPEAU D'UX UNIQUEMENT, n'accorde
+  // aucun droit). Le webhook a — ou va — écrire le plan ; on re-lit la DB, avec
+  // quelques tentatives le temps que l'événement Stripe arrive.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const payment = params.get("payment");
-    const paidPlan = params.get("plan");
-    if (payment === "success" && (paidPlan === "pro" || paidPlan === "couple")) {
-      setPlan(paidPlan);
+    if (params.get("payment") === "success") {
       setView("dashboard");
       window.history.replaceState({}, "", window.location.pathname);
+      let n = 0;
+      const id = setInterval(() => {
+        hydratePlanFromDb();
+        if (++n >= 5) clearInterval(id); // ~5 tentatives sur 10 s
+      }, 2000);
+      return () => clearInterval(id);
     } else if (params.get("view") === "pricing") {
       setView("pricing");
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [hydratePlanFromDb]);
 
   const [transactions, setTransactions] = useLocalStorage("wt_transactions", TX);
   const [histo,      setHisto]      = useLocalStorage("wt_histo", HISTO);

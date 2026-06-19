@@ -5778,8 +5778,6 @@ function Profil({ profile, setProfile, onInject, setTransactions }) {
           <div>
             <div className="text-lg font-bold" style={{ color: T.text }}>{profile.email || "—"}</div>
             <div className="flex gap-2 mt-2">
-              <span className="px-3 py-1 rounded-lg text-xs font-semibold"
-                style={{ background: "rgba(245,166,35,0.15)", color: T.amber }}>Premium</span>
               <span className="px-3 py-1 rounded-lg text-xs" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
                 {profile.age} ans</span>
             </div>

@@ -388,7 +388,7 @@ export function FreeDashboardFrame() {
 
       <LockedCard title="Crypto" tier="premium" />
       <LockedCard title="Assistant IA" tier="premium" />
-      <LockedCard title="Bilan PDF patrimonial" tier="pro" />
+      <LockedCard title="Or / Métaux précieux" tier="pro" />
     </FrameShell>
   );
 }
@@ -410,7 +410,7 @@ export function PremiumDashboardFrame() {
 
       <CryptoDefiCard />
       <AssistantCard />
-      <LockedCard title="Bilan PDF patrimonial" tier="pro" />
+      <LockedCard title="Or / Métaux précieux" tier="pro" />
     </FrameShell>
   );
 }

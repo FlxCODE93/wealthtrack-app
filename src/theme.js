@@ -1,8 +1,8 @@
 export const C = {
-  // Ultra-dark — cinema fintech palette
-  bg:        "#020617",        // Midnight void
-  panel:     "#070d1a",        // Section surface
-  card:      "#0e1223",        // Elevated card
+  // Ultra-dark — cinema fintech palette (teinté violet façon Landing, pas full-black)
+  bg:        "#0a0816",        // Deep violet-navy (au lieu d'un noir plat)
+  panel:     "#0d0b1e",        // Section surface — léger voile violet
+  card:      "#13112a",        // Elevated card — base violette discrète
   border:    "rgba(255,255,255,0.07)",  // Subtle glass divider
   text:      "#f8fafc",        // Pale white (not pure white)
   muted:     "#94a3b8",        // Secondary/muted text
@@ -34,11 +34,12 @@ export const C = {
   shineAccent: "#ffffff",
 };
 
-// Mesh gradient hero — violet + indigo + cyan
+// Mesh gradient hero — violet + indigo + cyan (renforcé pour harmoniser avec la Landing)
 C.bgGradient = `
-  radial-gradient(ellipse 900px 500px at 20% 10%, rgba(124, 58, 237, 0.18), transparent 50%),
-  radial-gradient(ellipse 700px 400px at 80% 30%, rgba(8, 145, 178, 0.10), transparent 55%),
-  radial-gradient(ellipse 600px 300px at 50% 100%, rgba(79, 70, 229, 0.10), transparent 60%),
+  radial-gradient(ellipse 1000px 560px at 15% 0%, rgba(124, 58, 237, 0.26), transparent 55%),
+  radial-gradient(ellipse 780px 440px at 85% 18%, rgba(79, 70, 229, 0.18), transparent 58%),
+  radial-gradient(ellipse 700px 360px at 50% 100%, rgba(139, 92, 246, 0.14), transparent 62%),
+  radial-gradient(ellipse 620px 340px at 95% 80%, rgba(8, 145, 178, 0.08), transparent 60%),
   ${C.bg}
 `;
 

@@ -124,11 +124,11 @@ function FeeImpactBar({ horizon, capital, feeRate }) {
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
-    <div style={{ minWidth: 320 }}>
-    <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
+    <div style={{ minWidth: 480 }}>
+    <ResponsiveContainer width="100%" height={280}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 56 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 10, fill: T.muted }} angle={-15} textAnchor="end" interval={0} />
+        <XAxis dataKey="name" tick={{ fontSize: 11, fill: T.muted }} angle={-35} textAnchor="end" interval={0} height={60} />
         <YAxis tickFormatter={(v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : Math.round(v / 1e3) + "k"} tick={{ fontSize: 10, fill: T.muted }} width={44} />
         <Tooltip
           {...makeChartTip(T)}

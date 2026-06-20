@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { C, glow, ASSET } from "./theme.js";
 import { useT } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
-import Landing from "./Landing.jsx";
 import TransactionImportTab from "./TransactionImportTab.jsx";
 import Plans   from "./Plans.jsx";
 import Crypto  from "./Crypto.jsx";
@@ -6310,7 +6309,6 @@ function BankConnectModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 export default function App() {
   const T = useT();
-  const [showApp,    setShowApp]    = useState(false);
   const [view,       setView]       = useState("dashboard");
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
   const [showBankConnect, setShowBankConnect] = useState(false);
@@ -6333,24 +6331,9 @@ export default function App() {
     setPlan(active ? data.plan : "free");
   }, [setPlan]);
 
-  // Session persistante : si l'utilisateur est déjà connecté, bypass la landing.
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setShowApp(true);
-    });
-  }, []);
-
-  // Hydrate au montage + à chaque changement d'auth (login/logout).
+  // Hydrate le plan au montage (l'auth est déjà garantie par AuthGate).
   useEffect(() => {
     hydratePlanFromDb();
-    if (!supabase) return;
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
-        hydratePlanFromDb();
-        if (session?.user) setShowApp(true);
-      });
-    return () => subscription?.unsubscribe();
   }, [hydratePlanFromDb]);
 
   // Retour Stripe Checkout → ?payment=success (DRAPEAU D'UX UNIQUEMENT, n'accorde
@@ -6400,7 +6383,7 @@ export default function App() {
   const [showTrialPopup, setShowTrialPopup] = useState(false);
 
   // Déclenche onboarding si pas encore fait ET prénom vide
-  const showOnboarding = showApp && !onboarded && !profile.firstName;
+  const showOnboarding = !onboarded && !profile.firstName;
 
   // Ouvre le modal FIRE pour les 10 premiers clics
   useEffect(() => {
@@ -6416,11 +6399,11 @@ export default function App() {
 
   // Popup essai gratuit : une fois par mois si plan Gratuit
   useEffect(() => {
-    if (!showApp || plan !== "free") return;
+    if (plan !== "free") return;
     const last = trialPopupSeen ? new Date(trialPopupSeen).getTime() : 0;
     const now = Date.now();
     if (now - last > 30 * 24 * 60 * 60 * 1000) setShowTrialPopup(true);
-  }, [showApp, plan]);
+  }, [plan]);
 
   const dismissTrialPopup = () => {
     setTrialPopupSeen(new Date().toISOString());
@@ -6510,8 +6493,6 @@ export default function App() {
   const handleDeleteTx  = (id) => setTransactions(prev => prev.filter(t => t.id !== id));
   const handleUpdateTx  = (id, changes) => setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...changes } : t));
   const handleDismissAlert = (alertId) => setDismissed(prev => [...prev, alertId]);
-
-  if (!showApp) return <Landing onStart={() => setShowApp(true)} />;
 
   return (
     <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>

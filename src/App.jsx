@@ -667,6 +667,56 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : TABLEAU DE BORD                                            */
 /* ------------------------------------------------------------------ */
+/* Flux IA — demande l'objectif AVANT de générer (pas de prompt générique). */
+const AI_OBJECTIVES = [
+  { id: "epargne",  icon: PiggyBank,   label: "Épargner davantage",     prompt: "Comment optimiser mon mois pour augmenter mon épargne ?" },
+  { id: "depenses", icon: TrendingDown, label: "Réduire mes dépenses",   prompt: "Quelles dépenses réduire en priorité ce mois-ci ?" },
+  { id: "credits",  icon: CreditCard,  label: "Rembourser mes crédits", prompt: "Comment accélérer le remboursement de mes crédits ?" },
+  { id: "investir", icon: TrendingUp,  label: "Mieux investir",         prompt: "Comment mieux investir mon épargne disponible ?" },
+];
+
+function ObjectiveModal({ onClose, onPick }) {
+  const T = useT();
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div onClick={onClose} className="wt-fade-in"
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="wt-scale-in"
+        style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "30px 32px", width: "100%", maxWidth: 460, position: "relative" }}>
+        <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none", color: "#6b7280", cursor: "pointer", minWidth: 40, minHeight: 40 }}><X size={20} /></button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <Sparkles size={20} style={{ color: T.violet }} />
+          <h2 style={{ color: T.text, fontWeight: 800, fontSize: 19, margin: 0 }}>Quel est votre objectif ?</h2>
+        </div>
+        <p style={{ color: T.muted, fontSize: 13.5, marginBottom: 20 }}>Choisissez une priorité — votre plan d'action sera adapté en conséquence.</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {AI_OBJECTIVES.map((o) => {
+            const Icon = o.icon;
+            return (
+              <button key={o.id} onClick={() => onPick(o.prompt)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderRadius: 14, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.03)", color: T.text, cursor: "pointer", textAlign: "left", fontWeight: 600, fontSize: 14.5 }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${T.violet}66`; e.currentTarget.style.background = `${T.violet}10`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}>
+                <span style={{ width: 38, height: 38, borderRadius: 10, background: `${T.violet}18`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon size={18} style={{ color: T.violet }} />
+                </span>
+                <span style={{ flex: 1 }}>{o.label}</span>
+                <ChevronRight size={16} style={{ color: T.muted, flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
@@ -674,6 +724,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
   const [active, setActive] = useState({});
   const [shareOpen, setShareOpen] = useState(false);
+  const [objectiveOpen, setObjectiveOpen] = useState(false); // flux IA : choix de l'objectif
   const [histoRange, setHistoRange] = useState(12);
 
   // Taux d'épargne mensuel reconstitué à partir de l'historique réel (rev/dep)
@@ -1019,13 +1070,25 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
             );
           })}
           <button
-            onClick={() => window.dispatchEvent(new Event("wt:open-chat"))}
+            onClick={() => setObjectiveOpen(true)}
             className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
             style={{ background: "linear-gradient(90deg,#7c3aed,#8b5cf6)", color: "#fff" }}>
             <Sparkles size={18} /> Optimiser mon mois par IA
           </button>
         </Card>
       </div>
+
+      {objectiveOpen && (
+        <ObjectiveModal
+          onClose={() => setObjectiveOpen(false)}
+          onPick={(prompt) => {
+            setObjectiveOpen(false);
+            setView("plans");
+            // Laisse la vue "Plan d'action" se monter avant d'ouvrir le chat seedé.
+            setTimeout(() => window.dispatchEvent(new CustomEvent("wt:open-chat", { detail: { prompt } })), 120);
+          }}
+        />
+      )}
 
       {/* Évolution taux épargne */}
       <Card>

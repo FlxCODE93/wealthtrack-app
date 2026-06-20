@@ -18,7 +18,7 @@ const DEFAULT_CTX = {
   patrimoine: { actifs: [], passifs: [] },
 };
 
-function AIChatCard({ ctx, onClose, onSignup }) {
+function AIChatCard({ ctx, onClose, onSignup, seed, onSeedConsumed }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const isDemo = !ctx;
@@ -65,6 +65,13 @@ function AIChatCard({ ctx, onClose, onSignup }) {
   const handleKey = (e) => {
     if (e.key === "Enter") sendMessage(input);
   };
+
+  // Objectif injecté depuis "Optimiser mon mois par IA" → envoyé automatiquement une fois.
+  useEffect(() => {
+    if (!seed) return;
+    sendMessage(seed);
+    onSeedConsumed?.();
+  }, [seed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative w-[400px] max-w-[92vw] h-[560px] max-h-[80vh] rounded-2xl overflow-hidden p-[2px]"
@@ -164,6 +171,7 @@ function AIChatCard({ ctx, onClose, onSignup }) {
 export default function AIChatWidget({ ctx, onSignup }) {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [seed, setSeed] = useState(null);
 
   useEffect(() => {
     const dismissedUntil = Number(storage.get(DISMISS_KEY, 0));
@@ -180,8 +188,12 @@ export default function AIChatWidget({ ctx, onSignup }) {
     const onScroll = () => { if (window.scrollY > SHOW_SCROLL_PX) reveal(); };
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    // Ouverture forcée depuis un bouton ailleurs dans l'app
-    const onOpenChat = () => { setVisible(true); setOpen(true); };
+    // Ouverture forcée depuis un bouton ailleurs dans l'app (avec objectif optionnel)
+    const onOpenChat = (e) => {
+      setVisible(true);
+      setOpen(true);
+      if (e?.detail?.prompt) setSeed(e.detail.prompt);
+    };
     window.addEventListener("wt:open-chat", onOpenChat);
 
     return () => {
@@ -210,7 +222,7 @@ export default function AIChatWidget({ ctx, onSignup }) {
             transition={{ duration: 0.2 }}
             className="fixed bottom-24 right-6 z-50"
           >
-            <AIChatCard ctx={ctx} onClose={() => setOpen(false)} onSignup={onSignup} />
+            <AIChatCard ctx={ctx} onClose={() => setOpen(false)} onSignup={onSignup} seed={seed} onSeedConsumed={() => setSeed(null)} />
           </motion.div>
         )}
       </AnimatePresence>

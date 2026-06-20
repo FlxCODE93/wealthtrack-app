@@ -289,8 +289,9 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
         >
           <Crown size={18} /> Passer à {P.label} — {price}/mois
         </button>
-        <div style={{ color: "#5a6478", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <Gift size={12} /> Essai gratuit 7 jours · Sans engagement · Annulable à tout moment
+        <div style={{ color: "#5a6478", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textAlign: "center" }}>
+          <Gift size={12} style={{ flexShrink: 0 }} />
+          <span>Essai gratuit 7 jours · Sans engagement<span className="hidden sm:inline"> · </span><br className="sm:hidden" />Annulable à tout moment</span>
         </div>
       </div>
     </div>
@@ -574,8 +575,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "finances",    label: "Finances",           icon: ListTree },
     { id: "credits",     label: "Mes crédits",        icon: CreditCard },
-    { id: "simulations", label: "Simulations",        icon: TrendingUp },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
+    { id: "simulations", label: "Simulations",        icon: TrendingUp },
     { id: "fi",          label: "FIRE",               icon: Flag },
     { id: "crypto",      label: "Crypto",             icon: Bitcoin },
     { id: "immobilier",  label: "Immobilier",         icon: Building2 },
@@ -1164,7 +1165,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
           onClick={() => setView("pricing")}
           style={{ width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          <Crown size={16} /> Passer à Pro — 5,99 €/mois · Essai gratuit 7 jours
+          <Crown size={16} /> Passer à Pro — Essai gratuit 7 jours puis 5,99€/mois sans engagement
         </button>
       </div>
     </div>
@@ -1333,7 +1334,9 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
     tx.filter(t => t.amount < 0).forEach(t => { map[t.cat] = (map[t.cat] || 0) + Math.abs(t.amount); });
     return map;
   }, [tx]);
-  const allCats = Object.keys({ ...CAT_COLORS, ...Object.fromEntries(tx.map(t => [t.cat, true])) });
+  // WPEA = investissement (pas une catégorie de dépense) → exclu des budgets.
+  const allCats = Object.keys({ ...CAT_COLORS, ...Object.fromEntries(tx.map(t => [t.cat, true])) })
+    .filter(cat => cat !== "WPEA");
 
   // Détection indicative de crédits à la consommation / LOA à taux élevé dans les libellés
   const highInterestDebts = useMemo(() => {
@@ -1535,8 +1538,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
               const pctUsed = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
               const color   = pctUsed >= 100 ? T.red : pctUsed >= 80 ? T.amber : T.green;
               const catCol  = CAT_COLORS[cat] || T.muted;
+              const over    = limit > 0 && spent > limit;   // dépassement du plafond
               return (
-                <div key={cat}>
+                <div key={cat} className={over ? "wt-budget-over" : ""}
+                  style={over ? { background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 12, padding: "10px 12px", margin: "-2px -4px" } : undefined}>
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: catCol }} />
                     <span className="text-sm font-semibold flex-1" style={{ color: T.text }}>{cat}</span>
@@ -6483,34 +6488,44 @@ export default function App() {
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* logout button */}
-        {supabase && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        {/* Barre haut : avatar profil (gauche) + déconnexion (droite) */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          {/* Bulle avatar — accès direct au profil */}
+          <button
+            onClick={() => setView("profil")}
+            aria-label="Mon profil"
+            title="Mon profil"
+            style={{
+              width: 40, height: 40, borderRadius: 9999, flexShrink: 0,
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              border: `1px solid ${view === "profil" ? T.violet : T.border}`,
+              background: T.gradientPrimary, color: "#fff", fontWeight: 800, fontSize: 14,
+              cursor: "pointer", boxShadow: glow(T.violet, 24, "33"),
+            }}
+          >
+            {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={18} />}
+          </button>
+          {supabase && (
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
                 window.location.reload();
               }}
               style={{
-                padding: "8px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                border: `1px solid ${T.border}`,
-                borderRadius: 8,
-                background: "transparent",
-                color: T.muted,
-                cursor: "pointer",
+                padding: "8px 14px", fontSize: 12, fontWeight: 600,
+                border: `1px solid ${T.border}`, borderRadius: 8,
+                background: "transparent", color: T.muted, cursor: "pointer",
               }}
               aria-label="Déconnexion"
             >
               Déconnexion
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "simulations", "patrimoine", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
+          {["dashboard", "finances", "credits", "patrimoine", "simulations", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>

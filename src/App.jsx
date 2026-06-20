@@ -1169,13 +1169,13 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
   return (
     <div style={{ borderRadius: 20, border: "1px solid rgba(245,158,11,0.2)", background: "linear-gradient(135deg, rgba(245,158,11,0.04) 0%, rgba(168,85,247,0.04) 100%)", overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <Crown size={18} style={{ color: "#f59e0b" }} />
-        <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Aperçu Pro — basé sur vos données</span>
-        <span style={{ marginLeft: "auto", fontSize: 12, color: T.muted }}>Dès 5,99 €/mois · Essai gratuit 7 jours</span>
+      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <Crown size={18} style={{ color: "#f59e0b", flexShrink: 0 }} />
+        <span style={{ color: T.text, fontWeight: 700, fontSize: 15, flex: "1 1 auto", minWidth: 0 }}>Aperçu Pro — basé sur vos données</span>
+        <span style={{ fontSize: 12, color: T.muted, flexShrink: 0 }}>Dès 5,99 €/mois · Essai gratuit 7 jours</span>
       </div>
 
-      <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ padding: "18px 22px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
         {/* Metric 1 — IF teaser */}
         <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Votre Indépendance Financière projetée</div>

@@ -60,6 +60,13 @@ export function useLocalStorage(key, defaultValue) {
                  primary key (user_id, key) )  + RLS : user_id = auth.uid()
    ──────────────────────────────────────────────────────────────────── */
 
+/* ⚠️ ON NE SYNCHRONISE QUE LES DONNÉES APPLICATIVES (`wt_*`).
+   Les clés système — notamment le token d'auth Supabase `sb-<ref>-auth-token` —
+   NE DOIVENT JAMAIS transiter par le cloud : sinon on restaure au login un vieux
+   token périmé par-dessus le token frais → déconnexion au refresh. */
+const SYNC_PREFIX = "wt_";
+const isSyncableKey = (key) => typeof key === "string" && key.startsWith(SYNC_PREFIX);
+
 /* Écriture DEBOUNCÉE par clé : on regroupe les frappes rapprochées en un
    seul upsert (800 ms après la dernière modif) → évite de spammer le réseau. */
 const DEBOUNCE_MS = 800;
@@ -85,6 +92,7 @@ function flushKey(key) {
 /** Push d'une clé vers le cloud (debouncé). Best-effort, erreurs avalées. */
 function pushToCloud(key, value) {
   if (!supabase || !activeUserId) return;
+  if (!isSyncableKey(key)) return; // jamais les clés système (token auth, etc.)
   pendingValues[key] = value;
   clearTimeout(pushTimers[key]);
   pushTimers[key] = setTimeout(() => flushKey(key), DEBOUNCE_MS);
@@ -108,7 +116,7 @@ export async function pushAllToCloud(userId) {
   const rows = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key) continue;
+    if (!key || !isSyncableKey(key)) continue; // que les `wt_*`, jamais le token auth
     try {
       rows.push({ user_id: userId, key, value: JSON.parse(localStorage.getItem(key)), updated_at: new Date().toISOString() });
     } catch {
@@ -128,6 +136,7 @@ export async function hydrateFromCloud(userId) {
     const { data, error } = await supabase.from("user_data").select("key,value").eq("user_id", userId);
     if (error || !data) return;
     for (const row of data) {
+      if (!isSyncableKey(row.key)) continue; // ne jamais restaurer une clé système
       try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch { /* ignore */ }
     }
   } catch {
@@ -151,10 +160,19 @@ export async function syncOnLogin(userId) {
       .select("key,value")
       .eq("user_id", userId);
     if (error) return;
-    if (!data || data.length === 0) {
-      await pushAllToCloud(userId); // cloud vide → on pousse le local
+
+    // Purge des lignes polluées écrites par l'ancienne version (clés système type
+    // `sb-…-auth-token`) : un token d'auth n'a rien à faire en base.
+    const polluted = (data || []).filter((row) => !isSyncableKey(row.key)).map((row) => row.key);
+    if (polluted.length) {
+      try { await supabase.from("user_data").delete().eq("user_id", userId).in("key", polluted); } catch { /* ignore */ }
+    }
+
+    const syncable = (data || []).filter((row) => isSyncableKey(row.key));
+    if (syncable.length === 0) {
+      await pushAllToCloud(userId); // cloud vide (de données app) → on pousse le local
     } else {
-      for (const row of data) {
+      for (const row of syncable) {
         try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch { /* ignore */ }
       }
     }

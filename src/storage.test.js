@@ -87,12 +87,21 @@ describe("pushAllToCloud", () => {
   });
 
   it("ignore les valeurs non-JSON", async () => {
-    localStorage.setItem("bad", "{not json");
-    storage.set("good", 42);
+    localStorage.setItem("wt_bad", "{not json");
+    storage.set("wt_good", 42);
     await pushAllToCloud("user-123");
     const rows = upserts[0];
-    expect(rows.map((r) => r.key)).toContain("good");
-    expect(rows.map((r) => r.key)).not.toContain("bad");
+    expect(rows.map((r) => r.key)).toContain("wt_good");
+    expect(rows.map((r) => r.key)).not.toContain("wt_bad");
+  });
+
+  it("ne synchronise JAMAIS les clés système (token auth Supabase)", async () => {
+    localStorage.setItem("sb-abcd-auth-token", JSON.stringify({ access_token: "secret" }));
+    storage.set("wt_x", 1);
+    await pushAllToCloud("user-123");
+    const rows = upserts[0] || [];
+    expect(rows.map((r) => r.key)).toContain("wt_x");
+    expect(rows.map((r) => r.key)).not.toContain("sb-abcd-auth-token");
   });
 });
 

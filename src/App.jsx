@@ -2283,7 +2283,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           <ResponsiveContainer width="100%" height={340}>
             <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
 
               {/* Axe gauche — scénarios sûrs */}
               <YAxis
@@ -2831,7 +2831,7 @@ function ImmoCard({ price, setPrice, horizon }) {
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<CustomTooltip />} />
             <Line type="monotone" dataKey="propValue"     name="Valeur du bien"    stroke={ASSET.immo} strokeWidth={2.5} dot={false} />
@@ -2998,7 +2998,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={logFmt} width={64} />
             <Tooltip {...chartTip}
@@ -3037,7 +3037,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} labelFormatter={(y) => `Année ${y}`} />
@@ -3334,7 +3334,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={projSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
               <Line type="monotone" dataKey="Ensemble" stroke={T.blue} strokeWidth={2.5} dot={false} />
@@ -4731,7 +4731,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={ownershipSeries}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval={0} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} />
             <Line type="monotone" dataKey="Propriété nette" stroke={T.amber} strokeWidth={2.5} dot={false} />

@@ -19,7 +19,7 @@ vi.mock("./supabaseClient.js", () => ({
   isSupabaseConfigured: true,
 }));
 
-import { storage, hydrateFromCloud, pushAllToCloud, clearCloudSync } from "./storage.js";
+import { storage, hydrateFromCloud, pushAllToCloud, clearCloudSync, flushPendingCloudWrites } from "./storage.js";
 
 /* ── Stub localStorage (Map en mémoire) ──────────────────────────────── */
 function makeLocalStorage() {
@@ -102,7 +102,8 @@ describe("write-through cloud", () => {
     await pushAllToCloud("user-123"); // pose activeUserId
     upserts.length = 0;
     storage.set("wt_new", { v: 9 });
-    // pushToCloud est async/best-effort : laisse la microtask se résoudre
+    // L'écriture cloud est debouncée : on force l'envoi puis on laisse résoudre.
+    flushPendingCloudWrites();
     await Promise.resolve();
     expect(upserts.length).toBeGreaterThanOrEqual(1);
     expect(upserts[0].key).toBe("wt_new");

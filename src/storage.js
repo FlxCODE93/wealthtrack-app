@@ -60,19 +60,45 @@ export function useLocalStorage(key, defaultValue) {
                  primary key (user_id, key) )  + RLS : user_id = auth.uid()
    ──────────────────────────────────────────────────────────────────── */
 
-/** Push d'une clé vers le cloud (upsert). Best-effort, erreurs avalées. */
-async function pushToCloud(key, value) {
+/* Écriture DEBOUNCÉE par clé : on regroupe les frappes rapprochées en un
+   seul upsert (800 ms après la dernière modif) → évite de spammer le réseau. */
+const DEBOUNCE_MS = 800;
+const pushTimers = {};   // key → timeout id
+const pendingValues = {}; // key → dernière valeur en attente
+
+function flushKey(key) {
   if (!supabase || !activeUserId) return;
-  try {
-    await supabase
-      .from("user_data")
-      .upsert(
-        { user_id: activeUserId, key, value, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,key" }
-      );
-  } catch {
-    /* hors-ligne / erreur réseau : le cache local reste la source de vérité */
-  }
+  if (!(key in pendingValues)) return;
+  const value = pendingValues[key];
+  delete pendingValues[key];
+  clearTimeout(pushTimers[key]);
+  delete pushTimers[key];
+  supabase
+    .from("user_data")
+    .upsert(
+      { user_id: activeUserId, key, value, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,key" }
+    )
+    .then(() => {}, () => { /* hors-ligne : le cache local reste la vérité */ });
+}
+
+/** Push d'une clé vers le cloud (debouncé). Best-effort, erreurs avalées. */
+function pushToCloud(key, value) {
+  if (!supabase || !activeUserId) return;
+  pendingValues[key] = value;
+  clearTimeout(pushTimers[key]);
+  pushTimers[key] = setTimeout(() => flushKey(key), DEBOUNCE_MS);
+}
+
+/** Force l'envoi immédiat de toutes les écritures en attente (avant unload). */
+export function flushPendingCloudWrites() {
+  Object.keys(pendingValues).forEach(flushKey);
+}
+
+// Filet de sécurité : pousse les écritures en attente avant de quitter la page.
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", flushPendingCloudWrites);
+  window.addEventListener("pagehide", flushPendingCloudWrites);
 }
 
 /** Pousse tout le localStorage courant vers le cloud (1re synchro après login). */
@@ -109,8 +135,37 @@ export async function hydrateFromCloud(userId) {
   }
 }
 
+/**
+ * Synchro au login (1 seul aller-retour) :
+ *  - cloud VIDE → 1re synchro : on pousse le localStorage courant.
+ *  - cloud PRÉSENT → source de vérité : on écrase le cache local avec le cloud.
+ * À `await` AVANT de monter l'app pour que `useLocalStorage` lise les bonnes
+ * valeurs dès l'initialisation (sinon l'app afficherait le seed local).
+ */
+export async function syncOnLogin(userId) {
+  if (!supabase || !userId) return;
+  activeUserId = userId;
+  try {
+    const { data, error } = await supabase
+      .from("user_data")
+      .select("key,value")
+      .eq("user_id", userId);
+    if (error) return;
+    if (!data || data.length === 0) {
+      await pushAllToCloud(userId); // cloud vide → on pousse le local
+    } else {
+      for (const row of data) {
+        try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch { /* ignore */ }
+      }
+    }
+  } catch {
+    /* hors-ligne : on garde le cache local */
+  }
+}
+
 /** Réinitialise l'état de synchro (à appeler au logout). */
 export function clearCloudSync() {
+  flushPendingCloudWrites();
   activeUserId = null;
 }
 
@@ -131,44 +186,34 @@ export function useAuthState() {
       setLoading(false);
       return;
     }
+    let mounted = true;
 
-    // Récupère l'utilisateur courant au mount
-    supabase.auth.getUser().then(({ data }) => {
+    // Session existante au mount (utilisateur déjà connecté → on hydrate aussi)
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
-        setUser(data.user);
         activeUserId = data.user.id;
+        await syncOnLogin(data.user.id); // bloque le rendu jusqu'à l'hydratation
+        if (mounted) setUser(data.user);
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    // Écoute les changements (login/logout)
+    // Changements d'auth (login/logout)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        setUser(session.user);
         activeUserId = session.user.id;
-        // 1er login = hydrate depuis cloud (ou pousse si vide)
-        if (event === "SIGNED_IN") {
-          const { data: cloudData } = await supabase
-            .from("user_data")
-            .select("key")
-            .eq("user_id", session.user.id)
-            .limit(1);
-          if (!cloudData || cloudData.length === 0) {
-            await pushAllToCloud(session.user.id);
-          } else {
-            await hydrateFromCloud(session.user.id);
-          }
-        }
+        if (event === "SIGNED_IN") await syncOnLogin(session.user.id);
+        if (mounted) setUser(session.user);
       } else {
-        setUser(null);
+        if (mounted) setUser(null);
         clearCloudSync();
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    return () => subscription?.unsubscribe();
+    return () => { mounted = false; subscription?.unsubscribe(); };
   }, []);
 
   return [user, loading];

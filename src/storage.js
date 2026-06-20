@@ -199,12 +199,12 @@ export function useAuthState() {
     let mounted = true;
 
     // Session existante au mount (utilisateur déjà connecté → on hydrate aussi)
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         activeUserId = data.user.id;
-        // Hydrate avant le rendu, mais bornée : la connexion ne hang jamais.
-        await withTimeout(syncOnLogin(data.user.id), 4000);
         if (mounted) setUser(data.user);
+        // Sync en arrière-plan — ne bloque jamais le rendu
+        withTimeout(syncOnLogin(data.user.id), 4000);
       }
       if (mounted) setLoading(false);
     });
@@ -212,16 +212,18 @@ export function useAuthState() {
     // Changements d'auth (login/logout)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         activeUserId = session.user.id;
-        if (event === "SIGNED_IN") await withTimeout(syncOnLogin(session.user.id), 4000);
         if (mounted) setUser(session.user);
+        if (mounted) setLoading(false);
+        // Sync en arrière-plan — ne bloque JAMAIS la navigation post-login
+        if (event === "SIGNED_IN") withTimeout(syncOnLogin(session.user.id), 4000);
       } else {
         if (mounted) setUser(null);
+        if (mounted) setLoading(false);
         clearCloudSync();
       }
-      if (mounted) setLoading(false);
     });
 
     return () => { mounted = false; subscription?.unsubscribe(); };

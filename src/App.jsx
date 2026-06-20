@@ -2113,7 +2113,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             <TrendingUp size={16} style={{ color: "#f59e0b" }} />
             <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection de l'or</h2>
           </div>
-          <p className="text-xs mb-4" style={{ color: T.muted }}>Trajectoire centrale et bande d'incertitude (scénarios prudent → favorable). Paramètres communs (capital, mensuel, horizon) partagés avec les autres actifs.</p>
+          <p className="text-xs mb-4" style={{ color: T.muted }}>Trajectoire au rendement net retenu. Paramètres communs (capital, mensuel, horizon) partagés avec les autres actifs.</p>
           <ExpandableChart height={280} title="Projection de l'or">
             <AreaChart data={orSeries} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
               <defs>
@@ -2130,7 +2130,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <XAxis dataKey="year" tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} />
               <YAxis tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} axisLine={false} width={48} />
               <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "capital" ? "Or (net)" : n === "apports" ? "Apports cumulés" : n]} />
-              <Area type="monotone" dataKey="range" stroke="none" fill="url(#goldBandSim)" isAnimationActive={false} />
               <Area type="monotone" dataKey="apports" name="Apports cumulés" stroke="#3b82f6" strokeDasharray="4 4" strokeWidth={1.5} fill="none" />
               <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
             </AreaChart>

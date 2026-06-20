@@ -48,6 +48,31 @@ function extractParams(text) {
 
 /* ─── Base de connaissances ────────────────────────────────────────── */
 
+function mkRepayFaster(ctx, params) {
+  const { totals } = ctx;
+  const surplus = Math.max(0, Math.round((totals.revenus || 0) - (totals.chargesFixes || 0) - (totals.depensesVar || 0) - (totals.invest || 0)));
+  return {
+    intro: "Pour solder vos crédits plus vite : augmentez la part qui rembourse le capital, et attaquez d'abord le crédit le plus cher.",
+    table: [
+      ["Levier", "Effet"],
+      ["Méthode avalanche", "Cibler le TAEG le plus élevé d'abord = max d'intérêts économisés"],
+      ["Mensualités arrondies", "Arrondir à la centaine supérieure raccourcit la durée sans douleur"],
+      ["Remboursement anticipé partiel", "Prime, 13e mois ou rentrée d'argent versée directement sur le capital"],
+      ["Renégociation / rachat", "Si votre taux dépasse le marché, regrouper peut baisser le coût total"],
+    ],
+    bullets: [
+      "Attaquez d'abord le crédit au **taux le plus élevé** (conso et revolving avant l'immobilier).",
+      "Vérifiez les **IRA** (indemnités de remboursement anticipé) : pour un prêt immo, plafonnées à 6 mois d'intérêts et 3 % du capital restant dû.",
+      "Gardez votre **épargne de précaution** (3 à 6 mois de dépenses) avant d'accélérer le remboursement.",
+      "Crédit immo à **moins de 3,5 %** : placer le surplus est souvent plus rentable que rembourser — comparez avec l'outil « Rembourser ou investir ? ».",
+    ],
+    note: surplus > 0
+      ? `Votre surplus actuel (~${eur(surplus)}/mois) appliqué en remboursement anticipé réduit fortement la durée et les intérêts totaux.`
+      : "Dégagez d'abord un surplus mensuel (réduction des dépenses) pour pouvoir accélérer le remboursement.",
+    chips: ["Rembourser ou investir ?", "Réduire mes dépenses", "Capacité d'emprunt"],
+  };
+}
+
 function mkBorrowing(ctx, params) {
   const { totals } = ctx;
   const mMax  = Math.round(totals.revenus * 0.35);
@@ -671,6 +696,7 @@ const INTENTS = [
   { re: /\bdca\b|dollar.?cost|investir.*chaque.*mois|mensuel.*r[eé]gulier|investissement.*r[eé]gulier/i, fn: mkDCA },
   { re: /\bptz\b|pr[eê]t.*z[eé]ro|primo.?acc[eé]d/i,                                        fn: mkPTZ },
   { re: /notaire|frais.*achat.*immo|frais.*acqu/i,                                           fn: mkNotaire },
+  { re: /(rembours|solder|acc[eé]l[eé]r|anticip).{0,30}(cr[eé]dit|pr[eê]t|dette|emprunt)|(cr[eé]dit|pr[eê]t|dette).{0,30}(plus.{0,5}vite|rembours|anticip|solder)/i, fn: mkRepayFaster },
   { re: /emprunt|emprunter|cr[eé]dit|pr[eê]t|capacit[eé]|acheter.*appart|logement/i,         fn: mkBorrowing },
   { re: /pfu|pea|fiscalit[eé]|imp[oô]t|imposition|flat.?tax/i,                               fn: mkPFUvsPEA },
   { re: /[eé]pargn|combien.*mois|taux.*[eé]pargne|[eé]conomis/i,                             fn: mkSavings },

@@ -13,7 +13,7 @@
    ────────────────────────────────────────────────────────────────────
    Ces taux sont des références HISTORIQUES (performances passées sur
    longue période) utilisées comme valeurs par défaut dans les
-   projections. Ils sont hors inflation, hors frais et hors fiscalité,
+   projections. Ils sont hors frais et hors fiscalité,
    et NE CONSTITUENT PAS UNE PROMESSE DE RENDEMENT FUTUR.            */
 
 export const RATE_ETF_WORLD = 0.105; // ETF actions monde (ex: MSCI World) — perf. nominale historique récente
@@ -110,7 +110,7 @@ export const RATE_A = RATE_ETF_WORLD;
 export const RATE_C = RATE_LIVRET_A;
 
 export const RATE_DISCLAIMER =
-  "Performances passées, hors inflation, frais et fiscalité — ne préjugent pas des performances futures.";
+  "Performances passées, hors frais et fiscalité — ne préjugent pas des performances futures.";
 
 /* Fiscalité — valeurs de référence */
 export const RATE_PFU = 0.30;             // Prélèvement Forfaitaire Unique (flat tax)

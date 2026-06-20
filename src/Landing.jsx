@@ -117,7 +117,7 @@ const FEATURES = [
   {
     icon: Zap, color: C.blue,
     title: "Simulations sur 30 ans",
-    desc: "ETF MSCI World, immobilier locatif, épargne défensive — avec intérêts composés, inflation et timeline année par année.",
+    desc: "ETF MSCI World, immobilier locatif, épargne défensive — avec intérêts composés et timeline année par année.",
     stat: "3 scénarios temps réel",
   },
   {
@@ -136,7 +136,7 @@ const FEATURES = [
     icon: Flag, color: C.green,
     title: "Indépendance financière (FIRE)",
     desc: "Calculez votre date d'IF à partir de votre taux d'épargne réel et la règle des 4% avec 3 scénarios: pessimiste, base, optimiste.",
-    stat: "Règle des 4% + inflation réelle",
+    stat: "Règle des 4% + 3 scénarios",
   },
 ];
 

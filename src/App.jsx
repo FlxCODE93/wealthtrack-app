@@ -1159,7 +1159,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
   if (totals.tauxEpargne < SAVINGS_RATE_CRITICAL) alerts.push({ level: "red", msg: `Taux d'épargne critique (${totals.tauxEpargne.toFixed(1)}%) — sous le seuil recommandé de ${SAVINGS_RATE_CRITICAL} %`, feature: "simulations" });
   else if (totals.tauxEpargne < SAVINGS_RATE_TARGET) alerts.push({ level: "amber", msg: `Taux d'épargne de ${totals.tauxEpargne.toFixed(1)}% — chaque +1% représente des dizaines de k€ sur 20 ans`, feature: "simulations" });
   if (healthScore.breakdown.diversification.score < 20) alerts.push({ level: "red", msg: "Actifs trop concentrés — un crash sectoriel peut effacer une part importante de votre patrimoine", feature: "fi" });
-  if (healthScore.breakdown.investment.score < 15) alerts.push({ level: "amber", msg: "Investissement insuffisant — vos liquidités perdent de la valeur face à l'inflation (2–3%/an)", feature: "fiscalite" });
+  if (healthScore.breakdown.investment.score < 15) alerts.push({ level: "amber", msg: "Investissement insuffisant — vos liquidités dorment au lieu de générer du rendement", feature: "fiscalite" });
   if (incomeRef > 0 && totals.chargesFixes > incomeRef * 0.55) alerts.push({ level: "red", msg: `Charges fixes élevées (${Math.round((totals.chargesFixes / incomeRef) * 100)}% des revenus${incomeIsSmoothed ? ", moyenne 12 mois" : ""}) — marge de manœuvre réduite`, feature: "simulations" });
   if (netWorth < 0) alerts.push({ level: "red", msg: "Patrimoine net négatif — priorité au désendettement avant tout investissement", feature: "fi" });
   if (alerts.length < 2) alerts.push({ level: "info", msg: `En basculant vers ETF World (10%/an), votre patrimoine atteindrait ${fv10ETF >= 1e6 ? (fv10ETF / 1e6).toFixed(1) + " M€" : Math.round(fv10ETF / 1e3) + " k€"} dans 10 ans`, feature: "simulations" });
@@ -1767,7 +1767,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   const setPrice = (v) => setSimParams((p) => ({ ...p, price: v }));
   const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
   const [activeTab, setActiveTab] = useState("etf");
-  const [inflationRate, setInflationRate] = useState(0.02);
   const [orRate, setOrRate] = useState(+(RATE_GOLD * 100).toFixed(1));
   const [orStorageFee, setOrStorageFee] = useState(0.5);
   const [cryptoTip, setCryptoTip] = useState(null);
@@ -1871,16 +1870,15 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   const loan20 = Math.round(loanFromPayment(mensualiteMax, 0.035, 20));
   const loan25 = Math.round(loanFromPayment(mensualiteMax, 0.037, 25));
 
-  // FIRE — taux réel = taux nominal − inflation (pouvoir d'achat constant)
+  // FIRE — projection au rendement nominal (règle des 25× les dépenses annuelles)
   const fireAge = useMemo(() => {
     const annualNeeds = (totals.chargesFixes + totals.depensesVar) * 12;
     const fireTarget  = annualNeeds * 25;
-    const realRate    = (1 + RATE_A) / (1 + inflationRate) - 1;
     for (let y = 0; y <= 50; y++) {
-      if (fv(initial, monthly, realRate, y) >= fireTarget) return age + y;
+      if (fv(initial, monthly, RATE_A, y) >= fireTarget) return age + y;
     }
     return "—";
-  }, [totals.chargesFixes, totals.depensesVar, initial, monthly, age, inflationRate]);
+  }, [totals.chargesFixes, totals.depensesVar, initial, monthly, age]);
 
   const comboSeries = useMemo(() => sim.detailedA.map((p, idx) => {
     const BTC = sim.detailedBTC[idx].capital;
@@ -1972,7 +1970,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       {/* Paramètres communs */}
       <Card>
         <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Investissement mensuel (€)">
             <input type="number" value={monthly || ""} placeholder="0" style={inputStyle}
               onChange={(e) => setMonthly(+e.target.value || 0)} />
@@ -1995,20 +1993,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <option value={30}>30 ans</option>
             </select>
           </Field>
-          <div>
-            <div className="flex justify-between mb-2">
-              <span className="text-sm" style={{ color: T.muted }}>Inflation</span>
-              <span className="font-bold text-sm" style={{ color: inflationRate > 0 ? T.amber : T.muted }}>
-                {(inflationRate * 100).toFixed(1).replace(".", ",")} % / an
-              </span>
-            </div>
-            <input type="range" min={0} max={0.05} step={0.001} value={inflationRate}
-              onChange={(e) => setInflationRate(+e.target.value)}
-              className="w-full" style={{ accentColor: T.amber }} />
-            <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
-              <span>0 %</span><span>2,5 %</span><span>5 %</span>
-            </div>
-          </div>
         </div>
       </Card>
 
@@ -2054,7 +2038,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             { label: "Intérêts générés", value: eur(sim.A.gain), color: T.green },
             { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: T.amber },
           ]}
-          detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" inflationRate={inflationRate} showBand={false}
+          detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" showBand={false}
           note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
         />
 
@@ -2178,7 +2162,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             { label: "Intérêts générés", value: eur(sim.C.gain), color: T.green },
             { label: "Revenu passif/mois", value: eur(sim.C.passif), color: T.text },
           ]}
-          detailedData={sim.detailedC} lineColor={ASSET.livret} chartKey="C" inflationRate={inflationRate} showBand={false}
+          detailedData={sim.detailedC} lineColor={ASSET.livret} chartKey="C" showBand={false}
           note="Intérêts composés sur Livret A, LDDS ou épargne de précaution — capital garanti et disponible à tout moment."
         />
       )}
@@ -2191,7 +2175,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <ScenarioCard
           title="Bitcoin"
           rate="médian 12 %/an · EXTRÊME" accent={ASSET.btc}
-          lineColor={ASSET.btc} chartKey="BTC" inflationRate={inflationRate} logScale showBand={false}
+          lineColor={ASSET.btc} chartKey="BTC" logScale showBand={false}
           warning={{
             title: "VOLATILITÉ EXTRÊME — LIRE AVANT D'INVESTIR",
             points: [
@@ -2223,7 +2207,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <ScenarioCard
           title="Ethereum"
           rate="médian 10 %/an · EXTRÊME+" accent={ASSET.eth}
-          lineColor={ASSET.eth} chartKey="ETH" inflationRate={inflationRate} logScale showBand={false}
+          lineColor={ASSET.eth} chartKey="ETH" logScale showBand={false}
           warning={{
             title: "RISQUE EXTRÊME — RÉSERVÉ AUX UTILISATEURS AVERTIS",
             points: [
@@ -2882,17 +2866,11 @@ function ImmoCard({ price, setPrice, horizon }) {
   );
 }
 
-function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, inflationRate = 0, warning = null, riskBadges = null, logScale = false, showBand = true }) {
+function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, warning = null, riskBadges = null, logScale = false, showBand = true }) {
   const T = useT();
   const chartTip = makeChartTip(T);
   const [showTable, setShowTable] = useState(true);
-  const startYear = detailedData[0]?.year || 2026;
-  const augmentedData = detailedData.map((row) => ({
-    ...row,
-    realCapital: inflationRate > 0
-      ? Math.round(row.capital / Math.pow(1 + inflationRate, row.year - startYear))
-      : undefined,
-  }));
+  const augmentedData = detailedData;
 
   // Échelle logarithmique : sur 20-30 ans, un rendement à 25-30 %/an multiplie le
   // capital par ×100 ou plus — en linéaire, les 20 premières années sont écrasées
@@ -2908,7 +2886,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       ...row,
       logCapital: row.capital > 1 ? +Math.log10(row.capital).toFixed(3) : 0,
       logApports: row.apports > 1 ? +Math.log10(row.apports).toFixed(3) : 0,
-      logReal: row.realCapital > 1 ? +Math.log10(row.realCapital).toFixed(3) : undefined,
       logRange: hasBand ? [lg(row.capPess), lg(row.capOpt)] : undefined,
     }));
     const allPositive = augmentedData.flatMap((r) => [r.capital, r.apports, r.capPess, r.capOpt])
@@ -2970,12 +2947,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: "#3b82f6" }} />
               Apports cumulés
             </span>
-            {inflationRate > 0 && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #ef4444" }} />
-                Valeur réelle
-              </span>
-            )}
             <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
           </>
         ) : (
@@ -2992,12 +2963,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
                 <span className="inline-block w-7 h-3 rounded-sm" style={{ background: lineColor, opacity: 0.18 }} />
                 Fourchette pess. → opt.
-              </span>
-            )}
-            {inflationRate > 0 && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-                <span className="inline-block w-7" style={{ borderTop: "1.5px dashed #ef4444" }} />
-                Valeur réelle
               </span>
             )}
             <span className="text-xs" style={{ color: T.muted }}>— Hauteur totale = Capital médian</span>
@@ -3023,7 +2988,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 const key = props.dataKey;
                 const raw = key === "logCapital" ? props.payload.capital
                   : key === "logApports" ? props.payload.apports
-                  : props.payload.realCapital;
+                  : props.payload.capital;
                 return [eur(raw), name];
               }}
               labelFormatter={(y) => `Année ${y}`} />
@@ -3035,11 +3000,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               stroke={lineColor} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
             <Line type="monotone" dataKey="logApports" name="Apports cumulés"
               stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
-            {inflationRate > 0 && (
-              <Line type="monotone" dataKey="logReal"
-                name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
-                stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
-            )}
           </ComposedChart>
         ) : (
           <ComposedChart data={augmentedData}>
@@ -3068,11 +3028,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
               stroke={lineColor} strokeWidth={2.5}
               fill={`url(#gG${chartKey})`} />
-            {inflationRate > 0 && (
-              <Line type="monotone" dataKey="realCapital"
-                name={`Valeur réelle (−${(inflationRate * 100).toFixed(0)} % inflation / an)`}
-                stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
-            )}
           </ComposedChart>
         )}
       </ExpandableChart>
@@ -3130,11 +3085,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       {(() => {
         const last = detailedData[detailedData.length - 1];
         if (!last) return null;
-        const years = last.year - startYear;
-        const realCap = inflationRate > 0
-          ? Math.round(last.capital / Math.pow(1 + inflationRate, years))
-          : null;
-        const realGains = realCap !== null ? realCap - last.apports : null;
         return (
           <div className="mt-4">
             <div className="grid grid-cols-3 gap-3">
@@ -3150,34 +3100,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 </div>
               ))}
             </div>
-            {realCap !== null && (
-              <div className="mt-3 rounded-xl p-4"
-                style={{ background: "rgba(203,213,225,0.04)", border: "1px solid rgba(203,213,225,0.15)" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs font-semibold tracking-wide" style={{ color: "#94a3b8" }}>
-                    VALEUR RÉELLE · inflation {(inflationRate * 100).toFixed(1).replace(".", ",")} % / an
-                  </span>
-                  <span
-                    title="Ces montants sont exprimés en euros d'aujourd'hui : ils tiennent compte de l'érosion monétaire liée à l'inflation. Un euro dans 20 ans aura moins de pouvoir d'achat qu'un euro aujourd'hui."
-                    className="cursor-help text-xs" style={{ color: "#64748b" }}>ⓘ</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs mb-1" style={{ color: "#94a3b8" }}>Capital réel</div>
-                    <div className="text-lg font-bold" style={{ color: "#cbd5e1" }}>{eur(realCap)}</div>
-                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>en € constants d'aujourd'hui</div>
-                  </div>
-                  <div>
-                    <div className="text-xs mb-1" style={{ color: "#94a3b8" }}>Gains réels</div>
-                    <div className="text-lg font-bold"
-                      style={{ color: realGains >= 0 ? "#cbd5e1" : "#ff5a5f" }}>
-                      {realGains >= 0 ? "+" : ""}{eur(realGains)}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>vs apports en valeur constante</div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         );
       })()}
@@ -6733,7 +6655,7 @@ function LegalDisclaimer() {
                   <strong style={{ color: T.text }}>Rendements passés :</strong> Les performances passées, les taux de rendement historiques (ETF, crypto-actifs, immobilier, livrets réglementés, etc.) affichés sur WealthTrack ne préjugent pas des performances futures et ne sont pas garantis. Tout investissement comporte un risque de perte partielle ou totale du capital investi.
                 </p>
                 <p>
-                  <strong style={{ color: T.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement, d'inflation et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
+                  <strong style={{ color: T.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
                 </p>
                 <p>
                   <strong style={{ color: T.text }}>Crypto-actifs :</strong> Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI).

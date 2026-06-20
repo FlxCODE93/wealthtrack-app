@@ -50,7 +50,7 @@ const DEVICES = [
     rendementBrut: 2.5,
     type: "garanti",
     avantages: ["Capital garanti", "Liquidité sous 72h", "Rendement net ~2% en 2024"],
-    inconvenients: ["Rendement inférieur à l'inflation longue durée", "Frais enveloppe déduits avant revalorisation"],
+    inconvenients: ["Rendement faible sur longue durée", "Frais enveloppe déduits avant revalorisation"],
     note: "Rendement brut 2024 ~2,5%. Net après frais ~1,7%. Bon pour épargne de précaution moyen terme.",
   },
   {

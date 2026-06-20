@@ -1058,8 +1058,8 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
 
       {/* ── Note ── */}
       <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-        <span style={{ color: T.text, fontWeight: 600 }}>Règle des 4 %</span> (Bengen 1994) · Rendements réels non garantis ·
-        Calcul hors inflation et hors prélèvements sociaux · Outil pédagogique — consultez un conseiller pour votre situation personnelle
+        <span style={{ color: T.text, fontWeight: 600 }}>Règle des 4 %</span> (Bengen 1994) · Rendements non garantis ·
+        Calcul hors prélèvements sociaux · Outil pédagogique — consultez un conseiller pour votre situation personnelle
       </div>
     </div>
   );

@@ -254,7 +254,7 @@ function mkLivrets(ctx, params) {
       "Remplissez d'abord le Livret A, puis le LDDS, avant de passer à d'autres placements.",
       "Ces livrets sont **parfaits pour le fonds d'urgence** — argent disponible en 24h.",
     ].filter(Boolean),
-    note: "Le taux du Livret A (2,4 %) est révisé par la Banque de France chaque semestre selon l'inflation.",
+    note: "Le taux du Livret A (2,4 %) est révisé par la Banque de France chaque semestre.",
     chips: ["Fonds d'urgence", "PFU vs PEA", "Assurance-vie"],
   };
 }

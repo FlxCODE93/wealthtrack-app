@@ -1814,11 +1814,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
   const showCryptoTip = (e, coin) => {
     clearTimeout(tipTimer.current);
-    const r = e.currentTarget.getBoundingClientRect();
-    setCryptoTip({ coin, x: Math.min(r.left, window.innerWidth - 520), y: r.bottom + 8 });
+    setCryptoTip({ coin });
   };
   const hideCryptoTip = () => { tipTimer.current = setTimeout(() => setCryptoTip(null), 200); };
   const keepCryptoTip = () => clearTimeout(tipTimer.current);
+  const closeCryptoTip = () => { clearTimeout(tipTimer.current); setCryptoTip(null); };
 
   // Immobilier : amortissement RÉEL d'un achat à crédit (apport + frais de
   // notaire + crédit amorti). L'equity = valeur du bien − capital restant dû.
@@ -2020,16 +2020,24 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               onMouseEnter={hasHoverChart ? (e) => showCryptoTip(e, t.id) : undefined}
               onMouseLeave={hasHoverChart ? hideCryptoTip : undefined}
-              title={hasHoverChart ? "Survol : voir l'historique des cours" : undefined}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              title={hasHoverChart ? "Voir l'historique des cours" : undefined}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all inline-flex items-center gap-1.5"
               style={{
                 background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)",
                 border: `1.5px solid ${activeTab === t.id ? t.color : T.border}`,
                 color: activeTab === t.id ? t.color : T.muted,
-                cursor: hasHoverChart ? "help" : "pointer",
+                cursor: "pointer",
               }}>
               {t.label}
-              {hasHoverChart && <span style={{ fontSize: 12, marginLeft: 4, opacity: 0.5 }}>ℹ</span>}
+              {hasHoverChart && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Historique ${t.label}`}
+                  onClick={(e) => { e.stopPropagation(); showCryptoTip(e, t.id); }}
+                  style={{ fontSize: 13, opacity: 0.7, cursor: "pointer", padding: "0 2px" }}
+                >ℹ</span>
+              )}
             </button>
           );
         })}
@@ -2468,30 +2476,42 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         </div>
       )}
 
-      {/* Floating crypto history tooltip */}
-      {cryptoTip && (
+      {/* Modale historique des cours — responsive (ETF / BTC / ETH) */}
+      {cryptoTip && createPortal(
         <div
-          onMouseEnter={keepCryptoTip}
-          onMouseLeave={hideCryptoTip}
-          style={{
-            position: "fixed",
-            top: cryptoTip.y,
-            left: cryptoTip.x,
-            width: 500,
-            zIndex: 1000,
-            background: T.card,
-            border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : T.cyan}`,
-            borderRadius: 12,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-            padding: 20,
-            overflowY: "auto",
-            maxHeight: "80vh",
-          }}
+          onClick={closeCryptoTip}
+          className="wt-fade-in"
+          style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
         >
-          {cryptoTip.coin === "etf"
-            ? <ETFHistoryTooltip />
-            : <CryptoHistoryTooltip coin={cryptoTip.coin} />}
-        </div>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onMouseEnter={keepCryptoTip}
+            className="wt-scale-in flex flex-col gap-4"
+            style={{
+              position: "relative",
+              width: "min(560px, 92vw)",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              background: T.card,
+              border: `2px solid ${cryptoTip.coin === "btc" ? "#f7931a" : cryptoTip.coin === "eth" ? "#627eea" : T.cyan}`,
+              borderRadius: 16,
+              boxShadow: "0 10px 40px rgba(0,0,0,0.6)",
+              padding: 20,
+            }}
+          >
+            <button
+              onClick={closeCryptoTip}
+              aria-label="Fermer"
+              style={{ position: "absolute", top: 10, right: 12, zIndex: 2, background: "rgba(0,0,0,0.4)", border: `1px solid ${T.border}`, borderRadius: 10, minWidth: 36, minHeight: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", color: T.text, cursor: "pointer" }}
+            >
+              <X size={18} />
+            </button>
+            {cryptoTip.coin === "etf"
+              ? <ETFHistoryTooltip />
+              : <CryptoHistoryTooltip coin={cryptoTip.coin} />}
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

@@ -169,6 +169,16 @@ export function clearCloudSync() {
   activeUserId = null;
 }
 
+/* Borne une promesse : si elle ne se résout pas en `ms`, on continue quand même.
+   CRITIQUE : la sync cloud ne doit JAMAIS bloquer la connexion. En cas de
+   réseau lent/coupé, on se rabat sur le cache local et la sync reprend après. */
+function withTimeout(promise, ms) {
+  return Promise.race([
+    Promise.resolve(promise).catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, ms)),
+  ]);
+}
+
 /* ────────────────── Hook pour la synchro auth ──────────────────── */
 
 /**
@@ -192,7 +202,8 @@ export function useAuthState() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         activeUserId = data.user.id;
-        await syncOnLogin(data.user.id); // bloque le rendu jusqu'à l'hydratation
+        // Hydrate avant le rendu, mais bornée : la connexion ne hang jamais.
+        await withTimeout(syncOnLogin(data.user.id), 4000);
         if (mounted) setUser(data.user);
       }
       if (mounted) setLoading(false);
@@ -204,7 +215,7 @@ export function useAuthState() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         activeUserId = session.user.id;
-        if (event === "SIGNED_IN") await syncOnLogin(session.user.id);
+        if (event === "SIGNED_IN") await withTimeout(syncOnLogin(session.user.id), 4000);
         if (mounted) setUser(session.user);
       } else {
         if (mounted) setUser(null);

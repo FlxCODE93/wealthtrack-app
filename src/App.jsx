@@ -1657,7 +1657,6 @@ function PERSimulator({ monthly = 200, years = 20 }) {
   const [tmiNow, setTmiNow]           = useState(0.30);
   const [tmiRetraite, setTmiRetraite] = useState(0.11);
   const [returnPct, setReturnPct]     = useState(5);
-  const [chartRef, chartW]            = useElementWidth();
 
   const opts = { monthly, years, tmiNow, tmiRetraite, annualReturn: returnPct / 100 };
   const r      = useMemo(() => perSimulation(opts), [monthly, years, tmiNow, tmiRetraite, returnPct]);
@@ -1730,25 +1729,23 @@ function PERSimulator({ monthly = 200, years = 20 }) {
         </span>
       </div>
 
-      <div ref={chartRef} style={{ width: "100%", height: 240 }}>
-        {chartW > 0 && (
-          <AreaChart width={chartW} height={240} data={series} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
-            <defs>
-              <linearGradient id="perGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T.violet} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-            <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
-            <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
-            <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n]} />
-            <Legend />
-            <Area type="monotone" dataKey="per" name="PER + éco. impôt réinvestie" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
-            <Area type="monotone" dataKey="cto" name="CTO (versements seuls)" stroke={T.muted} strokeWidth={2} fill="none" strokeDasharray="5 4" />
-          </AreaChart>
-        )}
-      </div>
+      <ExpandableChart height={240} title="PER vs CTO — projection">
+        <AreaChart data={series} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
+          <defs>
+            <linearGradient id="perGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={T.violet} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+          <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
+          <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
+          <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n]} />
+          <Legend />
+          <Area type="monotone" dataKey="per" name="PER + éco. impôt réinvestie" stroke={T.violet} strokeWidth={2.5} fill="url(#perGrad)" />
+          <Area type="monotone" dataKey="cto" name="CTO (versements seuls)" stroke={T.muted} strokeWidth={2} fill="none" strokeDasharray="5 4" />
+        </AreaChart>
+      </ExpandableChart>
       <p className="text-xs mt-3 flex items-start gap-1.5" style={{ color: T.muted }}>
         <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
         <span>Hypothèse : sortie en capital (versements imposés au barème, plus-values au PFU 30 %), versements dans le plafond épargne retraite, TMI supposée constante (pas de changement de tranche), économie d'impôt réinvestie. Estimation pédagogique, pas un conseil fiscal.</span>
@@ -2129,7 +2126,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection de l'or</h2>
           </div>
           <p className="text-xs mb-4" style={{ color: T.muted }}>Trajectoire centrale et bande d'incertitude (scénarios prudent → favorable). Paramètres communs (capital, mensuel, horizon) partagés avec les autres actifs.</p>
-          <ResponsiveContainer width="100%" height={280}>
+          <ExpandableChart height={280} title="Projection de l'or">
             <AreaChart data={orSeries} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="goldFillSim" x1="0" y1="0" x2="0" y2="1">
@@ -2149,7 +2146,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <Area type="monotone" dataKey="apports" stroke={T.muted} strokeDasharray="4 4" strokeWidth={1.5} fill="none" />
               <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
             </AreaChart>
-          </ResponsiveContainer>
+          </ExpandableChart>
         </Card>
         <div style={{ borderRadius: 12, padding: 14, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", gap: 10, alignItems: "flex-start" }}>
           <Info size={15} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
@@ -2280,7 +2277,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           </div>
 
           {/* Graphique double axe */}
-          <ResponsiveContainer width="100%" height={340}>
+          <ExpandableChart height={340} title="Comparatif des scénarios">
             <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
@@ -2329,7 +2326,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <Line yAxisId="crypto" type="monotone" dataKey="logBTC" name="Bitcoin"  stroke={ASSET.btc} strokeWidth={2.5} dot={false} strokeDasharray="10 4" />
               <Line yAxisId="crypto" type="monotone" dataKey="logETH" name="Ethereum" stroke={ASSET.eth} strokeWidth={2}   dot={false} strokeDasharray="3 4" />
             </LineChart>
-          </ResponsiveContainer>
+          </ExpandableChart>
 
           {/* Tableau récapitulatif */}
           <div className="overflow-x-auto mt-6">
@@ -2543,7 +2540,7 @@ function ETFHistoryTooltip() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={180}>
+      <ExpandableChart height={180} title="Historique de l'indice">
         <LineChart data={MSCI_HISTORY} margin={{ top: 5, right: 10, bottom: 5, left: 52 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
@@ -2559,7 +2556,7 @@ function ETFHistoryTooltip() {
           <Line type="monotone" dataKey="price" stroke={color} strokeWidth={2.5}
             dot={<CustomDot />} activeDot={{ r: 6, fill: color }} />
         </LineChart>
-      </ResponsiveContainer>
+      </ExpandableChart>
 
       <div className="mt-3 mb-3">
         <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
@@ -2662,7 +2659,7 @@ function CryptoHistoryTooltip({ coin }) {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={180}>
+      <ExpandableChart height={180} title="Historique (échelle log)">
         <LineChart data={logData} margin={{ top: 5, right: 10, bottom: 5, left: 48 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
@@ -2684,7 +2681,7 @@ function CryptoHistoryTooltip({ coin }) {
           <Line type="monotone" dataKey="logPrice" stroke={color} strokeWidth={2.5}
             dot={<CustomDot />} activeDot={{ r: 6, fill: color }} />
         </LineChart>
-      </ResponsiveContainer>
+      </ExpandableChart>
 
       {/* Milestones grid */}
       <div className="mt-3 mb-3">
@@ -2828,7 +2825,7 @@ function ImmoCard({ price, setPrice, horizon }) {
           </span>
         </div>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ExpandableChart height={300} title="Achat immobilier — valeur, crédit & capital">
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
@@ -2838,7 +2835,7 @@ function ImmoCard({ price, setPrice, horizon }) {
             <Line type="monotone" dataKey="loanRemaining" name="Crédit restant"    stroke="#ef4444"   strokeWidth={2}   dot={false} strokeDasharray="5 3" />
             <Line type="monotone" dataKey="equity"        name="Votre capital"     stroke={T.green}   strokeWidth={3}   dot={false} />
           </LineChart>
-        </ResponsiveContainer>
+        </ExpandableChart>
 
         {/* Explication simple */}
         <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
@@ -2988,7 +2985,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
+      <ExpandableChart height={280} title={title}>
         {logScale ? (
           <ComposedChart data={logData}>
             <defs>
@@ -3058,7 +3055,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             )}
           </ComposedChart>
         )}
-      </ResponsiveContainer>
+      </ExpandableChart>
 
       <button
         onClick={() => setShowTable((s) => !s)}

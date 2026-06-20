@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { C, glow, ASSET } from "./theme.js";
 import { useT } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
@@ -954,14 +955,17 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
           <h2 className="text-xl font-bold" style={{ color: T.text }}>Historique mensuel</h2>
           <select value={histoRange} onChange={(e) => setHistoRange(+e.target.value)}
             style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 9999, padding: "6px 14px", fontSize: 12, outline: "none", cursor: "pointer" }}>
-            <option value={6}>6 derniers mois</option>
-            <option value={12}>12 derniers mois</option>
+            <option value={1}>1 mois</option>
+            <option value={3}>3 mois</option>
+            <option value={6}>6 mois</option>
+            <option value={12}>12 mois</option>
             <option value={24}>2 ans</option>
             <option value={36}>3 ans</option>
           </select>
         </div>
         <FinTechBarChart
           data={histo.slice(-histoRange)}
+          xKey="m"
           bars={[
             { dataKey: "rev", fill: T.green, name: "Revenus" },
             { dataKey: "dep", fill: T.red, name: "Dépenses" },
@@ -1030,6 +1034,7 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
         </div>
         <FinTechAreaChart
           data={savingHisto.slice(-histoRange)}
+          xKey="m"
           areas={[{ dataKey: "v", fill: T.cyan, stroke: T.cyan }]}
           format={(v) => v.toFixed(1) + "%"}
           stacked={false}
@@ -3649,16 +3654,18 @@ function CreditArbitrage({ initial } = {}) {
 /* ------------------------------------------------------------------ */
 /** Largeur réelle d'un élément, suivie via ResizeObserver. */
 function useElementWidth() {
-  const ref = useRef(null);
   const [w, setW] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
+  const roRef = useRef(null);
+  // Callback ref : se ré-attache quand l'élément (dé)monte — indispensable
+  // car le conteneur des graphiques est rendu conditionnellement (0 → 1 crédit).
+  const ref = useCallback((el) => {
+    if (roRef.current) { roRef.current.disconnect(); roRef.current = null; }
     if (!el) return;
     const update = () => setW(el.clientWidth);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    roRef.current = ro;
   }, []);
   return [ref, w];
 }
@@ -3750,7 +3757,7 @@ function CreditForm({ credit, onSave, onCancel }) {
             <Field label="Assurance (€ / mois)">
               <input type="number" min={0} value={c.assuranceMensuelle} style={inputStyle} onChange={(e) => setNum("assuranceMensuelle", e.target.value)} />
             </Field>
-            <Field label={<>Capital déjà remboursé (€)<InfoTooltip text="Optionnel. Si vous le renseignez, le capital restant et l'échéance sont calculés à partir de ce montant (pas besoin d'une date de début exacte). Laissez à 0 pour un calcul automatique depuis la date de début." /></>}>
+            <Field label={<>Capital déjà remboursé (€) <span style={{ color: T.muted, fontWeight: 400 }}>(Optionnel)</span><InfoTooltip text="Optionnel. Si vous le renseignez, le capital restant et l'échéance sont calculés à partir de ce montant (pas besoin d'une date de début exacte). Laissez à 0 pour un calcul automatique depuis la date de début." /></>}>
               <input type="number" min={0} max={rembourseMax} value={c.capitalRembourse} style={{ ...inputStyle, borderColor: rembourseTrop ? T.red : inputStyle.border }} onChange={(e) => setNum("capitalRembourse", e.target.value)} />
               {rembourseTrop && <span className="text-xs" style={{ color: T.red }}>Ne peut pas dépasser le capital emprunté ({eur(rembourseMax)}).</span>}
             </Field>
@@ -3983,7 +3990,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Mes crédits</h1>
-          <p style={{ color: T.muted }}>Suivez vos crédits et prêts en cours — ils alimentent vos passifs.</p>
+          <p style={{ color: T.muted }}>Suivez vos crédits et prêts en cours.</p>
         </div>
         {!editing && (
           <button onClick={() => setEditing(emptyCredit())}
@@ -4056,8 +4063,14 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
         </div>
       )}
 
-      {editing && (
-        <CreditForm key={editing.id || "new"} credit={editing} onSave={save} onCancel={() => setEditing(null)} />
+      {editing && createPortal(
+        <div className="wt-fade-in" onClick={() => setEditing(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+          <div onClick={(e) => e.stopPropagation()} className="wt-scale-in" style={{ width: "100%", maxWidth: 720, margin: "auto" }}>
+            <CreditForm key={editing.id || "new"} credit={editing} onSave={save} onCancel={() => setEditing(null)} />
+          </div>
+        </div>,
+        document.body
       )}
 
       {arbitrage && (
@@ -5787,36 +5800,80 @@ function AlertsBanner({ totals, patrimoine, dismissed, onDismiss, incomeRef = to
 /* ------------------------------------------------------------------ */
 /*  ONBOARDING — wizard de première connexion                         */
 /* ------------------------------------------------------------------ */
-function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
+// Répartition de l'épargne proposée à l'onboarding (cases à cocher → input montant)
+const ONBOARD_ENVELOPES = [
+  { id: "livrets", label: "Livrets (A, LDDS, LEP)", group: "liquidites" },
+  { id: "av",      label: "Assurance vie",          group: "investissements" },
+  { id: "pea",     label: "PEA / Compte-titres",    group: "investissements" },
+  { id: "per",     label: "PER",                    group: "investissements" },
+];
+
+function OnboardingWizard({ profile, setProfile, setTransactions, setPatrimoine, onConnectBank, onDone }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const [step, setStep]         = useState(0);
   const [prenom, setPrenom]     = useState("");
   const [age, setAge]           = useState(30);
-  const [revenus, setRevenus]   = useState(3000);
-  const [loyer, setLoyer]       = useState(800);
-  const [epargne, setEpargne]   = useState(300);
+  // Champs montants : on stocke des chaînes pour autoriser le vide (pas de 0 collant).
+  const [revenus, setRevenus]   = useState("3000");
+  const [loyer, setLoyer]       = useState("800");
+  const [epargne, setEpargne]   = useState("300");
+  const [epargneTotale, setEpargneTotale] = useState("");
+  const [immo, setImmo]         = useState("");
+  // Répartition : { livrets: { on, val }, ... }
+  const [repart, setRepart] = useState(() =>
+    Object.fromEntries(ONBOARD_ENVELOPES.map(e => [e.id, { on: false, val: "" }])));
+
+  const num = (v) => Math.max(0, +v || 0);
 
   const steps = [
     { title: "Bienvenue sur WealthTrack", sub: "Quelques infos pour personnaliser votre expérience" },
     { title: "Vos revenus & charges",     sub: "Ces données restent sur votre appareil" },
-    { title: "Votre épargne",             sub: "On calcule votre potentiel d'indépendance financière" },
+    { title: "Votre épargne & patrimoine", sub: "Pour calculer votre potentiel d'indépendance financière" },
+    { title: "Répartition de votre épargne", sub: "Cochez vos enveloppes et indiquez les montants détenus" },
   ];
 
   const finish = () => {
     setProfile(p => ({ ...p, firstName: prenom, age: Math.min(100, Math.max(16, +age || 30)) }));
     const ts = Date.now();
     setTransactions([
-      { id: ts+1, label: "Salaire / Revenus",  cat: "Freelance",    type: "revenu",            amount:  revenus,  recurring: true },
-      { id: ts+2, label: "Loyer / Logement",   cat: "Logement",     type: "charge_fixe",       amount: -loyer,    recurring: true },
-      { id: ts+3, label: "Épargne mensuelle",  cat: "Épargne",      type: "investissement",    amount: -epargne,  recurring: true },
+      { id: ts+1, label: "Salaire / Revenus", cat: "Freelance", type: "revenu",         amount:  num(revenus),  recurring: true },
+      { id: ts+2, label: "Loyer / Mensualité", cat: "Logement",  type: "charge_fixe",     amount: -num(loyer),    recurring: true },
+      { id: ts+3, label: "Épargne mensuelle",  cat: "Épargne",    type: "investissement",  amount: -num(epargne),  recurring: true },
     ]);
+
+    // Connexion directe aux composants Patrimoine (aucune double saisie).
+    setPatrimoine(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const setGroup = (id, items) => {
+        const g = next.actifs.find(a => a.id === id);
+        if (g) g.items = items;
+      };
+      // Liquidités : livrets cochés sinon épargne totale déclarée
+      const liq = [];
+      if (repart.livrets.on && num(repart.livrets.val)) liq.push({ label: "Livrets", value: num(repart.livrets.val) });
+      else if (num(epargneTotale)) liq.push({ label: "Épargne", value: num(epargneTotale) });
+      setGroup("liquidites", liq);
+      // Investissements : AV + PEA + PER cochés
+      const inv = [];
+      if (repart.av.on  && num(repart.av.val))  inv.push({ label: "Assurance vie", value: num(repart.av.val) });
+      if (repart.pea.on && num(repart.pea.val)) inv.push({ label: "PEA / CTO", value: num(repart.pea.val) });
+      if (repart.per.on && num(repart.per.val)) inv.push({ label: "PER", value: num(repart.per.val) });
+      setGroup("investissements", inv);
+      // Immobilier
+      setGroup("immobilier", num(immo) ? [{ label: "Patrimoine immobilier", value: num(immo) }] : []);
+      setGroup("autres", []);
+      return next;
+    });
     onDone();
   };
 
   const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
-  const modal   = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 480 };
+  const modal   = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "36px 40px", width: "100%", maxWidth: 480, maxHeight: "92vh", overflowY: "auto" };
   const inpO    = { ...inputStyle, marginTop: 6 };
+  // Vide le champ s'il vaut "0" au focus (évite d'effacer le zéro à la main).
+  const clearZero = (setter) => (e) => { if (e.target.value === "0") setter(""); };
+  const lbl = { fontSize: 12, color: T.muted, fontWeight: 600 };
 
   return (
     <div className="wt-fade-in" style={overlay}>
@@ -5837,33 +5894,75 @@ function OnboardingWizard({ profile, setProfile, setTransactions, onDone }) {
 
         {step === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre prénom</label>
+            <div><label style={lbl}>Votre prénom</label>
               <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
-            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Votre âge</label>
+            <div><label style={lbl}>Votre âge</label>
               <input type="number" min={16} max={100} value={age}
                 onChange={e => setAge(e.target.value === "" ? "" : Math.min(100, +e.target.value || 0))}
                 onBlur={e => setAge(Math.min(100, Math.max(16, +e.target.value || 16)))} style={inpO} /></div>
+            {/* CTA connexion bancaire dès la 1re page */}
+            <button onClick={onConnectBank}
+              style={{ marginTop: 4, padding: "12px 14px", borderRadius: 12, border: `1px solid ${T.blue}55`, background: `${T.blue}12`, color: T.text, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <Landmark size={18} style={{ color: T.blue, flexShrink: 0, marginTop: 2 }} />
+              <span>
+                <span style={{ fontWeight: 700, fontSize: 13, display: "block" }}>Connecter ma banque (Plaid)</span>
+                <span style={{ fontSize: 11, color: T.muted }}>Synchronisez vos comptes automatiquement. (Tokens sécurisés uniquement, aucune information de connexion transmise)</span>
+              </span>
+            </button>
           </div>
         )}
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Revenus mensuels nets (€)</label>
-              <input type="number" min={0} value={revenus} onChange={e => setRevenus(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
-            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Loyer / charge principale (€/mois)</label>
-              <input type="number" min={0} value={loyer} onChange={e => setLoyer(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
+            <div><label style={lbl}>Revenus mensuels nets (€)</label>
+              <input type="number" inputMode="numeric" min={0} value={revenus} placeholder="0"
+                onFocus={clearZero(setRevenus)} onChange={e => setRevenus(e.target.value)} style={inpO} /></div>
+            <div><label style={lbl}>Loyer / Mensualité (crédit) (€/mois)</label>
+              <input type="number" inputMode="numeric" min={0} value={loyer} placeholder="0"
+                onFocus={clearZero(setLoyer)} onChange={e => setLoyer(e.target.value)} style={inpO} /></div>
           </div>
         )}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div><label style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Épargne / investissement mensuel (€)</label>
-              <input type="number" min={0} value={epargne} onChange={e => setEpargne(Math.max(0, +e.target.value || 0))} style={inpO} /></div>
+            <div><label style={lbl}>Épargne / investissement mensuel (€)</label>
+              <input type="number" inputMode="numeric" min={0} value={epargne} placeholder="0"
+                onFocus={clearZero(setEpargne)} onChange={e => setEpargne(e.target.value)} style={inpO} /></div>
+            <div><label style={lbl}>Épargne totale déjà constituée (€)</label>
+              <input type="number" inputMode="numeric" min={0} value={epargneTotale} placeholder="0"
+                onFocus={clearZero(setEpargneTotale)} onChange={e => setEpargneTotale(e.target.value)} style={inpO} /></div>
+            <div><label style={lbl}>Patrimoine immobilier (€)</label>
+              <input type="number" inputMode="numeric" min={0} value={immo} placeholder="0"
+                onFocus={clearZero(setImmo)} onChange={e => setImmo(e.target.value)} style={inpO} /></div>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${T.blue}22` }}>
               <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>
-                {eur(Math.round(fvMonthly(epargne, RATE_A, 20)))}
+                {eur(Math.round(fvMonthly(num(epargne), RATE_A, 20)))}
               </div>
               <div style={{ fontSize: 12, color: T.muted, marginTop: 6, display: "flex", alignItems: "flex-start", gap: 5 }}><AlertTriangle size={11} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span></div>
             </div>
+          </div>
+        )}
+        {step === 3 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {ONBOARD_ENVELOPES.map(env => {
+              const r = repart[env.id];
+              return (
+                <div key={env.id}>
+                  <button onClick={() => setRepart(p => ({ ...p, [env.id]: { ...p[env.id], on: !p[env.id].on } }))}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1px solid ${r.on ? T.blue : T.border}`, background: r.on ? `${T.blue}12` : "transparent", color: T.text, cursor: "pointer", textAlign: "left" }}>
+                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${r.on ? T.blue : T.muted}`, background: r.on ? T.blue : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {r.on && <Check size={12} color="#fff" />}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{env.label}</span>
+                  </button>
+                  {r.on && (
+                    <input type="number" inputMode="numeric" min={0} value={r.val} placeholder="Montant (€)"
+                      onFocus={e => { if (e.target.value === "0") setRepart(p => ({ ...p, [env.id]: { ...p[env.id], val: "" } })); }}
+                      onChange={e => setRepart(p => ({ ...p, [env.id]: { ...p[env.id], val: e.target.value } }))}
+                      style={{ ...inputStyle, marginTop: 8 }} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -6115,6 +6214,43 @@ function FIREInfoModal({ onClose }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  CONNEXION BANCAIRE (Plaid) — CTA + réassurance                     */
+/* ------------------------------------------------------------------ */
+function BankConnectModal({ onClose }) {
+  const T = useT();
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} className="wt-fade-in"
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} className="wt-scale-in"
+        style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "32px 36px", width: "100%", maxWidth: 440, position: "relative" }}>
+        <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none", color: "#6b7280", cursor: "pointer", minWidth: 40, minHeight: 40 }}><X size={20} /></button>
+        <div style={{ width: 52, height: 52, borderRadius: 16, background: `${T.blue}1a`, border: `1px solid ${T.blue}33`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+          <Landmark size={24} style={{ color: T.blue }} />
+        </div>
+        <h2 style={{ color: T.text, fontWeight: 800, fontSize: 20, margin: "0 0 8px" }}>Connecter votre banque</h2>
+        <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Synchronisez automatiquement vos comptes et transactions via Plaid, agrégateur bancaire agréé.
+        </p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderRadius: 12, background: `${T.green}10`, border: `1px solid ${T.green}33`, marginBottom: 20 }}>
+          <ShieldCheck size={16} style={{ color: T.green, flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 12.5, color: T.text }}>Tokens sécurisés uniquement, aucune information de connexion transmise.</span>
+        </div>
+        <button onClick={onClose}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, background: T.blue, color: "#fff" }}>
+          Bientôt disponible
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  APP                                                                */
 /* ------------------------------------------------------------------ */
 export default function App() {
@@ -6122,6 +6258,7 @@ export default function App() {
   const [showApp,    setShowApp]    = useState(false);
   const [view,       setView]       = useState("dashboard");
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
+  const [showBankConnect, setShowBankConnect] = useState(false);
 
   // ── Plan : SOURCE DE VÉRITÉ = table `subscriptions` (écrite par le seul
   //    webhook Stripe). On NE FAIT JAMAIS confiance à l'URL ni au localStorage
@@ -6338,9 +6475,12 @@ export default function App() {
           profile={profile}
           setProfile={setProfile}
           setTransactions={setTransactions}
+          setPatrimoine={setPatrimoine}
+          onConnectBank={() => setShowBankConnect(true)}
           onDone={() => setOnboarded(true)}
         />
       )}
+      {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
         {/* logout button */}

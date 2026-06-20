@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import { Maximize2, X } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -27,6 +29,54 @@ const CustomTooltip = ({ active, payload, label, format = (v) => v }) => {
 };
 
 /* ─────────────────────────────────────────────────────────────── */
+/* ChartShell — titre + bouton plein écran (modal) commun à tous    */
+/* les graphiques. Le `children` est rendu dans un ResponsiveContainer */
+/* à hauteur fixe en vue normale, et 70vh en plein écran.           */
+/* ─────────────────────────────────────────────────────────────── */
+
+function ChartShell({ title, ariaLabel, height = 280, children }) {
+  const [full, setFull] = useState(false);
+  const body = (h) => (
+    <div style={{ width: "100%", height: h }}>
+      <ResponsiveContainer width="100%" height="100%">
+        {children}
+      </ResponsiveContainer>
+    </div>
+  );
+  return (
+    <div role="figure" aria-label={ariaLabel || title} style={{ position: "relative" }}>
+      {title && <h3 className="text-headline mb-4">{title}</h3>}
+      <button
+        onClick={() => setFull(true)}
+        aria-label="Agrandir le graphique en plein écran"
+        style={{ position: "absolute", top: title ? 0 : -2, right: 0, zIndex: 2, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: 6, cursor: "pointer", color: "rgba(255,255,255,0.6)", lineHeight: 0 }}
+      >
+        <Maximize2 size={15} />
+      </button>
+      {body(height)}
+      {full && createPortal(
+        <div
+          onClick={() => setFull(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#0b1120", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "48px 16px 16px", width: "100%", maxWidth: 1000, position: "relative" }}
+          >
+            {title && <h3 style={{ position: "absolute", top: 16, left: 20, color: "#f8fafc", fontWeight: 700, fontSize: 16, margin: 0 }}>{title}</h3>}
+            <button onClick={() => setFull(false)} aria-label="Fermer" style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#94a3b8", cursor: "pointer", minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={20} />
+            </button>
+            {body("70vh")}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 /* Line Chart — fintech primary (growth, trends)                    */
 /* ─────────────────────────────────────────────────────────────── */
 
@@ -36,43 +86,29 @@ export const FinTechLineChart = ({
   format = (v) => v,
   title,
   ariaLabel,
+  xKey = "name",
   margin = { top: 8, right: 60, left: 0, bottom: 0 },
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={margin}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(255,255,255,0.05)"
-          vertical={false}
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <LineChart data={data} margin={margin}>
+      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <XAxis dataKey={xKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} />
+      <YAxis stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <Tooltip content={<CustomTooltip format={format} />} />
+      {lines.map((lineConfig, idx) => (
+        <Line
+          key={idx}
+          type="monotone"
+          dataKey={lineConfig.dataKey}
+          stroke={lineConfig.stroke || C.amber}
+          strokeWidth={2}
+          dot={false}
+          isAnimationActive={false}
+          name={lineConfig.name || lineConfig.dataKey}
         />
-        <XAxis
-          dataKey="name"
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-        />
-        <YAxis
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <Tooltip content={<CustomTooltip format={format} />} />
-        {lines.map((lineConfig, idx) => (
-          <Line
-            key={idx}
-            type="monotone"
-            dataKey={lineConfig.dataKey}
-            stroke={lineConfig.stroke || C.amber}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-            name={lineConfig.name || lineConfig.dataKey}
-          />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
+      ))}
+    </LineChart>
+  </ChartShell>
 );
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -86,45 +122,31 @@ export const FinTechAreaChart = ({
   title,
   ariaLabel,
   stacked = true,
+  xKey = "name",
   margin = { top: 8, right: 60, left: 0, bottom: 0 },
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <AreaChart data={data} margin={margin}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(255,255,255,0.05)"
-          vertical={false}
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <AreaChart data={data} margin={margin}>
+      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <XAxis dataKey={xKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} />
+      <YAxis stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <Tooltip content={<CustomTooltip format={format} />} />
+      {areas.map((areaConfig, idx) => (
+        <Area
+          key={idx}
+          type="monotone"
+          dataKey={areaConfig.dataKey}
+          fill={areaConfig.fill || C.violet}
+          fillOpacity={0.3}
+          stroke={areaConfig.stroke || C.violet}
+          strokeWidth={2}
+          isAnimationActive={false}
+          stackId={stacked ? "area" : undefined}
+          name={areaConfig.name || areaConfig.dataKey}
         />
-        <XAxis
-          dataKey="name"
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-        />
-        <YAxis
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <Tooltip content={<CustomTooltip format={format} />} />
-        {areas.map((areaConfig, idx) => (
-          <Area
-            key={idx}
-            type="monotone"
-            dataKey={areaConfig.dataKey}
-            fill={areaConfig.fill || C.violet}
-            fillOpacity={0.3}
-            stroke={areaConfig.stroke || C.violet}
-            strokeWidth={2}
-            isAnimationActive={false}
-            stackId={stacked ? "area" : undefined}
-            name={areaConfig.name || areaConfig.dataKey}
-          />
-        ))}
-      </AreaChart>
-    </ResponsiveContainer>
-  </div>
+      ))}
+    </AreaChart>
+  </ChartShell>
 );
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -137,41 +159,27 @@ export const FinTechBarChart = ({
   format = (v) => v,
   title,
   ariaLabel,
+  xKey = "name",
   margin = { top: 8, right: 16, left: 0, bottom: 0 },
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={margin}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(255,255,255,0.05)"
-          vertical={false}
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <BarChart data={data} margin={margin}>
+      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <XAxis dataKey={xKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} />
+      <YAxis stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <Tooltip content={<CustomTooltip format={format} />} />
+      {bars.map((barConfig, idx) => (
+        <Bar
+          key={idx}
+          dataKey={barConfig.dataKey}
+          fill={barConfig.fill || C.amber}
+          isAnimationActive={false}
+          name={barConfig.name || barConfig.dataKey}
+          radius={[6, 6, 0, 0]}
         />
-        <XAxis
-          dataKey="name"
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-        />
-        <YAxis
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <Tooltip content={<CustomTooltip format={format} />} />
-        {bars.map((barConfig, idx) => (
-          <Bar
-            key={idx}
-            dataKey={barConfig.dataKey}
-            fill={barConfig.fill || C.amber}
-            isAnimationActive={false}
-            name={barConfig.name || barConfig.dataKey}
-            radius={[6, 6, 0, 0]}
-          />
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
+      ))}
+    </BarChart>
+  </ChartShell>
 );
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -185,31 +193,25 @@ export const FinTechPieChart = ({
   ariaLabel,
   innerRadius = 0,
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={innerRadius}
-          outerRadius={80}
-          paddingAngle={2}
-          dataKey="value"
-          isAnimationActive={false}
-        >
-          {data.map((entry, idx) => (
-            <Cell
-              key={`cell-${idx}`}
-              fill={colors[idx % colors.length] || C.amber}
-            />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <PieChart>
+      <Pie
+        data={data}
+        cx="50%"
+        cy="50%"
+        innerRadius={innerRadius}
+        outerRadius={80}
+        paddingAngle={2}
+        dataKey="value"
+        isAnimationActive={false}
+      >
+        {data.map((entry, idx) => (
+          <Cell key={`cell-${idx}`} fill={colors[idx % colors.length] || C.amber} />
+        ))}
+      </Pie>
+      <Tooltip content={<CustomTooltip />} />
+    </PieChart>
+  </ChartShell>
 );
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -225,37 +227,15 @@ export const FinTechScatterChart = ({
   ariaLabel,
   color = C.cyan,
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <ScatterChart margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(255,255,255,0.05)"
-          vertical={false}
-        />
-        <XAxis
-          dataKey={xKey}
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <YAxis
-          dataKey={yKey}
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <Tooltip content={<CustomTooltip format={format} />} />
-        <Scatter
-          name="Data"
-          data={data}
-          fill={color}
-          isAnimationActive={false}
-        />
-      </ScatterChart>
-    </ResponsiveContainer>
-  </div>
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <ScatterChart margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <XAxis dataKey={xKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <YAxis dataKey={yKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <Tooltip content={<CustomTooltip format={format} />} />
+      <Scatter name="Data" data={data} fill={color} isAnimationActive={false} />
+    </ScatterChart>
+  </ChartShell>
 );
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -269,51 +249,37 @@ export const FinTechComposedChart = ({
   format = (v) => v,
   title,
   ariaLabel,
+  xKey = "name",
   margin = { top: 8, right: 60, left: 0, bottom: 0 },
 }) => (
-  <div role="figure" aria-label={ariaLabel || title}>
-    {title && <h3 className="text-headline mb-4">{title}</h3>}
-    <ResponsiveContainer width="100%" height={280}>
-      <ComposedChart data={data} margin={margin}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(255,255,255,0.05)"
-          vertical={false}
+  <ChartShell title={title} ariaLabel={ariaLabel}>
+    <ComposedChart data={data} margin={margin}>
+      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <XAxis dataKey={xKey} stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} />
+      <YAxis stroke="rgba(255,255,255,0.4)" style={{ fontSize: "12px" }} tickFormatter={format} />
+      <Tooltip content={<CustomTooltip format={format} />} />
+      {bars.map((barConfig, idx) => (
+        <Bar
+          key={`bar-${idx}`}
+          dataKey={barConfig.dataKey}
+          fill={barConfig.fill || C.amber}
+          isAnimationActive={false}
+          name={barConfig.name || barConfig.dataKey}
+          radius={[6, 6, 0, 0]}
         />
-        <XAxis
-          dataKey="name"
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
+      ))}
+      {lines.map((lineConfig, idx) => (
+        <Line
+          key={`line-${idx}`}
+          type="monotone"
+          dataKey={lineConfig.dataKey}
+          stroke={lineConfig.stroke || C.cyan}
+          strokeWidth={2}
+          dot={false}
+          isAnimationActive={false}
+          name={lineConfig.name || lineConfig.dataKey}
         />
-        <YAxis
-          stroke="rgba(255,255,255,0.4)"
-          style={{ fontSize: "12px" }}
-          tickFormatter={format}
-        />
-        <Tooltip content={<CustomTooltip format={format} />} />
-        {bars.map((barConfig, idx) => (
-          <Bar
-            key={`bar-${idx}`}
-            dataKey={barConfig.dataKey}
-            fill={barConfig.fill || C.amber}
-            isAnimationActive={false}
-            name={barConfig.name || barConfig.dataKey}
-            radius={[6, 6, 0, 0]}
-          />
-        ))}
-        {lines.map((lineConfig, idx) => (
-          <Line
-            key={`line-${idx}`}
-            type="monotone"
-            dataKey={lineConfig.dataKey}
-            stroke={lineConfig.stroke || C.cyan}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-            name={lineConfig.name || lineConfig.dataKey}
-          />
-        ))}
-      </ComposedChart>
-    </ResponsiveContainer>
-  </div>
+      ))}
+    </ComposedChart>
+  </ChartShell>
 );

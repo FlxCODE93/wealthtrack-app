@@ -213,26 +213,27 @@ export function useAuthState() {
       if (mounted) setLoading(false);
     });
 
-    // Changements d'auth (login/logout)
+    // Changements d'auth.
+    //
+    // RÈGLE STRICTE : on ne DÉCONNECTE JAMAIS l'utilisateur depuis ce listener.
+    // La seule déconnexion possible passe par le bouton « Se déconnecter » qui
+    // appelle supabase.auth.signOut() PUIS window.location.reload() — au rechargement
+    // getSession() renvoie null et la Landing s'affiche.
+    //
+    // Pourquoi : un `SIGNED_OUT` peut être émis par un refresh de token RATÉ
+    // (session périmée résiduelle dans localStorage, refresh token déjà consommé,
+    // course multi-onglets…). Le nuller ici provoquait des déconnexions fantômes
+    // et le bounce vers la Landing 0,5 s après un login pourtant réussi.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         activeUserId = session.user.id;
         if (mounted) setUser(session.user);
-        if (mounted) setLoading(false);
-        // Sync en arrière-plan — ne bloque JAMAIS la navigation post-login
         if (event === "SIGNED_IN") withTimeout(syncOnLogin(session.user.id), 4000);
-      } else if (event === "SIGNED_OUT") {
-        // Déconnexion EXPLICITE uniquement — on ne coupe jamais lors d'un refresh de token
-        if (mounted) setUser(null);
-        if (mounted) setLoading(false);
-        clearCloudSync();
-      } else {
-        // INITIAL_SESSION sans session, TOKEN_REFRESHED en transit, etc.
-        // On ne touche pas à user — getUser() ci-dessus est autoritaire pour l'état initial.
-        if (mounted) setLoading(false);
       }
+      // Aucun cas ne remet l'user à null — voir RÈGLE STRICTE ci-dessus.
+      if (mounted) setLoading(false);
     });
 
     return () => { mounted = false; subscription?.unsubscribe(); };

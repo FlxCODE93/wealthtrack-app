@@ -2098,7 +2098,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: `Capital à ${SIM_START_YEAR + horizon}`, value: eur(orCapFinal), color: "#f59e0b" },
-            { label: "Total versé", value: eur(orTotalVerse), color: T.muted },
+            { label: "Apports cumulés", value: eur(orTotalVerse), color: T.muted },
             { label: "Plus-value estimée", value: eur(orGain), color: orGain >= 0 ? T.green : T.red },
             { label: "Performance", value: (orTotalVerse > 0 ? (orGain / orTotalVerse * 100) : 0).toFixed(0) + " %", color: orGain >= 0 ? T.green : T.red },
           ].map((s) => (
@@ -2129,9 +2129,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <CartesianGrid strokeDasharray="3 3" stroke={chartTip.contentStyle?.border?.replace?.(/\s.*/, "") || "#334155"} vertical={false} />
               <XAxis dataKey="year" tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} />
               <YAxis tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} axisLine={false} width={48} />
-              <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "capital" ? "Or (net)" : n === "apports" ? "Versé" : n]} />
+              <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "capital" ? "Or (net)" : n === "apports" ? "Apports cumulés" : n]} />
               <Area type="monotone" dataKey="range" stroke="none" fill="url(#goldBandSim)" isAnimationActive={false} />
-              <Area type="monotone" dataKey="apports" stroke={T.muted} strokeDasharray="4 4" strokeWidth={1.5} fill="none" />
+              <Area type="monotone" dataKey="apports" name="Apports cumulés" stroke="#3b82f6" strokeDasharray="4 4" strokeWidth={1.5} fill="none" />
               <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
             </AreaChart>
           </ExpandableChart>
@@ -2961,7 +2961,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 Fourchette pess. → opt.
               </span>
             )}
-            <span className="text-xs" style={{ color: T.muted }}>— Hauteur totale = Capital médian</span>
           </>
         )}
       </div>

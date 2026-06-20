@@ -198,13 +198,17 @@ export function useAuthState() {
     }
     let mounted = true;
 
-    // Session existante au mount (utilisateur déjà connecté → on hydrate aussi)
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        activeUserId = data.user.id;
-        if (mounted) setUser(data.user);
+    // Session existante au mount. ON UTILISE getSession() (lecture LOCALE depuis
+    // le storage, zéro réseau) et SURTOUT PAS getUser() : ce dernier valide le
+    // token côté serveur et, s'il tombe sur un token périmé, DÉTRUIT la session
+    // courante (même fraîchement créée) → SIGNED_OUT → déconnexion fantôme.
+    supabase.auth.getSession().then(({ data }) => {
+      const sessionUser = data?.session?.user;
+      if (sessionUser) {
+        activeUserId = sessionUser.id;
+        if (mounted) setUser(sessionUser);
         // Sync en arrière-plan — ne bloque jamais le rendu
-        withTimeout(syncOnLogin(data.user.id), 4000);
+        withTimeout(syncOnLogin(sessionUser.id), 4000);
       }
       if (mounted) setLoading(false);
     });

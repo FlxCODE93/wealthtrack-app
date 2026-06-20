@@ -5207,8 +5207,9 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
   // Pré-remplit l'email avec celui du compte (l'adresse renseignée à l'inscription).
   useEffect(() => {
     if (!supabase || profile.email) return;
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.email) setProfile((p) => ({ ...p, email: data.user.email }));
+    supabase.auth.getSession().then(({ data }) => {
+      const email = data?.session?.user?.email;
+      if (email) setProfile((p) => ({ ...p, email }));
     });
   }, []);
 
@@ -5219,7 +5220,8 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
     if (!supabase) { alert("Connexion requise pour ajouter une photo."); return; }
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) { alert("Connectez-vous pour ajouter une photo."); return; }
       const blob = await downscaleImage(file, 512);
       const path = `${user.id}/avatar.jpg`;
@@ -6316,7 +6318,9 @@ export default function App() {
   //    systématiquement écrasé par la valeur DB ci-dessous.
   const hydratePlanFromDb = useCallback(async () => {
     if (!supabase) return; // dev local sans Supabase : reste sur le cache
-    const { data: { user } } = await supabase.auth.getUser();
+    // getSession() (local) et non getUser() (réseau) : éviter de révoquer la session.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) { setPlan("free"); return; }
     const { data, error } = await supabase
       .from("subscriptions")

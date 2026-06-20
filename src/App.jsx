@@ -5380,18 +5380,20 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : PATRIMOINE                                                 */
 /* ------------------------------------------------------------------ */
-function Patrimoine({ patrimoine, setPatrimoine }) {
+function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
   const T = useT();
   const chartTip = makeChartTip(T);
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
   const [histRange, setHistRange] = useState(12);
+  const [compactComp, setCompactComp] = useState(true); // comparaison : vue réduite (mobile)
   const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, outline: "none" };
   const netWorthFlashRef = useRef(null);
 
   const totalActifs = patrimoine.actifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
   const totalPassifs = patrimoine.passifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
   const netWorth = totalActifs - totalPassifs;
+  const hasData = totalActifs > 0 || totalPassifs > 0; // sinon → état vide (pas de fausses données)
   const hist = useMemo(() => ensureHistoriqueDepth(patrimoine.historique, 36), [patrimoine.historique]);
   const prevNW = hist.length >= 2 ? hist[hist.length - 2].v : netWorth;
   const monthlyChange = netWorth - prevNW;
@@ -5411,13 +5413,22 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
   const growthTotalAbs = netWorth - firstNW;
   const growthTotalPct = firstNW !== 0 ? (growthTotalAbs / firstNW) * 100 : 0;
 
-  // "Investissements" toujours en cyan (cohérent avec le reste de l'app),
-  // même si une ancienne couleur est restée enregistrée en local.
-  const catColor = (cat) => cat.id === "investissements" ? T.cyan : cat.color;
+  // Palette distincte par catégorie — les anciennes couleurs (3 bleus proches :
+  // liquidités, immobilier, investissements) étaient illisibles sur le donut.
+  const CAT_PALETTE = {
+    liquidites:        "#14b8a6", // teal
+    investissements:   "#22d3ee", // cyan
+    immobilier:        "#3b82f6", // bleu
+    autres:            "#f59e0b", // ambre
+    creditImmo:        "#ef4444", // rouge
+    autresDettes:      "#f97316", // orange
+    "credits-derived": "#ec4899", // rose
+  };
+  const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
 
   const allSlices = [
     ...patrimoine.actifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
-    ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: c.color })),
+    ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
   ].filter((s) => s.value > 0);
   const totalSlices = allSlices.reduce((s, x) => s + x.value, 0);
 
@@ -5425,7 +5436,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
     const prev = idx > 0 ? chartHist[idx - 1].v : row.v;
     const variation = idx > 0 ? row.v - prev : 0;
     const pctVal = prev > 0 && idx > 0 ? (variation / prev) * 100 : 0;
-    return { m: row.m, v: row.v, variation, pct: pctVal };
+    return { m: row.m, v: row.v, variation, pct: pctVal, first: idx === 0 };
   });
 
   const updateItem = (side, catId, idx, changes) =>
@@ -5574,7 +5585,34 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
         </button>
       </div>
 
+      {/* État vide — aucune donnée patrimoniale saisie */}
+      {!hasData && (
+        <Card>
+          <div style={{ textAlign: "center", padding: "28px 16px", maxWidth: 460, margin: "0 auto" }}>
+            <Wallet size={40} style={{ color: T.muted, margin: "0 auto 14px" }} />
+            <p style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Données non disponibles</p>
+            <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+              Connectez-vous pour une évaluation ou remplissez manuellement vos actifs/passifs.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={onConnectBank}
+                style={{ padding: "12px 18px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: T.blue, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Landmark size={16} /> Connecter ma banque
+              </button>
+              <span style={{ fontSize: 11.5, color: T.muted, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <ShieldCheck size={13} style={{ color: T.green }} /> Tokens sécurisés uniquement, aucune information de connexion transmise
+              </span>
+              <button onClick={() => setEditMode(true)}
+                style={{ padding: "11px 18px", borderRadius: 12, border: `1px solid ${T.border}`, cursor: "pointer", fontWeight: 600, fontSize: 13, background: "transparent", color: T.muted }}>
+                Saisir manuellement
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* KPI row */}
+      {hasData && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Patrimoine net"
@@ -5625,8 +5663,10 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
           </>}
         />
       </div>
+      )}
 
       {/* Évolution + Répartition */}
+      {hasData && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
@@ -5702,6 +5742,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
           </div>
         </Card>
       </div>
+      )}
 
       {/* Détail par catégorie */}
       <Card>
@@ -5719,10 +5760,19 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
       </Card>
 
       {/* Comparison table */}
+      {hasData && (
       <Card>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparaison mois par mois</h2>
-          <p className="text-sm" style={{ color: T.muted }}>Sur la période sélectionnée ci-dessus</p>
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparaison mois par mois</h2>
+            <p className="text-sm" style={{ color: T.muted }}>Sur la période sélectionnée ci-dessus</p>
+          </div>
+          {/* Sélecteur de durée affichée — évite un défilement infini sur mobile */}
+          <select value={compactComp ? "compact" : "all"} onChange={(e) => setCompactComp(e.target.value === "compact")}
+            style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
+            <option value="compact">6 derniers mois</option>
+            <option value="all">Tout afficher</option>
+          </select>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -5734,17 +5784,17 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
               </tr>
             </thead>
             <tbody>
-              {tableRows.map((row, idx) => (
+              {(compactComp ? tableRows.slice(-6) : tableRows).map((row, idx) => (
                 <tr key={row.m} style={{ borderBottom: `1px solid ${T.border}` }}>
                   <td className="py-3 px-3" style={{ color: T.text }}>{row.m}</td>
                   <td className="py-3 px-3 font-bold" style={{ color: T.text }}>{eur(row.v)}</td>
                   <td className="py-3 px-3 font-semibold"
-                    style={{ color: idx === 0 ? T.muted : row.variation >= 0 ? T.green : T.red }}>
-                    {idx === 0 ? "—" : (row.variation > 0 ? "+" : "") + eur(row.variation)}
+                    style={{ color: row.first ? T.muted : row.variation >= 0 ? T.green : T.red }}>
+                    {row.first ? "—" : (row.variation > 0 ? "+" : "") + eur(row.variation)}
                   </td>
                   <td className="py-3 px-3 font-semibold"
-                    style={{ color: idx === 0 ? T.muted : row.pct >= 0 ? T.green : T.red }}>
-                    {idx === 0 ? "—" : (row.pct > 0 ? "+" : "") + pct(row.pct)}
+                    style={{ color: row.first ? T.muted : row.pct >= 0 ? T.green : T.red }}>
+                    {row.first ? "—" : (row.pct > 0 ? "+" : "") + pct(row.pct)}
                   </td>
                 </tr>
               ))}
@@ -5752,6 +5802,7 @@ function Patrimoine({ patrimoine, setPatrimoine }) {
           </table>
         </div>
       </Card>
+      )}
     </div>
   );
 }
@@ -6549,7 +6600,7 @@ export default function App() {
           />}
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
-        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} />}
+        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
         {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}

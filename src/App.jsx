@@ -1998,12 +1998,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => {
-          const hasHoverChart = t.id === "btc" || t.id === "eth" || t.id === "etf";
+          const hasHistoChart = t.id === "btc" || t.id === "eth" || t.id === "etf";
           return (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
-              onMouseEnter={hasHoverChart ? (e) => showCryptoTip(e, t.id) : undefined}
-              onMouseLeave={hasHoverChart ? hideCryptoTip : undefined}
-              title={hasHoverChart ? "Voir l'historique des cours" : undefined}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all inline-flex items-center gap-1.5"
               style={{
                 background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)",
@@ -2012,7 +2009,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
                 cursor: "pointer",
               }}>
               {t.label}
-              {hasHoverChart && (
+              {hasHistoChart && (
                 <span
                   role="button"
                   tabIndex={0}

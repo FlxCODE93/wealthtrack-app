@@ -219,10 +219,15 @@ export function useAuthState() {
         if (mounted) setLoading(false);
         // Sync en arrière-plan — ne bloque JAMAIS la navigation post-login
         if (event === "SIGNED_IN") withTimeout(syncOnLogin(session.user.id), 4000);
-      } else {
+      } else if (event === "SIGNED_OUT") {
+        // Déconnexion EXPLICITE uniquement — on ne coupe jamais lors d'un refresh de token
         if (mounted) setUser(null);
         if (mounted) setLoading(false);
         clearCloudSync();
+      } else {
+        // INITIAL_SESSION sans session, TOKEN_REFRESHED en transit, etc.
+        // On ne touche pas à user — getUser() ci-dessus est autoritaire pour l'état initial.
+        if (mounted) setLoading(false);
       }
     });
 

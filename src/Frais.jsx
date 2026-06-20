@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useT } from "./ThemeProvider.jsx";
 import { glow } from "./theme.js";
 import { Card, Field, makeInputStyle, makeChartTip } from "./ui.jsx";
@@ -6,7 +6,7 @@ import { fv, RATE_ETF_WORLD } from "./finance.js";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { Percent, AlertTriangle, TrendingDown, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Percent, AlertTriangle, TrendingDown, Info, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 
 const eur = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(Number.isFinite(n) ? n : 0)) + " €";
@@ -172,6 +172,8 @@ export default function Frais() {
   const [horizon, setHorizon] = useState(20);
   const [feeRate, setFeeRate] = useState(1.8);
   const [expanded, setExpanded] = useState(null);
+  const glossaireRef = useRef(null);
+  const scrollToGlossaire = () => glossaireRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const impactData = useMemo(() => {
     const sans = fv(capital, 0, RATE_ETF_WORLD, horizon);
@@ -189,10 +191,15 @@ export default function Frais() {
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Percent size={22} style={{ color: "#ef4444" }} />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Analyse des frais</h1>
-            <p style={{ color: T.muted, fontSize: 14, margin: 0 }}>L'impact invisible qui érode votre capital sur le long terme.</p>
+            <p style={{ color: T.muted, fontSize: 14, margin: 0 }}>Frais par enveloppe (PEA, assurance-vie, PER…) et leur impact sur votre capital.</p>
           </div>
+          {/* Raccourci glossaire — pour les novices */}
+          <button onClick={scrollToGlossaire}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.03)", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+            <BookOpen size={15} style={{ color: T.muted }} /> Glossaire
+          </button>
         </div>
       </div>
 
@@ -254,8 +261,8 @@ export default function Frais() {
 
       {/* Tableau comparatif */}
       <Card>
-        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparatif des dispositifs</h2>
-        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Cliquez sur un dispositif pour voir les détails.</p>
+        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparatif des frais par enveloppe</h2>
+        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Frais sur PEA, assurance-vie (UC & fonds €), PER, OPCVM et SCPI. Cliquez pour le détail.</p>
 
         {/* Mobile-friendly: cards stacked */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -268,14 +275,16 @@ export default function Frais() {
                 style={{ borderRadius: 12, border: `1.5px solid ${isOpen ? d.color + "88" : T.border}`, overflow: "hidden", transition: "border-color 0.2s" }}>
                 <button
                   onClick={() => setExpanded(isOpen ? null : d.id)}
-                  style={{ width: "100%", background: isOpen ? `${d.color}08` : "transparent", border: "none", cursor: "pointer", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}
+                  style={{ width: "100%", background: isOpen ? `${d.color}08` : "transparent", border: "none", cursor: "pointer", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, textAlign: "left" }}
                 >
-                  <div style={{ width: 10, height: 10, borderRadius: 5, background: d.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{d.label}</div>
+                  {/* Ligne 1 : pastille + libellé + chevron (jamais de chevauchement) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 5, background: d.color, flexShrink: 0 }} />
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 14, flex: 1, minWidth: 0 }}>{d.label}</div>
+                    {isOpen ? <ChevronUp size={16} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: T.muted, flexShrink: 0 }} />}
                   </div>
-                  {/* Fee badges — wrap on mobile */}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 }}>
+                  {/* Ligne 2 : badges de frais — passent à la ligne proprement sur mobile */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingLeft: 20 }}>
                     {d.fraisEntree > 0 && (
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
                         Entrée {d.fraisEntree}%
@@ -288,7 +297,6 @@ export default function Frais() {
                       {eur(final20)} à 20 ans*
                     </span>
                   </div>
-                  {isOpen ? <ChevronUp size={16} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: T.muted, flexShrink: 0 }} />}
                 </button>
 
                 {isOpen && (
@@ -355,10 +363,12 @@ export default function Frais() {
       </div>
 
       {/* Glossaire */}
-      <Card>
-        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Glossaire — Frais & dispositifs</h2>
-        {GLOSSAIRE.map((g) => <GlossaireItem key={g.term} term={g.term} def={g.def} />)}
-      </Card>
+      <div ref={glossaireRef} style={{ scrollMarginTop: 16 }}>
+        <Card>
+          <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Glossaire — Frais & dispositifs</h2>
+          {GLOSSAIRE.map((g) => <GlossaireItem key={g.term} term={g.term} def={g.def} />)}
+        </Card>
+      </div>
     </div>
   );
 }

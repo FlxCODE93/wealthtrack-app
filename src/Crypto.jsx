@@ -10,6 +10,7 @@ import {
   Shield, ShieldAlert, ShieldOff, ShieldQuestion, Search, X, Coins,
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { ExpandableChart } from "./ChartComponents.jsx";
 import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
 import { API_URL } from "./config.js";
@@ -360,7 +361,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
               Chargement du graphique…
             </div>
           ) : chart && chart.length > 1 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ExpandableChart height={220} title="Historique du cours">
               <AreaChart data={chart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="coinDetailGradient" x1="0" y1="0" x2="0" y2="1">
@@ -382,7 +383,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
                 <Area type="monotone" dataKey="price" stroke={positive ? T.green : T.red} strokeWidth={2}
                   fill="url(#coinDetailGradient)" dot={false} />
               </AreaChart>
-            </ResponsiveContainer>
+            </ExpandableChart>
           ) : (
             <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: T.muted, fontSize: 12 }}>
               Données indisponibles.

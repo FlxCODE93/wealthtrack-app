@@ -5,6 +5,7 @@ import {
   CartesianGrid, Tooltip, ReferenceLine, Legend,
 } from "recharts";
 import { eur } from "./theme.js";
+import { ExpandableChart } from "./ChartComponents.jsx";
 import { useT } from "./ThemeProvider.jsx";
 import { fv, yearsTo, monthsTo, RATE_A, RATE_C, RATE_LEP, RATE_IMMO_APPRECIATION, RATE_CRYPTO_FI_PRUDENT } from "./finance.js";
 import InfoTooltip from "./InfoTooltip.jsx";
@@ -912,7 +913,7 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
             </div>
           )}
         </div>
-        <ResponsiveContainer width="100%" height={300}>
+        <ExpandableChart height={300} title="Trajectoire vers l'indépendance financière">
           <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} interval={Math.floor(chartEnd / 8)} />
@@ -927,7 +928,7 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
             <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={3} />
             <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} strokeDasharray="3 3" />
           </LineChart>
-        </ResponsiveContainer>
+        </ExpandableChart>
       </div>
 
       {/* ── Milestones ── */}

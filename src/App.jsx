@@ -12,7 +12,7 @@ import FI      from "./FI.jsx";
 import Frais   from "./Frais.jsx";
 import {
   FinTechLineChart, FinTechAreaChart, FinTechBarChart,
-  FinTechPieChart, FinTechScatterChart, FinTechComposedChart,
+  FinTechPieChart, FinTechScatterChart, FinTechComposedChart, ExpandableChart,
 } from "./ChartComponents.jsx";
 import {
   BarChart3, TrendingUp, TrendingDown, Shield, Zap, Wallet, PiggyBank, Home,
@@ -24,7 +24,7 @@ import {
   Crown, Star, FileText, ChevronRight, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
-  Plane, Palmtree, Car, GraduationCap, Coins, Percent, Maximize2,
+  Plane, Palmtree, Car, GraduationCap, Coins, Percent,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -3348,7 +3348,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
             <TrendingUp size={18} style={{ color: T.blue }} />
             <h2 className="text-xl font-bold" style={{ color: T.text }}>Simulation à {horizonY} ans</h2>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
+          <ExpandableChart height={240} title="Simulation patrimoniale commune">
             <LineChart data={projSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
@@ -3357,7 +3357,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
               <Line type="monotone" dataKey="Ensemble" stroke={T.blue} strokeWidth={2.5} dot={false} />
               <Line type="monotone" dataKey="Séparément" stroke={T.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
             </LineChart>
-          </ResponsiveContainer>
+          </ExpandableChart>
           <div className="grid grid-cols-3 gap-3 mt-4">
             {[
               { label: "Ensemble", value: eur(last.Ensemble || 0), color: T.blue },
@@ -3753,41 +3753,6 @@ function useElementWidth() {
     roRef.current = ro;
   }, []);
   return [ref, w];
-}
-
-/* Wrapper plein écran pour graphiques recharts bruts (hors composants FinTech).
-   `children` = l'élément chart SANS ResponsiveContainer (il est fourni ici). */
-function ExpandableChart({ children, height = 280, title }) {
-  const T = useT();
-  const [full, setFull] = useState(false);
-  const body = (h) => (
-    <div style={{ width: "100%", height: h }}>
-      <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
-    </div>
-  );
-  return (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => setFull(true)} aria-label="Agrandir le graphique en plein écran"
-        style={{ position: "absolute", top: -2, right: 0, zIndex: 2, background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`, borderRadius: 8, padding: 6, cursor: "pointer", color: T.muted, lineHeight: 0 }}>
-        <Maximize2 size={15} />
-      </button>
-      {body(height)}
-      {full && createPortal(
-        <div onClick={() => setFull(false)} className="wt-fade-in"
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "48px 16px 16px", width: "100%", maxWidth: 1000, position: "relative" }}>
-            {title && <h3 style={{ position: "absolute", top: 16, left: 20, color: T.text, fontWeight: 700, fontSize: 16, margin: 0 }}>{title}</h3>}
-            <button onClick={() => setFull(false)} aria-label="Fermer" style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: T.muted, cursor: "pointer", minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-              <X size={20} />
-            </button>
-            {body("70vh")}
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
 }
 
 const CREDIT_TYPES = {
@@ -4745,7 +4710,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
           </>
         )}
 
-        <ResponsiveContainer width="100%" height={260}>
+        <ExpandableChart height={260} title="Constitution de patrimoine immobilier">
           <LineChart data={ownershipSeries}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
@@ -4755,7 +4720,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
             <Line type="monotone" dataKey="propValue" name="Valeur du bien" stroke={T.muted} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
             {showRentVsBuy && <Line type="monotone" dataKey="Patrimoine locataire" stroke={T.cyan} strokeWidth={2} strokeDasharray="5 3" dot={false} />}
           </LineChart>
-        </ResponsiveContainer>
+        </ExpandableChart>
 
         <div className="grid grid-cols-3 gap-3 mt-4">
           <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>

@@ -24,7 +24,7 @@ import {
   Crown, Star, FileText, ChevronRight, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
-  Plane, Palmtree, Car, GraduationCap, Coins, Percent,
+  Plane, Palmtree, Car, GraduationCap, Coins, Percent, Maximize2,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -3738,6 +3738,41 @@ function useElementWidth() {
   return [ref, w];
 }
 
+/* Wrapper plein écran pour graphiques recharts bruts (hors composants FinTech).
+   `children` = l'élément chart SANS ResponsiveContainer (il est fourni ici). */
+function ExpandableChart({ children, height = 280, title }) {
+  const T = useT();
+  const [full, setFull] = useState(false);
+  const body = (h) => (
+    <div style={{ width: "100%", height: h }}>
+      <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
+    </div>
+  );
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setFull(true)} aria-label="Agrandir le graphique en plein écran"
+        style={{ position: "absolute", top: -2, right: 0, zIndex: 2, background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`, borderRadius: 8, padding: 6, cursor: "pointer", color: T.muted, lineHeight: 0 }}>
+        <Maximize2 size={15} />
+      </button>
+      {body(height)}
+      {full && createPortal(
+        <div onClick={() => setFull(false)} className="wt-fade-in"
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "48px 16px 16px", width: "100%", maxWidth: 1000, position: "relative" }}>
+            {title && <h3 style={{ position: "absolute", top: 16, left: 20, color: T.text, fontWeight: 700, fontSize: 16, margin: 0 }}>{title}</h3>}
+            <button onClick={() => setFull(false)} aria-label="Fermer" style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: T.muted, cursor: "pointer", minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={20} />
+            </button>
+            {body("70vh")}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 const CREDIT_TYPES = {
   immo:      { label: "Immobilier",   color: "#5b8def", Icon: Building2 },
   auto:      { label: "Auto",         color: "#22c79a", Icon: Car },
@@ -3958,7 +3993,6 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
   // Largeur réelle mesurée (ResizeObserver) → dimensions explicites pour Recharts.
   // Évite le ResponsiveContainer qui se mesure à 0 selon le timing de layout.
   const [pieRef, pieW] = useElementWidth();
-  const [areaRef, areaW] = useElementWidth();
 
   const active = credits;
 
@@ -4116,17 +4150,15 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
           <Card>
             <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Trajectoire de désendettement</h2>
             <p className="text-xs mb-3" style={{ color: T.muted }}>Capital restant total projeté, à mensualités constantes.</p>
-            <div ref={areaRef} style={{ width: "100%", height: 200 }}>
-              {areaW > 0 && (
-                <AreaChart width={areaW} height={200} data={desendettement} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                  <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 12 }} />
-                  <YAxis tick={{ fill: T.muted, fontSize: 12 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
-                  <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-                  <Area type="monotone" dataKey="total" stroke={T.blue} fill={`${T.blue}22`} strokeWidth={2} />
-                </AreaChart>
-              )}
-            </div>
+            <ExpandableChart height={200} title="Trajectoire de désendettement">
+              <AreaChart data={desendettement} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 12 }} />
+                <YAxis tick={{ fill: T.muted, fontSize: 12 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
+                <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+                <Area type="monotone" dataKey="total" stroke={T.blue} fill={`${T.blue}22`} strokeWidth={2} />
+              </AreaChart>
+            </ExpandableChart>
           </Card>
         </div>
       )}
@@ -5751,7 +5783,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
               <option value={36}>3 ans</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
+          <ExpandableChart height={280} title="Évolution du patrimoine">
             <AreaChart data={chartHist}>
               <defs>
                 <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
@@ -5767,7 +5799,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
               <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.violet} strokeWidth={2.5}
                 fill="url(#gradNW)" dot={false} />
             </AreaChart>
-          </ResponsiveContainer>
+          </ExpandableChart>
         </Card>
 
         <Card>
@@ -5779,7 +5811,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
             <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
           </div>
           <div className="relative">
-            <ResponsiveContainer width="100%" height={240}>
+            <ExpandableChart height={240} title="Répartition du patrimoine">
               <PieChart>
                 <Pie data={allSlices} dataKey="value" nameKey="name"
                   innerRadius={62} outerRadius={92} paddingAngle={2}
@@ -5788,7 +5820,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
                 </Pie>
                 <Tooltip {...chartTip} itemStyle={{ color: T.text }} formatter={(v) => eur(v)} />
               </PieChart>
-            </ResponsiveContainer>
+            </ExpandableChart>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
               <span className="text-xs" style={{ color: T.muted }}>Patrimoine</span>
               <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>

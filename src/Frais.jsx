@@ -203,6 +203,42 @@ export default function Frais() {
         </div>
       </div>
 
+      {/* Guide pédagogique frais & dispositifs */}
+      <Card>
+        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Comprendre les frais</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+          {[
+            { title: "Frais d'entrée", color: "#ef4444", icon: "✗", desc: "Prélevés une seule fois à la souscription (ex : 3% sur 10 000 € = 300 € perdus dès le départ). Négociables ou nuls en ligne.", tip: "Visez 0% — ils n'existent plus chez les courtiers en ligne." },
+            { title: "Frais de gestion annuels", color: "#f59e0b", icon: "%", desc: "Prélevés chaque année sur votre encours. L'effet de capitalisation les rend dévastateurs : 1,5 %/an sur 20 ans ≈ 25 % du capital final sacrifié.", tip: "ETF PEA : ~0,25 %/an. Fonds actifs : 1,5–2,5 %/an." },
+            { title: "Commission de surperformance", color: "#8b5cf6", icon: "⚠", desc: "Certains fonds prélèvent 10–20 % des gains dépassant leur indice — applicable même si votre capital a baissé en absolu.", tip: "Préférer les fonds sans commission de performance." },
+          ].map((f) => (
+            <div key={f.title} style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${f.color}33` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: f.color + "18", color: f.color, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{f.icon}</span>
+                <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{f.title}</span>
+              </div>
+              <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>{f.desc}</p>
+              <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, fontWeight: 600, background: f.color + "10", color: f.color }}>{f.tip}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 16 }}>
+          <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>
+            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Gestion libre vs gestion pilotée</h3>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#22c55e" }}>Gestion libre :</strong> vous choisissez vous-même les supports (ETF, fonds €, UC). Coût minimal, contrôle total.</p>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Gestion pilotée :</strong> algorithme selon votre profil. Frais supplémentaires ~0,3–0,9 %/an. Pratique mais coûteux sur le long terme.</p>
+            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 600 }}>Si vous pouvez nommer ce que vous investissez → choisissez la gestion libre.</div>
+          </div>
+          <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>
+            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Unités de Compte vs fonds euros</h3>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#f59e0b" }}>Fonds euros :</strong> capital garanti, rendement ~2–3 %. Idéal pour la partie sécurisée de votre AV ou PER.</p>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Unités de Compte (UC) :</strong> supports non garantis (actions, ETF, SCPI…). Potentiel supérieur, risque de perte en capital.</p>
+            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.08)", color: "#f59e0b", fontWeight: 600 }}>Jeune = UC dominants · Proche retraite = glissement progressif vers fonds €.</div>
+          </div>
+        </div>
+      </Card>
+
       {/* Simulateur d'impact */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>

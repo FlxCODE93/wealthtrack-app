@@ -193,7 +193,7 @@ export default function Frais() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Mes frais</h1>
-            <p style={{ color: T.muted, fontSize: 14, margin: 0 }}>Frais par enveloppe (PEA, assurance-vie, PER…) et leur impact sur votre capital.</p>
+            <p style={{ color: T.muted, fontSize: 14, margin: 0 }}>Combien les frais de vos placements vous coûtent vraiment — et comment payer moins.</p>
           </div>
           {/* Raccourci glossaire — pour les novices */}
           <button onClick={scrollToGlossaire}
@@ -243,7 +243,7 @@ export default function Frais() {
       <Card>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
           <TrendingDown size={18} style={{ color: "#ef4444" }} />
-          <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, margin: 0 }}>Simulateur d'impact — frais annuels</h2>
+          <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, margin: 0 }}>Combien les frais vous coûtent</h2>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
@@ -282,9 +282,9 @@ export default function Frais() {
             <div style={{ color: T.text, fontWeight: 800, fontSize: 22 }}>{eur(impactData.avec)}</div>
           </div>
           <div style={{ borderRadius: 12, padding: 16, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.3)" }}>
-            <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>MANQUE À GAGNER sur {horizon} ans</div>
+            <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Ce que vous perdez sur {horizon} ans</div>
             <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 22 }}>− {eur(impactData.perte)}</div>
-            <div style={{ color: "#ef4444", fontSize: 12, opacity: 0.8 }}>{impactData.pct}% du capital final sacrifié</div>
+            <div style={{ color: "#ef4444", fontSize: 12, opacity: 0.8 }}>soit {impactData.pct}% de votre capital en moins</div>
           </div>
         </div>
 
@@ -297,8 +297,8 @@ export default function Frais() {
 
       {/* Tableau comparatif */}
       <Card>
-        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparatif des frais par enveloppe</h2>
-        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Frais sur PEA, assurance-vie (UC & fonds €), PER, OPCVM et SCPI. Cliquez pour le détail.</p>
+        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparer les placements</h2>
+        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>PEA, assurance-vie, PER, fonds actifs et SCPI. Cliquez sur un placement pour voir le détail.</p>
 
         {/* Mobile-friendly: cards stacked */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -366,7 +366,7 @@ export default function Frais() {
                           {d.avantages.map((a) => <div key={a} style={{ color: T.muted, fontSize: 12, marginBottom: 3 }}>• {a}</div>)}
                         </div>
                         <div style={{ flex: 1, minWidth: 140 }}>
-                          <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>✗ Points de vigilance</div>
+                          <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>✗ Inconvénients</div>
                           {d.inconvenients.map((i) => <div key={i} style={{ color: T.muted, fontSize: 12, marginBottom: 3 }}>• {i}</div>)}
                         </div>
                       </div>
@@ -390,10 +390,10 @@ export default function Frais() {
       <div style={{ borderRadius: 14, padding: 16, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", gap: 14, alignItems: "flex-start" }}>
         <AlertTriangle size={20} style={{ color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
         <div>
-          <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Le coût invisible des fonds actifs</div>
+          <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Attention aux fonds gérés activement</div>
           <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
-            Selon l'étude SPIVA (S&P), <strong style={{ color: T.text }}>plus de 80% des fonds actifs sous-performent leur indice de référence sur 10 ans</strong> — une fois les frais déduits.
-            1% de frais en plus sur 30 ans représente <strong style={{ color: "#ef4444" }}>environ 26% de capital en moins</strong>.
+            D'après une grande étude de S&P, <strong style={{ color: T.text }}>plus de 8 fonds gérés activement sur 10 font moins bien qu'un simple ETF sur 10 ans</strong>, une fois les frais déduits.
+            1 % de frais en plus pendant 30 ans, c'est <strong style={{ color: "#ef4444" }}>environ 26 % de capital en moins</strong> au final.
           </div>
         </div>
       </div>
@@ -401,7 +401,7 @@ export default function Frais() {
       {/* Glossaire */}
       <div ref={glossaireRef} style={{ scrollMarginTop: 16 }}>
         <Card>
-          <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Glossaire — Frais & dispositifs</h2>
+          <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Le vocabulaire des frais, expliqué simplement</h2>
           {GLOSSAIRE.map((g) => <GlossaireItem key={g.term} term={g.term} def={g.def} />)}
         </Card>
       </div>

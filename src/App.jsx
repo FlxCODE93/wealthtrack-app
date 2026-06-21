@@ -2224,7 +2224,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <tbody>
                 {[
                   { key: "rate",     label: "Rendement annuel", render: (c) => <span style={{ color: c.color, fontWeight: 700 }}>{c.rate}</span> },
-                  { key: "y10",      label: "Capital à 10 ans", render: (c) => eur(c.y10) },
                   { key: "final",    label: `Capital final (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
                   { key: "gain",     label: "Gains générés", render: (c) => <span style={{ color: c.gain >= 0 ? T.green : T.red }}>{(c.gain >= 0 ? "+" : "") + eur(c.gain)}</span> },
                   { key: "apport",   label: "Apports cumulés", render: (c) => <span style={{ color: T.muted }}>{eur(c.apport)}</span> },

@@ -325,6 +325,8 @@ export default function TransactionImportTab({ onImport }) {
         cat: cfg.cat,
         type: cfg.type,
         amount: tx.amount,
+        source: "api",
+        date: tx.date || new Date().toISOString().slice(0, 10),
       };
     });
     onImport(mapped);

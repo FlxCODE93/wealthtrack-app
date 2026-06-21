@@ -708,7 +708,7 @@ function ObjectiveModal({ onClose, onPick }) {
   );
 }
 
-function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
+function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, credits = [], snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
@@ -800,6 +800,40 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   const healthScore = useMemo(() => calculateHealthScore(totals, patrimoine, simParams), [totals, patrimoine, simParams]);
   const badge = getScoreBadge(healthScore.overall);
   const scenarios = useMemo(() => calculateWhatIfScenarios(totals, simParams), [totals, simParams]);
+
+  const progressTips = useMemo(() => {
+    const tips = [];
+    if (revenus <= 0) return tips;
+    // Écart épargne
+    if (tauxEpargne < SAVINGS_RATE_TARGET) {
+      const gap = (SAVINGS_RATE_TARGET - tauxEpargne).toFixed(0);
+      const gapEur = Math.round(revenus * Number(gap) / 100);
+      tips.push({ text: `Épargner +${gap} % de plus (≈ +${eur(gapEur)}/mois) pour atteindre l'objectif de ${SAVINGS_RATE_TARGET} %`, pro: false });
+    }
+    // Crédit le plus cher (TAEG réel depuis les données)
+    const creditsActifs = (credits || []).filter((c) => Number(c.taux) > 0);
+    if (creditsActifs.length > 0) {
+      const worst = creditsActifs.reduce((a, b) => (Number(b.taux) > Number(a.taux) ? b : a));
+      const taeg = Number(worst.taux);
+      if (taeg > 4) {
+        tips.push({ text: `Solder "${worst.label || "crédit"}" à ${taeg.toFixed(2).replace(".", ",")} % de TAEG en priorité — c'est votre dette la plus coûteuse`, pro: false });
+      }
+    }
+    // Diversification (Pro)
+    if (healthScore.breakdown.diversification.score < 25) {
+      tips.push({ text: "Ouvrir un PEA (CW8 / WPEA) — 0 % d'impôt sur vos plus-values après 5 ans", pro: true });
+    }
+    // Taux d'investissement (Pro)
+    if (healthScore.breakdown.investment.score < 15) {
+      const investPct = (invest / revenus * 100).toFixed(1).replace(".", ",");
+      tips.push({ text: `Investir ≥ 10 % de vos revenus — vous êtes à ${investPct} % actuellement`, pro: true });
+    }
+    // Ratio dettes/actifs
+    if (healthScore.breakdown.health.score < 7) {
+      tips.push({ text: "Alléger votre endettement pour améliorer la solidité de votre bilan", pro: false });
+    }
+    return tips;
+  }, [tauxEpargne, revenus, invest, credits, healthScore]);
 
   const gainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + w.gain : s), 0);
   const ltGainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + longTermGain(w.gain) : s), 0);
@@ -981,8 +1015,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               )}
             </div>
             <div className="mb-4">
-              <span className="font-black" style={{ fontSize: 52, color: badge.color }}>{healthScore.overall}</span>
-              <span className="text-2xl font-normal" style={{ color: T.muted }}>/100</span>
+              <span style={{ fontSize: 52, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
+              <span style={{ fontSize: 22, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
             </div>
             <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>
               DÉTAIL PAR CRITÈRE
@@ -1010,12 +1044,30 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             </button>
             <div className="rounded-xl p-3 text-xs flex-1" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
               <div className="font-semibold mb-2" style={{ color: T.text }}>Pour progresser :</div>
-              <ul style={{ color: T.muted, paddingLeft: 14, lineHeight: 1.8, margin: 0 }}>
-                {tauxEpargne < SAVINGS_RATE_TARGET && <li>Épargner {(SAVINGS_RATE_TARGET - tauxEpargne).toFixed(0)} % de plus</li>}
-                {healthScore.breakdown.diversification.score < 25 && <li>Diversifier vos placements</li>}
-                {healthScore.breakdown.investment.score < 15 && <li>Investir ≥ 10 % de vos revenus</li>}
-                {healthScore.breakdown.health.score < 7 && <li>Réduire votre ratio dettes/actifs</li>}
-              </ul>
+              {progressTips.length === 0 ? (
+                <p style={{ color: T.green, margin: 0 }}>Excellent — rien à optimiser pour l'instant.</p>
+              ) : (
+                <ul style={{ color: T.muted, margin: 0, padding: 0, listStyle: "none" }}>
+                  {progressTips.map((tip, i) => {
+                    const locked = tip.pro && plan === "free";
+                    return (
+                      <li key={i} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, lineHeight: 1.5 }}>
+                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: locked ? T.amber : T.muted, flexShrink: 0, opacity: 0.6 }} />
+                        {locked ? (
+                          <>
+                            <span style={{ filter: "blur(4px)", userSelect: "none", flex: 1, pointerEvents: "none" }}>{tip.text}</span>
+                            <button onClick={() => setView("pricing")} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${T.amber}1a`, border: `1px solid ${T.amber}55`, borderRadius: 4, padding: "1px 6px", fontWeight: 700, color: T.amber, cursor: "pointer", fontSize: 10, flexShrink: 0 }}>
+                              <Lock size={8} /> Pro
+                            </button>
+                          </>
+                        ) : (
+                          <span style={{ flex: 1 }}>{tip.text}</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
         </div>
@@ -1469,6 +1521,8 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
   const [editId, setEditId]    = useState(null);
   const [editBuf, setEditBuf]  = useState({});
   const [newTx, setNewTx]      = useState({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
+  // Rapprochement bancaire : solde réel saisi par mois (AAAA-MM → montant)
+  const [soldeReelMap, setSoldeReelMap] = useLocalStorage("wt_solde_reel", {});
 
   // ── Gestion du temps : chaque transaction porte une date (les anciennes sans
   //    date sont rattachées au mois courant pour rester visibles). ───────────
@@ -1500,11 +1554,17 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
     .filter((t) => txYM(t) === period)
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
+  // Rapprochement : solde calculé (flux du mois) vs solde réel saisi
+  const soldeCalc = useMemo(() => tx.filter(t => txYM(t) === period).reduce((s, t) => s + t.amount, 0), [tx, period]);
+  const soldeReelStr = soldeReelMap[period] ?? "";
+  const soldeReelVal = soldeReelStr !== "" ? parseFloat(soldeReelStr) : null;
+  const rapprochEcart = soldeReelVal !== null && !isNaN(soldeReelVal) ? soldeReelVal - soldeCalc : null;
+
   const handleAdd = () => {
     const amount = parseFloat(newTx.amount);
     if (!newTx.label.trim() || !amount) return;
     const signed = newTx.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
-    onAdd?.({ ...newTx, amount: signed, id: Date.now(), date: new Date().toISOString().slice(0, 10) });
+    onAdd?.({ ...newTx, amount: signed, id: Date.now(), date: new Date().toISOString().slice(0, 10), source: "manual" });
     setNewTx({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
     setShowAdd(false);
   };
@@ -1650,6 +1710,43 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             </div>
           </div>
 
+          {/* ── Rapprochement bancaire ──────────────────────────── */}
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 18px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+              <RefreshCw size={15} style={{ color: T.muted }} />
+              <span style={{ color: T.muted, fontSize: 13, fontWeight: 600 }}>Rapprochement</span>
+              <span style={{ color: T.muted, fontSize: 12 }}>Solde calculé :</span>
+              <span style={{ color: soldeCalc >= 0 ? T.green : T.red, fontWeight: 700, fontSize: 13 }}>
+                {soldeCalc >= 0 ? "+" : ""}{eur(soldeCalc)}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ color: T.muted, fontSize: 12 }}>Solde bancaire réel :</label>
+              <input
+                type="number"
+                placeholder="Ex : 3 500"
+                value={soldeReelStr}
+                onChange={(e) => setSoldeReelMap(prev => ({ ...prev, [period]: e.target.value }))}
+                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.text, fontSize: 13, width: 120, outline: "none" }}
+              />
+            </div>
+            {rapprochEcart !== null && (
+              <div style={{
+                width: "100%",
+                padding: "8px 12px", borderRadius: 8,
+                background: Math.abs(rapprochEcart) <= 5 ? `${T.green}12` : Math.abs(rapprochEcart) <= 50 ? `${T.amber}12` : `${T.red}12`,
+                border: `1px solid ${Math.abs(rapprochEcart) <= 5 ? T.green : Math.abs(rapprochEcart) <= 50 ? T.amber : T.red}44`,
+                color: Math.abs(rapprochEcart) <= 5 ? T.green : Math.abs(rapprochEcart) <= 50 ? T.amber : T.red,
+                fontSize: 12, fontWeight: 600,
+              }}>
+                {Math.abs(rapprochEcart) <= 5
+                  ? "Solde équilibré — aucun écart significatif."
+                  : `Écart de ${eur(Math.abs(rapprochEcart))} ${rapprochEcart > 0 ? "(solde réel supérieur — transactions manquantes ?)" : "(solde réel inférieur — dépenses non enregistrées ?)"}`
+                }
+              </div>
+            )}
+          </div>
+
           <Card>
             <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>
               Transactions de {monthLabel(period)} ({list.length})
@@ -1709,6 +1806,16 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                           <span className="text-xs" style={{ color: T.muted }}>{t.cat}</span>
                           <span className="px-2 py-0.5 rounded-md text-xs font-medium"
                             style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>
+                          {t.source && (
+                            <span style={{
+                              padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+                              background: t.source === "api" ? `${T.blue}1a` : "rgba(255,255,255,0.05)",
+                              color: t.source === "api" ? T.blue : T.muted,
+                              border: `1px solid ${t.source === "api" ? T.blue + "44" : T.border}`,
+                            }}>
+                              {t.source === "api" ? "API" : "Saisie"}
+                            </span>
+                          )}
                           <div className="flex gap-1 ml-auto">
                             <button onClick={() => startEdit(t)}
                               style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.muted }}>
@@ -6730,7 +6837,7 @@ export default function App() {
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
+        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}

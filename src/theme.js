@@ -1,9 +1,9 @@
 export const C = {
-  // Ultra-dark — cinema fintech palette (teinté violet façon Landing, pas full-black)
-  bg:        "#0a0816",        // Deep violet-navy (au lieu d'un noir plat)
-  panel:     "#0d0b1e",        // Section surface — léger voile violet
-  card:      "#13112a",        // Elevated card — base violette discrète
-  border:    "rgba(255,255,255,0.07)",  // Subtle glass divider
+  // Bleu nuit institutionnel — plus sobre, moins violet, plus rassurant
+  bg:        "#0f111a",        // Blue-navy profond (institutionnel)
+  panel:     "#111827",        // Surface section
+  card:      "#161b2e",        // Carte élevée
+  border:    "rgba(255,255,255,0.06)",  // Subtle glass divider
   text:      "#f8fafc",        // Pale white (not pure white)
   muted:     "#94a3b8",        // Secondary/muted text
 
@@ -34,12 +34,12 @@ export const C = {
   shineAccent: "#ffffff",
 };
 
-// Mesh gradient hero — violet + indigo + cyan (renforcé pour harmoniser avec la Landing)
+// Mesh gradient hero — plus sobre, moins violet, plus institutionnel
 C.bgGradient = `
-  radial-gradient(ellipse 1000px 560px at 15% 0%, rgba(124, 58, 237, 0.26), transparent 55%),
-  radial-gradient(ellipse 780px 440px at 85% 18%, rgba(79, 70, 229, 0.18), transparent 58%),
-  radial-gradient(ellipse 700px 360px at 50% 100%, rgba(139, 92, 246, 0.14), transparent 62%),
-  radial-gradient(ellipse 620px 340px at 95% 80%, rgba(8, 145, 178, 0.08), transparent 60%),
+  radial-gradient(ellipse 1000px 560px at 15% 0%, rgba(79, 70, 229, 0.14), transparent 55%),
+  radial-gradient(ellipse 780px 440px at 85% 18%, rgba(59, 130, 246, 0.09), transparent 58%),
+  radial-gradient(ellipse 700px 360px at 50% 100%, rgba(139, 92, 246, 0.07), transparent 62%),
+  radial-gradient(ellipse 620px 340px at 95% 80%, rgba(8, 145, 178, 0.06), transparent 60%),
   ${C.bg}
 `;
 
@@ -101,8 +101,8 @@ export const ASSET = {
   eth:    "#f1f5f9",   // Ethereum — blanc cassé
 };
 
-// Halo lumineux diffus autour d'un élément (focus / accent)
-export const glow = (color, size = 40, alpha = "55") => `0 0 ${size}px ${color}${alpha}`;
+// Halo lumineux diffus autour d'un élément (focus / accent) — réduit pour sobriété
+export const glow = (color, size = 32, alpha = "28") => `0 0 ${size}px ${color}${alpha}`;
 
 export const eur = (n) =>
   n == null ? "—" :

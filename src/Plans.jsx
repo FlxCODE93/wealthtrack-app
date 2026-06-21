@@ -227,6 +227,7 @@ function buildPlan4(totals, transactions, credits = []) {
 
 /* ─── Composant PlanCard ─────────────────────────────────────────────── */
 function PlanCard({ plan, completed, onToggle, onPlanComplete, recommended = false }) {
+  const [open, setOpen] = useState(false);
   const done = plan.steps.filter((_, i) => completed.includes(i)).length;
   const progress = plan.steps.length > 0 ? Math.round((done / plan.steps.length) * 100) : 0;
 

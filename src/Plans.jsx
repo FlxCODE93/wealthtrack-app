@@ -3,7 +3,7 @@
  * 3 plans auto-générés depuis les données réelles + suivi par cases à cocher.
  */
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { CheckSquare, Square, TrendingUp, ChevronDown, ChevronUp, Shield, Home, PartyPopper } from "lucide-react";
+import { CheckSquare, Square, TrendingUp, ChevronDown, ChevronUp, Shield, Home, PartyPopper, CreditCard, Sparkles } from "lucide-react";
 import { C, eur } from "./theme.js";
 import { fvMonthly, loanCap, yearsToTarget, RATE_A } from "./finance.js";
 import { gsap, usePrevious, useCelebrateOnTrue, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion } from "./lib/motion.jsx";
@@ -184,15 +184,62 @@ function buildPlan3(totals, patrimoine, age, hasRealEstate) {
   };
 }
 
+/* ─── PLAN 4 : Rembourser plus vite les crédits ─────────────────────── */
+const DEBT_RE = /cofidis|cetelem|sofinco|oney|floa|younited|cofinoga|franfinance|sygma|cashper|cr[ée]dit conso|cr[ée]dit renouvelable|revolving|\bloa\b|\bpr[êe]t\b|remboursement cr[ée]dit/i;
+
+function buildPlan4(totals, transactions, credits = []) {
+  // Mensualité d'accélération possible = moitié du reste à vivre (prudent).
+  const surplus = Math.max(0, Math.round((totals.restant ?? (totals.revenus - totals.chargesFixes - totals.depensesVar - totals.invest)) || 0));
+  const accel = Math.round(surplus * 0.5);
+  const debtTx = transactions.filter((t) => t.amount < 0 && DEBT_RE.test(t.label || ""));
+  const monthlyDebt = debtTx.reduce((s, t) => s + Math.abs(t.amount), 0)
+    + (credits || []).reduce((s, c) => s + (Number(c.mensualite) || 0), 0);
+
+  return {
+    id: "plan4",
+    color: C.red,
+    Icon: CreditCard,
+    title: "Rembourser plus vite vos crédits",
+    subtitle: "Solder le plus cher d'abord, réduire le coût total des intérêts",
+    verdict: "PRIORITAIRE",
+    verdictColor: C.red,
+    impact: {
+      label: "Accélération possible",
+      value: accel > 0 ? `${eur(accel)}/mois` : "—",
+      sub: monthlyDebt > 0 ? `Mensualités de crédit détectées : ${eur(Math.round(monthlyDebt))}/mois` : "Versée directement sur le capital",
+    },
+    steps: [
+      { label: "Attaquer d'abord le crédit au TAEG le plus élevé (conso, revolving avant l'immobilier)", gain: 0 },
+      ...(accel > 0 ? [{ label: `Affecter ${eur(accel)}/mois de votre reste à vivre au remboursement anticipé`, gain: 0 }] : [{ label: "Dégager un surplus mensuel (réduction des dépenses) pour accélérer", gain: 0 }]),
+      { label: "Arrondir les mensualités à la centaine supérieure — raccourcit la durée sans douleur", gain: 0 },
+      { label: "Vérifier les indemnités de remboursement anticipé (IRA) : immo plafonné à 6 mois d'intérêts / 3 % du capital", gain: 0 },
+      { label: "Si votre taux dépasse le marché : demander un rachat / une renégociation", gain: 0 },
+      { label: "Conserver l'épargne de précaution (3–6 mois) avant d'accélérer", gain: 0 },
+    ],
+    detail: [
+      `Reste à vivre estimé          : ${eur(surplus)}/mois`,
+      `Accélération conseillée       : ${eur(accel)}/mois`,
+      `Mensualités de crédit         : ${eur(Math.round(monthlyDebt))}/mois`,
+    ],
+    note: "Crédit immobilier à moins de 3,5 % : placer le surplus peut être plus rentable que rembourser — voir « Rembourser ou investir ? ».",
+  };
+}
+
 /* ─── Composant PlanCard ─────────────────────────────────────────────── */
-function PlanCard({ plan, completed, onToggle, onPlanComplete }) {
-  const [open, setOpen] = useState(false);
+function PlanCard({ plan, completed, onToggle, onPlanComplete, recommended = false }) {
   const done = plan.steps.filter((_, i) => completed.includes(i)).length;
   const progress = plan.steps.length > 0 ? Math.round((done / plan.steps.length) * 100) : 0;
 
   const cardRef = useRef(null);
   const confettiRef = useRef(null);
   const iconRefs = useRef([]);
+
+  // Plan recommandé (objectif IA choisi) : scroll doux dessus à l'arrivée.
+  useEffect(() => {
+    if (recommended && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [recommended]);
 
   // Célébration (pop + confettis) quand toutes les étapes du plan sont cochées
   const justCompleted = plan.steps.length > 0 && progress === 100;
@@ -216,11 +263,18 @@ function PlanCard({ plan, completed, onToggle, onPlanComplete }) {
     <div ref={cardRef} style={{
       position: "relative",
       background: C.panel,
-      border: `1px solid ${plan.color}44`,
+      border: `1.5px solid ${recommended ? C.violet : `${plan.color}44`}`,
       borderRadius: 20,
       overflow: "hidden",
+      boxShadow: recommended ? `0 0 0 3px ${C.violet}22` : "none",
+      scrollMarginTop: 16,
     }}>
       <div ref={confettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible", zIndex: 5 }} />
+      {recommended && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 24px", background: `${C.violet}1a`, color: C.violet, fontSize: 12, fontWeight: 700 }}>
+          <Sparkles size={13} /> Recommandé pour votre objectif
+        </div>
+      )}
       {/* Header */}
       <div style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}` }}>
         <div className="flex items-start justify-between gap-4">
@@ -335,7 +389,7 @@ function PlanCard({ plan, completed, onToggle, onPlanComplete }) {
 }
 
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
-export default function Plans({ totals, simParams, patrimoine, transactions, profile }) {
+export default function Plans({ totals, simParams, patrimoine, transactions, profile, credits = [], objective = null }) {
   const horizon = simParams?.horizon || 20;
   const age = profile?.age;
 
@@ -345,17 +399,35 @@ export default function Plans({ totals, simParams, patrimoine, transactions, pro
   const hasRealEstate = (patrimoine?.actifs?.find((c) => c.id === "immobilier")?.items || [])
     .some((i) => i.value > 0);
 
-  const plans = useMemo(() => [
-    buildPlan1(totals, transactions, horizon),
-    buildPlan2(totals, horizon, hasPEA),
-    buildPlan3(totals, patrimoine, age, hasRealEstate),
-  ], [totals, transactions, patrimoine, horizon, age, hasPEA, hasRealEstate]);
+  // Y a-t-il des crédits / dettes ? → on n'affiche le plan crédits que si pertinent
+  // (dette détectée OU objectif explicite « rembourser mes crédits »).
+  const hasDebt = (credits && credits.length > 0)
+    || (transactions || []).some((t) => t.amount < 0 && DEBT_RE.test(t.label || ""));
 
-  const [completed, setCompleted] = useState({ plan1: [], plan2: [], plan3: [] });
+  // Objectif IA → identifiant du plan à épingler en haut.
+  const PIN_BY_OBJECTIVE = { epargne: "plan1", depenses: "plan1", investir: "plan2", credits: "plan4" };
+  const pinnedId = PIN_BY_OBJECTIVE[objective] || null;
+
+  const plans = useMemo(() => {
+    const base = [
+      buildPlan1(totals, transactions, horizon),
+      buildPlan2(totals, horizon, hasPEA),
+      buildPlan3(totals, patrimoine, age, hasRealEstate),
+    ];
+    if (hasDebt || objective === "credits") base.push(buildPlan4(totals, transactions, credits));
+    // Épingle le plan correspondant à l'objectif en tête de liste.
+    if (pinnedId) {
+      const idx = base.findIndex((p) => p.id === pinnedId);
+      if (idx > 0) { const [pinned] = base.splice(idx, 1); base.unshift(pinned); }
+    }
+    return base;
+  }, [totals, transactions, patrimoine, horizon, age, hasPEA, hasRealEstate, hasDebt, objective, pinnedId, credits]);
+
+  const [completed, setCompleted] = useState({ plan1: [], plan2: [], plan3: [], plan4: [] });
 
   const toggle = (planId, stepIdx) => {
     setCompleted((prev) => {
-      const list = prev[planId];
+      const list = prev[planId] || [];
       return {
         ...prev,
         [planId]: list.includes(stepIdx) ? list.filter((i) => i !== stepIdx) : [...list, stepIdx],
@@ -425,9 +497,10 @@ export default function Plans({ totals, simParams, patrimoine, transactions, pro
         <PlanCard
           key={plan.id}
           plan={plan}
-          completed={completed[plan.id]}
+          completed={completed[plan.id] || []}
           onToggle={(i) => toggle(plan.id, i)}
           onPlanComplete={handlePlanComplete}
+          recommended={pinnedId === plan.id}
         />
       ))}
 

@@ -691,7 +691,7 @@ function ObjectiveModal({ onClose, onPick }) {
           {AI_OBJECTIVES.map((o) => {
             const Icon = o.icon;
             return (
-              <button key={o.id} onClick={() => onPick(o.prompt)}
+              <button key={o.id} onClick={() => onPick(o)}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderRadius: 14, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.03)", color: T.text, cursor: "pointer", textAlign: "left", fontWeight: 600, fontSize: 14.5 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${T.violet}66`; e.currentTarget.style.background = `${T.violet}10`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}>
@@ -710,7 +710,7 @@ function ObjectiveModal({ onClose, onPick }) {
   );
 }
 
-function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
+function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
@@ -1168,11 +1168,12 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, breakdown, pat
       {objectiveOpen && (
         <ObjectiveModal
           onClose={() => setObjectiveOpen(false)}
-          onPick={(prompt) => {
+          onPick={(o) => {
             setObjectiveOpen(false);
+            setAiObjective?.(o.id);   // épingle le plan associé dans "Plan d'action"
             setView("plans");
             // Laisse la vue "Plan d'action" se monter avant d'ouvrir le chat seedé.
-            setTimeout(() => window.dispatchEvent(new CustomEvent("wt:open-chat", { detail: { prompt } })), 120);
+            setTimeout(() => window.dispatchEvent(new CustomEvent("wt:open-chat", { detail: { prompt: o.prompt } })), 120);
           }}
         />
       )}
@@ -6482,6 +6483,7 @@ export default function App() {
 
   // Surcharges manuelles par mois : { "AAAA-MM": { revenus?, chargesFixes?, depensesVar?, invest? } }.
   // Persistées (clé wt_ → synchro cloud). Prioritaires sur la somme automatique.
+  const [aiObjective, setAiObjective] = useState(null); // objectif IA → plan épinglé dans "Plan d'action"
   const [adjustments, setAdjustments] = useLocalStorage("wt_manual_adjustments", {});
   const CUR_YM = new Date().toISOString().slice(0, 7);
   const monthAdj = adjustments[CUR_YM] || {};
@@ -6648,7 +6650,7 @@ export default function App() {
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
+        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}
@@ -6662,7 +6664,7 @@ export default function App() {
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
-        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}

@@ -572,7 +572,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
     { id: "simulations", label: "Simulations",        icon: TrendingUp },
     { id: "plans",       label: "Plan d'action",      icon: Star },
-    { id: "frais",       label: "Analyse des frais",  icon: Percent },
+    { id: "frais",       label: "Mes frais",          icon: Percent },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
@@ -2316,7 +2316,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         {/* Teaser → Analyse des frais */}
         <div style={{ borderRadius: 14, padding: 16, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Analyse des frais — simulateur complet</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Mes frais — simulateur complet</div>
             <div style={{ color: T.muted, fontSize: 13 }}>Comparez ETF PEA, AV, PER, OPCVM, SCPI — et mesurez le coût réel des frais sur votre capital.</div>
           </div>
           <button onClick={() => setView("frais")}
@@ -6591,7 +6591,7 @@ const VIEW_LABELS = {
   patrimoine:  "Patrimoine",
   simulations: "Simulations",
   plans:       "Plan d'action",
-  frais:       "Analyse des frais",
+  frais:       "Mes frais",
   objectifs:   "Objectifs",
   fiscalite:   "Fiscalité",
   couple:      "Couple / Famille",

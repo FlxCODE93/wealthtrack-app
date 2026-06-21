@@ -192,7 +192,7 @@ export default function Frais() {
             <Percent size={22} style={{ color: "#ef4444" }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Analyse des frais</h1>
+            <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Mes frais</h1>
             <p style={{ color: T.muted, fontSize: 14, margin: 0 }}>Frais par enveloppe (PEA, assurance-vie, PER…) et leur impact sur votre capital.</p>
           </div>
           {/* Raccourci glossaire — pour les novices */}

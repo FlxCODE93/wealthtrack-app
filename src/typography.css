@@ -224,7 +224,7 @@ code, pre, .type-mono {
 /* Anneau de focus clavier global (WCAG 2.4.7). :where() = spécificité 0,
    donc les styles de focus spécifiques (ex. .wt-button-press) priment. */
 :where(button, a, [role="button"], input, select, textarea):focus-visible {
-  outline: 2px solid #8b5cf6;
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
   border-radius: 4px;
 }

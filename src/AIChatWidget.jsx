@@ -119,9 +119,9 @@ function AIChatCard({ ctx, onClose, onSignup, seed, onSeedConsumed }) {
               <div className="flex flex-wrap gap-2 justify-center">
                 {QUICK.map((q) => (
                   <button key={q} onClick={() => sendMessage(q)}
-                    className="hover:bg-[rgba(139,92,246,0.16)] hover:border-[rgba(139,92,246,0.4)] transition-colors"
+                    className="hover:bg-[rgba(59,130,246,0.16)] hover:border-[rgba(59,130,246,0.4)] transition-colors"
                     style={{
-                      background: "rgba(139,92,246,0.08)", border: `1px solid rgba(139,92,246,0.25)`,
+                      background: "rgba(59,130,246,0.08)", border: `1px solid rgba(59,130,246,0.25)`,
                       borderRadius: 20, padding: "5px 12px", fontSize: 11, color: C.violet, cursor: "pointer",
                     }}>{q}</button>
                 ))}

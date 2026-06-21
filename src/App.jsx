@@ -602,11 +602,13 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           <button
             key={it.id}
             onClick={() => setView(it.id)}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition"
+            className="flex items-center gap-3 py-3 rounded-xl text-left transition"
             style={{
-              background: active ? T.gradientPrimary : "transparent",
-              boxShadow: active ? glow(T.violet, 24, "33") : "none",
-              color: active ? "#fff" : locked ? T.muted + "88" : T.muted,
+              paddingLeft: active ? 13 : 16, paddingRight: 16,
+              background: active ? "rgba(255,255,255,0.06)" : "transparent",
+              borderLeft: active ? `3px solid ${T.blue}` : "3px solid transparent",
+              boxShadow: "none",
+              color: active ? T.text : locked ? T.muted + "88" : T.muted,
               fontWeight: active ? 600 : 500,
             }}
           >
@@ -860,8 +862,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               className="flex-1 rounded-2xl p-5 relative"
               style={{
                 minWidth: 160, cursor: "pointer", background: T.card,
-                border: `1px solid ${hovered ? T.violet : (overridden ? `${T.violet}66` : T.border)}`,
-                boxShadow: hovered ? glow(T.violet, 22, "33") : "none",
+                border: `1px solid ${hovered ? T.blue : (overridden ? `${T.blue}55` : T.border)}`,
+                boxShadow: hovered ? `0 0 0 1px ${T.blue}33` : "none",
                 transition: "border-color .15s ease, box-shadow .15s ease",
               }}>
               <div className="flex items-start justify-between">
@@ -873,7 +875,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                 {overridden && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
                     title="Montant modifié manuellement — cliquer pour ajuster ou réinitialiser"
-                    style={{ background: `${T.violet}1f`, color: T.violet, fontSize: 11, fontWeight: 700 }}>
+                    style={{ background: `${T.blue}18`, color: T.blue, fontSize: 11, fontWeight: 700 }}>
                     <Pencil size={10} /> Manuel
                   </span>
                 )}
@@ -914,7 +916,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                 Annuler
               </button>
               <button onClick={saveEdit}
-                style={{ background: T.violet, border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                style={{ background: T.blue, border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
                 Enregistrer
               </button>
             </div>
@@ -1083,7 +1085,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           </div>
           <div className="text-4xl font-bold mt-3" style={{ color: T.green }}>{eur(restant)}</div>
         </Card>
-        <Card style={{ background: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.25)" }}>
+        <Card style={{ background: "rgba(59,130,246,0.06)", borderColor: "rgba(59,130,246,0.25)" }}>
           <div className="flex justify-between items-start">
             <span style={{ color: T.muted }}>Taux d'épargne</span>
             <ArrowUpRight size={28} style={{ color: T.blue, opacity: 0.6 }} />
@@ -1222,7 +1224,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <button
             onClick={() => setObjectiveOpen(true)}
             className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(90deg,#7c3aed,#8b5cf6)", color: "#fff" }}>
+            style={{ background: "rgba(59,130,246,0.1)", border: `1px solid rgba(59,130,246,0.3)`, color: T.text }}>
             <Sparkles size={18} /> Optimiser mon mois par IA
           </button>
         </Card>
@@ -1613,10 +1615,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             <Upload size={18} /> Importer
           </button>
           <button className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
-            style={{ border: "1px solid rgba(139,92,246,0.5)", color: "#a78bfa", background: "rgba(139,92,246,0.08)" }}>
+            style={{ border: `1px solid ${T.border}`, color: T.muted, background: "transparent" }}>
             <Landmark size={18} /> Connexion Bancaire
             {plan === "free" && <span className="text-xs font-bold px-1.5 py-0.5 rounded-md ml-1"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", fontSize: 12, letterSpacing: 0.5 }}>PREMIUM</span>}
+              style={{ background: T.amber, color: "#fff", fontSize: 12, letterSpacing: 0.5 }}>PRO</span>}
           </button>
           <button onClick={() => setShowAdd((s) => !s)} className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold"
             style={{ background: T.blue, color: "#fff" }}>
@@ -1779,7 +1781,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                   ) : (
                     <div className="flex items-center gap-3 py-3">
                       <div className="rounded-xl w-9 h-9 flex items-center justify-center shrink-0"
-                        style={{ background: "rgba(139,92,246,0.08)" }}>
+                        style={{ background: "rgba(59,130,246,0.08)" }}>
                         {t.type === "revenu" ? <TrendingUp size={16} style={{ color: T.green }} />
                           : t.type === "investissement" ? <PiggyBank size={16} style={{ color: T.cyan }} />
                           : <Home size={16} style={{ color: T.muted }} />}
@@ -2617,7 +2619,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
                               {d.eur >= 1000 ? "€" + d.eur.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) : "€" + d.eur.toFixed(2)}
                             </div>
                           </div>
-                          <div className="rounded-lg p-3" style={{ background: "rgba(139,92,246,0.08)" }}>
+                          <div className="rounded-lg p-3" style={{ background: "rgba(59,130,246,0.08)" }}>
                             <div className="text-xs mb-1" style={{ color: T.muted }}>USD</div>
                             <div className="text-2xl font-bold" style={{ color: T.blue }}>
                               {d.usd >= 1000 ? "$" + d.usd.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "$" + d.usd.toFixed(2)}
@@ -3298,7 +3300,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         );
       })()}
 
-      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(139,92,246,0.04)", color: T.muted }}>
+      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(59,130,246,0.04)", color: T.muted }}>
         {note}
       </div>
     </Card>
@@ -3385,7 +3387,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
           {TEST_PROFILES.map((p) => (
             <button key={p.id} onClick={() => setPartnerId(partnerId === p.id ? null : p.id)}
               className="flex items-center gap-3 p-4 rounded-xl text-left transition"
-              style={{ border: `1px solid ${partnerId === p.id ? T.blue : T.border}`, background: partnerId === p.id ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.02)" }}>
+              style={{ border: `1px solid ${partnerId === p.id ? T.blue : T.border}`, background: partnerId === p.id ? "rgba(59,130,246,0.1)" : "rgba(255,255,255,0.02)" }}>
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                 style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
                 {p.profile.firstName[0]}
@@ -3431,7 +3433,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
         <div className="flex justify-between text-xs mb-4" style={{ color: T.muted }}><span>{eur(combinedNW)}</span><span>{eur(goalTarget)}</span></div>
 
         {yearsToGoal !== null && (
-          <div className="rounded-xl p-4 text-center" style={{ background: "rgba(139,92,246,0.08)", border: `1px solid ${T.blue}44` }}>
+          <div className="rounded-xl p-4 text-center" style={{ background: "rgba(59,130,246,0.08)", border: `1px solid ${T.blue}44` }}>
             <div className="text-sm mb-1" style={{ color: T.muted }}>Objectif atteint en</div>
             <div className="text-4xl font-bold" style={{ color: T.blue }}>{yearsToGoal} ans</div>
             <div className="text-xs mt-1" style={{ color: T.muted }}>À l'horizon {2026 + yearsToGoal} · {eur(goalTarget)}</div>
@@ -3579,7 +3581,7 @@ function Portefeuille() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold" style={{ color: T.text }}>Mes positions</h2>
           <button onClick={addPosition} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
-            style={{ background: "rgba(139,92,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
+            style={{ background: "rgba(59,130,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
             <Plus size={14} /> Ajouter
           </button>
         </div>
@@ -3588,7 +3590,7 @@ function Portefeuille() {
             <div className="rounded-xl p-8 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px dashed ${T.border}` }}>
               <p className="text-sm mb-3" style={{ color: T.muted }}>Aucune position. Ajoutez votre premier ETF.</p>
               <button onClick={addPosition} className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: "rgba(139,92,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
+                style={{ background: "rgba(59,130,246,0.15)", color: T.blue, border: `1px solid ${T.blue}44` }}>
                 <Plus size={13} style={{ display: "inline", marginRight: 4 }} />Ajouter une position
               </button>
             </div>
@@ -3634,7 +3636,7 @@ function Portefeuille() {
           <MiniStat label="Frais annuels" value={eur(annualFees)} color={T.amber} />
           <MiniStat label="Surcoût vs VWRL" value={surCostEur > 0 ? "+" + eur(surCostEur) + "/an" : "Optimal"} color={surCostEur > 0 ? T.red : T.green} />
         </div>
-        <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(139,92,246,0.04)", border: `1px solid ${T.border}` }}>
+        <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(59,130,246,0.04)", border: `1px solid ${T.border}` }}>
           <span style={{ color: T.muted }}>Benchmark Vanguard FTSE All-World (0,22 %) · votre TER pondéré est </span>
           <span style={{ color: weightedTER > BENCHMARK ? T.amber : T.green }}>
             {weightedTER > BENCHMARK ? `+${(weightedTER - BENCHMARK).toFixed(2)} %` : "sous le benchmark"} de plus
@@ -4692,7 +4694,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Card style={{ background: "rgba(139,92,246,0.05)" }}>
+          <Card style={{ background: "rgba(59,130,246,0.05)" }}>
             <div className="text-sm" style={{ color: T.muted }}>Sur <b>20 ans</b> à 3,5 %</div>
             <div className="text-3xl font-bold my-1" style={{ color: loan20 > 0 ? T.cyan : T.muted }}>{eur(loan20)}</div>
             <div className="text-xs" style={{ color: T.muted }}>mensualité : {eur(mensualiteMax)} · taux d'endettement : {revenueForBank > 0 ? ((mensualiteMax + creditsExistants) / revenueForBank * 100).toFixed(1) : 0} %</div>
@@ -5460,7 +5462,7 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
             onClick={() => fileRef.current?.click()}
             title="Changer la photo de profil"
             aria-label="Changer la photo de profil"
-            style={{ position: "relative", width: 64, height: 64, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: "rgba(139,92,246,0.15)" }}
+            style={{ position: "relative", width: 64, height: 64, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: "rgba(59,130,246,0.15)" }}
           >
             {profile.avatar ? (
               <img src={profile.avatar} alt="Photo de profil"

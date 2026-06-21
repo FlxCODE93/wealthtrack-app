@@ -640,7 +640,7 @@ export default function TransactionImportTab({ onImport }) {
 
           {/* Note Tier 3 */}
           <div style={{
-            background: "rgba(139,92,246,0.06)", border: `1px solid rgba(139,92,246,0.2)`,
+            background: "rgba(59,130,246,0.06)", border: `1px solid rgba(59,130,246,0.2)`,
             borderRadius: 12, padding: "12px 16px", fontSize: 12, color: C.muted,
           }}>
             <span style={{ color: C.violet, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12} /> Catégorisation IA (Tier 3) </span>

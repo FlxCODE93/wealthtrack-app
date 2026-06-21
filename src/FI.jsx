@@ -761,11 +761,11 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
               </div>
               {fiYearBase && fiYearETF.age < fiYearBase.age && (
                 <div style={{
-                  background: "rgba(139,92,246,0.12)", border: `1px solid rgba(139,92,246,0.3)`,
+                  background: "rgba(59,130,246,0.12)", border: `1px solid rgba(59,130,246,0.3)`,
                   borderRadius: 10, padding: "8px 14px", textAlign: "center",
                 }}>
-                  <div style={{ fontSize: 10, color: "#8b5cf6", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Gain</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "#8b5cf6" }}>
+                  <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Gain</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#3b82f6" }}>
                     {fiYearBase.age - fiYearETF.age} ans
                   </div>
                 </div>

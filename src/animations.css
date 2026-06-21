@@ -345,14 +345,11 @@
   0%, 100% {
     box-shadow:
       0 50px 120px -30px rgba(0,0,0,0.95),
-      0 0 40px rgba(124,58,237,0.06),
       inset 0 1px 0 rgba(255,255,255,0.04);
   }
   50% {
     box-shadow:
       0 50px 120px -30px rgba(0,0,0,0.95),
-      0 0 80px rgba(124,58,237,0.20),
-      0 0 150px rgba(79,70,229,0.08),
       inset 0 1px 0 rgba(255,255,255,0.06);
   }
 }
@@ -368,8 +365,8 @@
 }
 
 .wt-card-hover:hover {
-  box-shadow: 0 0 28px rgba(124,58,237,0.10), 0 12px 40px rgba(0,0,0,0.5);
-  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
 }
 
 /* ── Shimmer sweep (for stat numbers reveal) ─────────────────── */

@@ -1868,24 +1868,25 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
   // 7 scénarios = les 7 actifs simulables. Tous recalculés en direct depuis les
   // paramètres communs (apport initial, mensuel, horizon) → table 100 % réactive.
-  const RATE_PER_COMP = 0.05; // rendement net retenu pour la projection PER (cf. PERSimulator)
-  const PER_SCENARIO = { pess: 0.02, base: RATE_PER_COMP, opt: 0.08 }; // fonds euro → UC actions
   const compare = useMemo(() => {
-    const perCap = Math.round(fv(initial, monthly, RATE_PER_COMP, horizon));
-    // Fourchette de rendement annuel (scénario prudent → favorable). Le Capital
-    // final ci-dessous est calculé sur le scénario MÉDIAN (base).
-    const pf = (x) => `${(x * 100).toFixed(Math.abs(x * 100) % 1 === 0 ? 0 : 1).replace(".", ",")}`.replace("-", "−");
-    const rng = (s) => `${pf(s.pess)} – ${pf(s.opt)} %`;
+    // Capital final calculé sur le rendement MÉDIAN (milieu de chaque fourchette).
+    const apports = Math.round(sim.apports);
+    const capAt = (r) => Math.round(fv(initial, monthly, r, horizon));
+    // Immobilier (achat à crédit) : equity au taux d'appréciation médian 3,5 %.
+    const immoMed = immoDetailedSeries(price, horizon, SIM_START_YEAR, { apprec: 0.035 });
+    const immoLast = immoMed[immoMed.length - 1];
+    const mk = (name, tab, rateRange, color, risk, cap, apport) =>
+      ({ name, tab, rateRange, color, risk, apport: Math.round(apport), yN: cap, gain: cap - Math.round(apport) });
     return [
-      { name: "Livret A",   tab: "defensif", rateRange: "1,5 %",                    color: ASSET.livret, risk: "Très faible", apport: sim.apports,  yN: Math.round(sim.C.cap),   gain: Math.round(sim.C.gain) },
-      { name: "Immobilier", tab: "immo",     rateRange: "2 – 5 %",                  color: ASSET.immo,   risk: "Faible",      apport: sim.B.apport, yN: Math.round(sim.B.cap),   gain: Math.round(sim.B.gain) },
-      { name: "ETF World",  tab: "etf",      rateRange: "8 – 12 %",                 color: ASSET.etf,    risk: "Moyen",       apport: sim.apports,  yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
-      { name: "Or",         tab: "or",       rateRange: "5 %",                      color: "#f59e0b",    risk: "Faible",      apport: orTotalVerse, yN: Math.round(orCapFinal),  gain: Math.round(orGain) },
-      { name: "PER",        tab: "per",      rateRange: rng(PER_SCENARIO),          color: T.violet,     risk: "Moyen",       apport: sim.apports,  yN: perCap,                  gain: perCap - Math.round(sim.apports) },
-      { name: "Bitcoin",    tab: "btc",      rateRange: rng(RATE_SCENARIOS.btc),    color: ASSET.btc,    risk: "Extrême",     apport: sim.apports,  yN: Math.round(sim.BTC.cap), gain: Math.round(sim.BTC.gain) },
-      { name: "Ethereum",   tab: "eth",      rateRange: rng(RATE_SCENARIOS.eth),    color: ASSET.eth,    risk: "Extrême+",    apport: sim.apports,  yN: Math.round(sim.ETH.cap), gain: Math.round(sim.ETH.gain) },
+      mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
+      mk("Immobilier", "immo",     "2 – 5 %",    ASSET.immo,   "Faible",      Math.round(immoLast.capital),       immoLast.apports),
+      mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Moyen",       capAt(0.10),                        apports),
+      mk("Or",         "or",       "5 %",        "#f59e0b",    "Faible",      capAt(0.05),                        apports),
+      mk("PER",        "per",      "2 – 8 %",    T.violet,     "Moyen",       capAt(0.05),                        apports),
+      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Extrême",     capAt(0.10),                        apports),
+      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Extrême+",    capAt(0.065),                       apports),
     ];
-  }, [initial, monthly, horizon, price, sim, orScenario, orCapFinal, orTotalVerse, orGain]);
+  }, [initial, monthly, horizon, price, sim]);
 
   const TABS = [
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
@@ -2230,7 +2231,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
                 {[
                   { key: "rate",     label: "Rendement annuel (fourchette)", render: (c) => <span style={{ color: c.color, fontWeight: 700 }}>{c.rateRange}</span> },
                   { key: "apport",   label: "Apports cumulés", render: (c) => <span style={{ color: T.muted }}>{eur(c.apport)}</span> },
-                  { key: "final",    label: `Capital final (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
+                  { key: "final",    label: `Capital final · médian (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
                   { key: "gain",     label: "Gains générés", render: (c) => <span style={{ color: c.gain >= 0 ? T.green : T.red }}>{(c.gain >= 0 ? "+" : "") + eur(c.gain)}</span> },
                   { key: "risk",     label: "Risque", render: (c) => <span className="text-xs" style={{ color: T.muted }}>{c.risk}</span> },
                 ].map((row) => (
@@ -2258,7 +2259,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             </table>
           </div>
           <p className="text-xs mt-3" style={{ color: T.muted }}>
-            Rendements annuels indicatifs, <strong style={{ color: T.text }}>bruts de frais et de fiscalité</strong> — sauf le Livret A (net, défiscalisé) et l'Or (net des frais de stockage). La fiscalité réelle dépend de l'enveloppe (PEA, assurance-vie, CTO, PER) et n'est pas déduite ici. Les performances passées ne garantissent pas les rendements futurs.
+            Le capital final retient le <strong style={{ color: T.text }}>rendement médian</strong> (milieu de chaque fourchette). Rendements annuels indicatifs, <strong style={{ color: T.text }}>bruts de frais et de fiscalité</strong> — sauf le Livret A (net, défiscalisé) et l'Or (net des frais de stockage). La fiscalité réelle dépend de l'enveloppe (PEA, assurance-vie, CTO, PER) et n'est pas déduite ici. Les performances passées ne garantissent pas les rendements futurs.
           </p>
         </Card>
       )}

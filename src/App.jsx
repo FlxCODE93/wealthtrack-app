@@ -5991,7 +5991,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             >
               <PieChart>
                 <Pie data={allSlices} dataKey="value" nameKey="name"
-                  innerRadius={62} outerRadius={92} paddingAngle={2}
+                  innerRadius="52%" outerRadius="77%" paddingAngle={2}
                   label={renderDonutPctLabel} labelLine={false}>
                   {allSlices.map((s, i) => <Cell key={i} fill={s.color} />)}
                 </Pie>

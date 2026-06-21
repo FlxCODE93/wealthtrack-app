@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useT } from "./ThemeProvider.jsx";
 import { glow } from "./theme.js";
+import { useLocalStorage } from "./storage.js";
 import { Card, Field, makeInputStyle, makeChartTip } from "./ui.jsx";
 import { fv, RATE_ETF_WORLD } from "./finance.js";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { Percent, AlertTriangle, TrendingDown, Info, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Percent, AlertTriangle, TrendingDown, Info, ChevronDown, ChevronUp, BookOpen, Wallet, ArrowRight } from "lucide-react";
 
 const eur = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(Number.isFinite(n) ? n : 0)) + " €";
@@ -25,7 +26,7 @@ const DEVICES = [
     type: "passif",
     avantages: ["Pas de frais d'entrée en courtage en ligne", "Enveloppe fiscale PEA avantageuse", "Liquidité immédiate"],
     inconvenients: ["Performance non garantie", "Risque de marché (~−35% en crise)"],
-    note: "TER tout inclus (ex: WPEA 0,23%, CSPX 0,07%). Plateforme : Boursorama, Fortuneo, Trade Republic.",
+    note: "Frais annuels tout inclus très bas (souvent 0,07 à 0,25 %). Disponible chez la plupart des courtiers en ligne.",
   },
   {
     id: "av_uc",
@@ -38,7 +39,7 @@ const DEVICES = [
     type: "mixte",
     avantages: ["Fiscalité successorale avantageuse", "Gestion libre ou pilotée", "Arbitrages possibles"],
     inconvenients: ["Frais du contrat (0,5–1%) + frais des placements (0,5–1%)", "Rapporte moins qu'un ETF acheté en direct"],
-    note: "Frais enveloppe ~0,7% + frais des UC ~0,7%. Comparer les contrats (Linxea, Yomoni, WeSave).",
+    note: "Frais du contrat ~0,7 % + frais des supports ~0,7 %. Comparez les contrats : visez moins de 0,6 % de frais de contrat.",
   },
   {
     id: "av_fonds_euro",
@@ -49,9 +50,9 @@ const DEVICES = [
     fraisAnnuels: 0.8,
     rendementBrut: 2.5,
     type: "garanti",
-    avantages: ["Capital garanti", "Liquidité sous 72h", "Rendement net ~2% en 2024"],
-    inconvenients: ["Rendement faible sur longue durée", "Frais enveloppe déduits avant revalorisation"],
-    note: "Rendement brut 2024 ~2,5%. Net après frais ~1,7%. Bon pour épargne de précaution moyen terme.",
+    avantages: ["Capital garanti", "Liquidité sous 72h", "Rendement net récent ~2%"],
+    inconvenients: ["Rendement faible sur longue durée", "Frais du contrat déduits avant revalorisation"],
+    note: "Rendement brut récent ~2,5%, net après frais ~1,7%. Bon pour l'épargne de précaution à moyen terme.",
   },
   {
     id: "per",
@@ -64,7 +65,7 @@ const DEVICES = [
     type: "retraite",
     avantages: ["Déduction fiscale à l'entrée (jusqu'à 30%)", "Épargne retraite structurée", "UC + fonds €"],
     inconvenients: ["Bloqué jusqu'à retraite (sauf cas exceptionnels)", "Frais élevés chez banques traditionnelles"],
-    note: "Avantage fiscal à l'entrée compense souvent les frais. Comparer en ligne (Linxea Spirit PER ~0,5% enveloppe).",
+    note: "L'avantage fiscal à l'entrée compense souvent les frais. En ligne, on trouve des PER à ~0,5 % de frais de contrat.",
   },
   {
     id: "opcvm",
@@ -165,15 +166,23 @@ function GlossaireItem({ term, def }) {
   );
 }
 
-export default function Frais() {
+export default function Frais({ invested = 0, setView }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
-  const [capital, setCapital] = useState(10000);
-  const [horizon, setHorizon] = useState(20);
-  const [feeRate, setFeeRate] = useState(1.8);
+  // Le capital part du montant réellement investi par l'utilisateur (poche
+  // "Investissements" du patrimoine) si disponible, sinon 10 000 € par défaut.
+  // Inputs persistés : on ne repart plus de zéro à chaque visite.
+  const [capital, setCapital] = useLocalStorage("wt_frais_capital", invested > 0 ? Math.round(invested) : 10000);
+  const [horizon, setHorizon] = useLocalStorage("wt_frais_horizon", 20);
+  const [feeRate, setFeeRate] = useLocalStorage("wt_frais_feerate", 1.8);
   const [expanded, setExpanded] = useState(null);
   const glossaireRef = useRef(null);
   const scrollToGlossaire = () => glossaireRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const hasRealData = invested > 0;
+  // Coût annuel estimé des frais sur le capital réellement investi (1re année).
+  const realAnnualCost = Math.round(invested * (feeRate / 100));
+  const useRealCapital = () => setCapital(Math.round(invested));
 
   const impactData = useMemo(() => {
     const sans = fv(capital, 0, RATE_ETF_WORLD, horizon);
@@ -202,6 +211,55 @@ export default function Frais() {
           </button>
         </div>
       </div>
+
+      {/* Carte personnalisée — basée sur le capital réellement investi */}
+      {hasRealData ? (
+        <Card style={{ background: "rgba(59,130,246,0.06)", borderColor: "rgba(59,130,246,0.28)" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(59,130,246,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Wallet size={20} style={{ color: T.blue }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
+                Vos placements : {eur(invested)}
+              </div>
+              <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
+                À <strong style={{ color: T.text }}>{feeRate.toFixed(1).replace(".", ",")} %</strong> de frais par an, ils vous coûtent environ{" "}
+                <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)} cette année</strong> — et bien plus sur la durée à cause de l'effet cumulé.
+                Le simulateur ci-dessous part de ce montant réel.
+              </div>
+            </div>
+            {setView && (
+              <button onClick={() => setView("patrimoine")}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                Voir mes placements <ArrowRight size={15} style={{ color: T.blue }} />
+              </button>
+            )}
+          </div>
+        </Card>
+      ) : (
+        <Card style={{ background: "rgba(255,255,255,0.02)" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Wallet size={20} style={{ color: T.muted }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
+                Personnalisez avec vos vrais placements
+              </div>
+              <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
+                Renseignez vos investissements dans le Patrimoine et cette page calculera vos frais réels, pas un exemple générique.
+              </div>
+            </div>
+            {setView && (
+              <button onClick={() => setView("patrimoine")}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                Saisir mes placements <ArrowRight size={15} style={{ color: T.blue }} />
+              </button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Guide pédagogique frais & dispositifs */}
       <Card>
@@ -250,6 +308,12 @@ export default function Frais() {
           <Field label="Capital initial (€)">
             <input type="number" value={capital || ""} placeholder="0" style={inputStyle}
               onChange={(e) => setCapital(+e.target.value || 0)} />
+            {hasRealData && Math.round(invested) !== capital && (
+              <button onClick={useRealCapital}
+                style={{ marginTop: 6, background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12, fontWeight: 600 }}>
+                Utiliser mes placements ({eur(invested)})
+              </button>
+            )}
           </Field>
           <Field label="Horizon">
             <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}

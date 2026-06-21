@@ -6784,6 +6784,13 @@ export default function App() {
     const p = (patrimoineDerived?.passifs || []).flatMap(c => c.items).reduce((s, i) => s + (i.value || 0), 0);
     return a - p;
   }, [patrimoineDerived]);
+
+  // Capital réellement exposé aux frais = la poche "investissements" (ETF, actions,
+  // crypto…). Sert à personnaliser "Mes frais" avec les vraies données utilisateur.
+  const investedCapital = useMemo(() => {
+    const cat = (patrimoineDerived?.actifs || []).find(c => c.id === "investissements");
+    return (cat?.items || []).reduce((s, i) => s + (i.value || 0), 0);
+  }, [patrimoineDerived]);
   useEffect(() => {
     const now = new Date();
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -6917,7 +6924,7 @@ export default function App() {
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "frais"        && <Frais />}
+        {view === "frais"        && <Frais invested={investedCapital} setView={setView} />}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 

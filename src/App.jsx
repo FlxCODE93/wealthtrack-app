@@ -176,12 +176,6 @@ function generateSmartYTicks(max) {
   for (let v = 0; v <= max + step * 0.01; v += step) ticks.push(Math.round(v));
   return ticks;
 }
-const simsYFmt = (v) => {
-  if (v >= 1_000_000) return (v / 1_000_000 % 1 === 0 ? (v / 1_000_000).toFixed(0) : (v / 1_000_000).toFixed(1)) + " M";
-  if (v >= 1_000)     return Math.round(v / 1_000) + " k";
-  return String(v);
-};
-
 /* Données d'exemple / seed : extraites dans ./seedData.js (cf. import en tête). */
 
 /* Atomes UI (Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, helpers)
@@ -1872,44 +1866,21 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     return "—";
   }, [totals.chargesFixes, totals.depensesVar, initial, monthly, age]);
 
-  const comboSeries = useMemo(() => sim.detailedA.map((p, idx) => {
-    const BTC = sim.detailedBTC[idx].capital;
-    const ETH = sim.detailedETH[idx].capital;
-    return {
-      year: p.year,
-      A: p.capital,
-      B: sim.detailedB[idx].capital,
-      C: sim.detailedC[idx].capital,
-      BTC, ETH,
-      // Échelle log pour l'axe crypto : à 25-30 %/an, BTC/ETH écrasent les
-      // 20 premières années à 0 sur un axe linéaire (cf. Math.log10 plus bas).
-      logBTC: BTC > 1 ? +Math.log10(BTC).toFixed(3) : 0,
-      logETH: ETH > 1 ? +Math.log10(ETH).toFixed(3) : 0,
-    };
-  }), [sim]);
-
-  const { nonCryptoTicks, nonCryptoDomMax } = useMemo(() => {
-    const mx    = Math.max(...comboSeries.map(p => Math.max(p.A, p.B, p.C)));
-    const ticks = generateSmartYTicks(mx);
-    return { nonCryptoTicks: ticks, nonCryptoDomMax: ticks[ticks.length - 1] };
-  }, [comboSeries]);
-
-  // Domaine log de l'axe crypto, basé sur le capital initial (point de départ
-  // commun) jusqu'au plus haut des deux capitaux finaux BTC/ETH.
-  const { logDomMin, logDomMax, logTicks } = useMemo(() => {
-    const domMin = Math.floor(Math.log10(Math.max(initial, 1)));
-    const domMax = Math.ceil(Math.log10(Math.max(sim.ETH.cap, sim.BTC.cap)));
-    const ticks  = Array.from({ length: domMax - domMin + 1 }, (_, i) => domMin + i);
-    return { logDomMin: domMin, logDomMax: domMax, logTicks: ticks };
-  }, [initial, sim]);
-
-  const compare = useMemo(() => [
-    { name: "ETF PEA",    tab: "etf",      rate: "10,5 %", color: ASSET.etf, risk: "Faible",        vol: "15 %",  drawdown: "−35 %", y10: fv(initial, monthly, RATE_A, 10),   yN: sim.A.cap },
-    { name: "Immobilier", tab: "immo",     rate: "≈2 %/an", color: ASSET.immo, risk: "Faible",        vol: "20 %",  drawdown: "−40 %", y10: immoEquityAt(10), yN: sim.B.cap },
-    { name: "Livret A",   tab: "defensif", rate: "1,5 %",  color: ASSET.livret, risk: "Très faible",   vol: "5 %",   drawdown: "−5 %",  y10: fv(initial, monthly, RATE_C, 10),   yN: sim.C.cap },
-    { name: "Bitcoin",    tab: "btc",      rate: "12 % méd.",   color: ASSET.btc, risk: "Extrême",       vol: "65 %",  drawdown: "−80 %", y10: fv(initial, monthly, RATE_SCENARIOS.btc.base, 10), yN: sim.BTC.cap },
-    { name: "Ethereum",   tab: "eth",      rate: "10 % méd.",   color: ASSET.eth, risk: "Extrême+",      vol: "75 %",  drawdown: "−85 %", y10: fv(initial, monthly, RATE_SCENARIOS.eth.base, 10), yN: sim.ETH.cap },
-  ], [initial, monthly, price, sim]);
+  // 7 scénarios = les 7 actifs simulables. Tous recalculés en direct depuis les
+  // paramètres communs (apport initial, mensuel, horizon) → table 100 % réactive.
+  const RATE_PER_COMP = 0.05; // rendement net retenu pour la projection PER (cf. PERSimulator)
+  const compare = useMemo(() => {
+    const perCap = Math.round(fv(initial, monthly, RATE_PER_COMP, horizon));
+    return [
+      { name: "Livret A",   tab: "defensif", rate: "1,5 %",     color: ASSET.livret, risk: "Très faible", apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_C, 10)),                       yN: Math.round(sim.C.cap),   gain: Math.round(sim.C.gain) },
+      { name: "Immobilier", tab: "immo",     rate: "≈2 %/an",   color: ASSET.immo,   risk: "Faible",      apport: sim.B.apport, y10: Math.round(immoEquityAt(10)),                                       yN: Math.round(sim.B.cap),   gain: Math.round(sim.B.gain) },
+      { name: "ETF World",  tab: "etf",      rate: "10,5 %",    color: ASSET.etf,    risk: "Faible",      apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_A, 10)),                       yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
+      { name: "Or",         tab: "or",       rate: `${(orNetRate * 100).toFixed(1).replace(".", ",")} %`, color: "#f59e0b", risk: "Moyen", apport: orTotalVerse, y10: Math.round(fv(initial, monthly, orNetRate, 10)), yN: Math.round(orCapFinal), gain: Math.round(orGain) },
+      { name: "PER",        tab: "per",      rate: "≈5 %",      color: T.violet,     risk: "Moyen",       apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_PER_COMP, 10)),                yN: perCap,                  gain: perCap - Math.round(sim.apports) },
+      { name: "Bitcoin",    tab: "btc",      rate: "12 % méd.", color: ASSET.btc,    risk: "Extrême",     apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_SCENARIOS.btc.base, 10)),      yN: Math.round(sim.BTC.cap), gain: Math.round(sim.BTC.gain) },
+      { name: "Ethereum",   tab: "eth",      rate: "10 % méd.", color: ASSET.eth,    risk: "Extrême+",    apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_SCENARIOS.eth.base, 10)),      yN: Math.round(sim.ETH.cap), gain: Math.round(sim.ETH.gain) },
+    ];
+  }, [initial, monthly, horizon, price, sim, orNetRate, orCapFinal, orTotalVerse, orGain]);
 
   const TABS = [
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
@@ -2228,118 +2199,63 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           {/* En-tête */}
           <div className="flex items-center flex-wrap gap-3 mb-2">
             <TrendingUp size={20} style={{ color: T.blue }} />
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparatif — 5 scénarios</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparatif — 7 scénarios</h2>
           </div>
           <p className="text-xs mb-4" style={{ color: T.muted }}>
-            Axe gauche · scénarios sûrs (échelle linéaire) &nbsp;|&nbsp; Axe droit · crypto (échelle logarithmique, ×10 par graduation) — même horizon, deux échelles pour tout lire d'un coup.
+            Les 7 actifs au même apport initial ({eur(initial)}), même versement mensuel ({eur(monthly)}) et même horizon ({horizon} ans). Recalcul instantané dès que vous modifiez un paramètre ci-dessus. Cliquez un scénario pour son analyse détaillée.
           </p>
 
-          {/* Légende manuelle */}
-          <div className="flex flex-wrap gap-4 mb-4 text-xs">
-            {[
-              { label: "ETF World (10,5 %)",  color: "#22c55e", dash: false, axis: "←" },
-              { label: "Immobilier (≈2 %/an)", color: "#f59e0b", dash: false, axis: "←" },
-              { label: "Livret A (1,5 %)",     color: "#94a3b8", dash: false, axis: "←" },
-              { label: "Bitcoin (30 %)",       color: "#ef4444", dash: true,  axis: "→ log" },
-              { label: "Ethereum (25 %)",      color: "#a855f7", dash: true,  axis: "→ log" },
-            ].map((l) => (
-              <span key={l.label} className="flex items-center gap-1.5">
-                <span style={{
-                  display: "inline-block", width: 24, height: 2,
-                  background: l.dash
-                    ? `repeating-linear-gradient(to right,${l.color} 0,${l.color} 5px,transparent 5px,transparent 9px)`
-                    : l.color,
-                }} />
-                <span style={{ color: T.muted }}>{l.label}</span>
-                <span style={{ color: T.muted, opacity: 0.45, fontSize: 12 }}>{l.axis}</span>
-              </span>
-            ))}
-          </div>
-
-          {/* Graphique double axe */}
-          <ExpandableChart height={340} title="Comparatif des scénarios">
-            <LineChart data={comboSeries} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-
-              {/* Axe gauche — scénarios sûrs */}
-              <YAxis
-                yAxisId="safe"
-                orientation="left"
-                domain={[0, nonCryptoDomMax]}
-                ticks={nonCryptoTicks}
-                stroke={T.muted}
-                tick={{ fontSize: 12 }}
-                tickFormatter={simsYFmt}
-                width={54}
-              />
-
-              {/* Axe droit — crypto, échelle log (chaque graduation = ×10) */}
-              <YAxis
-                yAxisId="crypto"
-                orientation="right"
-                domain={[logDomMin, logDomMax]}
-                ticks={logTicks}
-                stroke={`${ASSET.btc}44`}
-                tick={{ fontSize: 12, fill: `${ASSET.btc}99` }}
-                tickFormatter={logFmt}
-                width={58}
-              />
-
-              <Tooltip
-                {...chartTip}
-                formatter={(v, name, props) => {
-                  const key = props.dataKey;
-                  const raw = key === "logBTC" ? props.payload.BTC
-                    : key === "logETH" ? props.payload.ETH
-                    : v;
-                  return [eur(raw), name];
-                }}
-              />
-
-              {/* Courbes sûres — axe gauche, échelle linéaire */}
-              <Line yAxisId="safe" type="monotone" dataKey="A" name="ETF World"  stroke={ASSET.etf}    strokeWidth={3}   dot={false} />
-              <Line yAxisId="safe" type="monotone" dataKey="B" name="Immobilier" stroke={ASSET.immo}   strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
-              <Line yAxisId="safe" type="monotone" dataKey="C" name="Livret A"   stroke={ASSET.livret} strokeWidth={1.5} dot={false} strokeDasharray="3 3" />
-
-              {/* Courbes crypto — axe droit, échelle log */}
-              <Line yAxisId="crypto" type="monotone" dataKey="logBTC" name="Bitcoin"  stroke={ASSET.btc} strokeWidth={2.5} dot={false} strokeDasharray="10 4" />
-              <Line yAxisId="crypto" type="monotone" dataKey="logETH" name="Ethereum" stroke={ASSET.eth} strokeWidth={2}   dot={false} strokeDasharray="3 4" />
-            </LineChart>
-          </ExpandableChart>
-
-          {/* Tableau récapitulatif */}
-          <div className="overflow-x-auto mt-6">
-            <table className="w-full text-sm min-w-[560px]">
+          {/* Tableau comparatif dynamique — colonnes = scénarios, lignes = indicateurs */}
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full text-sm border-collapse" style={{ minWidth: 720 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {["Scénario", "Rendement", "À 10 ans", `À ${horizon} ans`, "Multiple", "Risque"].map((h) => (
-                    <th key={h} className="py-2 px-3 text-left text-xs font-semibold" style={{ color: T.muted }}>{h}</th>
+                  <th className="py-3 px-3 text-left text-xs font-semibold sticky left-0"
+                    style={{ color: T.muted, background: T.card, zIndex: 1 }}>Indicateur</th>
+                  {compare.map((c) => (
+                    <th key={c.name} className="py-3 px-3 text-right whitespace-nowrap">
+                      <button onClick={() => setActiveTab(c.tab)}
+                        className="text-xs font-bold px-2 py-0.5 rounded-lg"
+                        style={{ color: c.color, border: `1px solid ${c.color}44` }}>{c.name}</button>
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {compare.map((c) => (
-                  <tr key={c.name} style={{ borderBottom: `1px solid ${T.border}` }}>
-                    <td className="py-3 px-3">
-                      <button
-                        onClick={() => setActiveTab(c.tab)}
-                        className="px-2 py-0.5 rounded-lg text-xs font-semibold"
-                        style={{ color: c.color, border: `1px solid ${c.color}44` }}
-                      >{c.name}</button>
-                    </td>
-                    <td className="py-3 px-3 font-bold text-xs" style={{ color: c.color }}>{c.rate}</td>
-                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.y10)}</td>
-                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{eur(c.yN)}</td>
-                    <td className="py-3 px-3 font-bold" style={{ color: c.color }}>{(c.yN / sim.apports).toFixed(1)}×</td>
-                    <td className="py-3 px-3 text-xs" style={{ color: T.muted }}>{c.risk}</td>
+                {[
+                  { key: "rate",     label: "Rendement annuel", render: (c) => <span style={{ color: c.color, fontWeight: 700 }}>{c.rate}</span> },
+                  { key: "y10",      label: "Capital à 10 ans", render: (c) => eur(c.y10) },
+                  { key: "final",    label: `Capital final (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
+                  { key: "gain",     label: "Gains générés", render: (c) => <span style={{ color: c.gain >= 0 ? T.green : T.red }}>{(c.gain >= 0 ? "+" : "") + eur(c.gain)}</span> },
+                  { key: "apport",   label: "Apports cumulés", render: (c) => <span style={{ color: T.muted }}>{eur(c.apport)}</span> },
+                  { key: "multiple", label: "Multiple", render: (c) => `${c.apport > 0 ? (c.yN / c.apport).toFixed(1) : "—"}×` },
+                  { key: "risk",     label: "Risque", render: (c) => <span className="text-xs" style={{ color: T.muted }}>{c.risk}</span> },
+                ].map((row) => (
+                  <tr key={row.key}
+                    style={{
+                      borderBottom: `1px solid ${T.border}`,
+                      background: row.highlight ? `${T.blue}12` : "transparent",
+                    }}>
+                    <td className="py-3 px-3 text-left text-xs sticky left-0 whitespace-nowrap"
+                      style={{
+                        color: row.highlight ? T.text : T.muted,
+                        fontWeight: row.highlight ? 800 : 500,
+                        background: row.highlight ? undefined : T.card,
+                        zIndex: 1,
+                      }}>{row.label}</td>
+                    {compare.map((c) => (
+                      <td key={c.name} className="py-3 px-3 text-right whitespace-nowrap"
+                        style={{ fontWeight: row.highlight ? 800 : 600, color: T.text }}>
+                        {row.render(c)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <p className="text-xs mt-3" style={{ color: T.muted }}>
-            Rendements basés sur les performances historiques annualisées de chaque actif. Les performances passées ne garantissent pas les rendements futurs. Cliquez sur un scénario pour accéder à son analyse détaillée.
+            Rendements basés sur les performances historiques annualisées de chaque actif (PER et Or au rendement net retenu). Les performances passées ne garantissent pas les rendements futurs.
           </p>
         </Card>
       )}

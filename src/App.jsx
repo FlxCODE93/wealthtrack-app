@@ -571,8 +571,8 @@ function PricingPage({ plan, setPlan }) {
 function Sidebar({ view, setView, profile, plan, setPlan }) {
   const T = useT();
   const items = [
-    { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "finances",    label: "Finances",           icon: ListTree },
+    { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "credits",     label: "Mes crédits",        icon: CreditCard },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
     { id: "simulations", label: "Simulations",        icon: TrendingUp },
@@ -1471,13 +1471,6 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
           </div>
         </Card>
       )}
-
-      <div className="flex gap-4 flex-wrap">
-        <Stat label="Revenu" value={eur(totals.revenus)} color={T.green} icon={TrendingUp} />
-        <Stat label="Charge fixe" value={eur(totals.chargesFixes)} color={T.text} icon={Home} />
-        <Stat label="Dépense variable" value={eur(totals.depensesVar)} color={T.text} icon={ArrowDownRight} />
-        <Stat label="Investissement" value={eur(totals.invest)} color={T.text} icon={PiggyBank} />
-      </div>
 
       {highInterestDebts.length > 0 && (
         <Card style={{ borderColor: `${T.amber}44`, background: "rgba(240,168,72,0.06)" }}>
@@ -6306,7 +6299,7 @@ function BankConnectModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 export default function App() {
   const T = useT();
-  const [view,       setView]       = useState("dashboard");
+  const [view,       setView]       = useState("finances"); // 1re vue : là où l'on connecte sa banque / importe
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
   const [showBankConnect, setShowBankConnect] = useState(false);
 
@@ -6556,7 +6549,7 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "finances", "credits", "patrimoine", "simulations", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
+          {["finances", "dashboard", "credits", "patrimoine", "simulations", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>

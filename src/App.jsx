@@ -2254,7 +2254,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             </table>
           </div>
           <p className="text-xs mt-3" style={{ color: T.muted }}>
-            Rendements basés sur les performances historiques annualisées de chaque actif (PER et Or au rendement net retenu). Les performances passées ne garantissent pas les rendements futurs.
+            Rendements annuels indicatifs, <strong style={{ color: T.text }}>bruts de frais et de fiscalité</strong> — sauf le Livret A (net, défiscalisé) et l'Or (net des frais de stockage). La fiscalité réelle dépend de l'enveloppe (PEA, assurance-vie, CTO, PER) et n'est pas déduite ici. Les performances passées ne garantissent pas les rendements futurs.
           </p>
         </Card>
       )}

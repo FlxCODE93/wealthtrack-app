@@ -710,12 +710,35 @@ function ObjectiveModal({ onClose, onPick }) {
   );
 }
 
-function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
+function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
   const [active, setActive] = useState({});
+  // Édition manuelle des 4 piliers (surcharge mensuelle)
+  const curMonthLabel = (() => {
+    const s = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  })();
+  const PILLARS = [
+    { key: "revenus",      label: "Revenus",            color: T.green, icon: ArrowUpRight,   value: revenus },
+    { key: "chargesFixes", label: "Charges fixes",      color: T.red,   icon: ArrowDownRight, value: chargesFixes },
+    { key: "depensesVar",  label: "Dépenses variables", color: T.amber, icon: ArrowDownRight, value: depensesVar },
+    { key: "invest",       label: "Investissements",    color: T.cyan,  icon: PiggyBank,      value: invest },
+  ];
+  const [editKey, setEditKey] = useState(null);   // pilier en cours d'édition
+  const [editVal, setEditVal] = useState("");
+  const [hoverKey, setHoverKey] = useState(null);
+  const editPillar = PILLARS.find((p) => p.key === editKey) || null;
+  const openEdit = (p) => { setEditKey(p.key); setEditVal(String(Math.round(p.value))); };
+  const closeEdit = () => setEditKey(null);
+  const saveEdit = () => {
+    const v = Math.abs(parseFloat(String(editVal).replace(",", ".")));
+    onAdjust?.(editKey, Number.isFinite(v) ? Math.round(v) : null);
+    setEditKey(null);
+  };
+  const resetEdit = () => { onAdjust?.(editKey, null); setEditKey(null); };
   const [shareOpen, setShareOpen] = useState(false);
   const [objectiveOpen, setObjectiveOpen] = useState(false); // flux IA : choix de l'objectif
   const [histoRange, setHistoRange] = useState(12);
@@ -791,11 +814,82 @@ function Dashboard({ totals, breakdown, patrimoine, simParams, setView, histo, t
       </div>
 
       <div className="flex gap-4 flex-wrap">
-        <Stat label="Revenus" value={eur(revenus)} color={T.green} icon={ArrowUpRight} />
-        <Stat label="Charges fixes" value={eur(chargesFixes)} color={T.red} icon={ArrowDownRight} />
-        <Stat label="Dépenses variables" value={eur(depensesVar)} color={T.amber} icon={ArrowDownRight} />
-        <Stat label="Investissements" value={eur(invest)} color={T.cyan} icon={PiggyBank} />
+        {PILLARS.map((p) => {
+          const Icon = p.icon;
+          const overridden = monthAdj[p.key] != null;
+          const hovered = hoverKey === p.key;
+          return (
+            <div key={p.key} role="button" tabIndex={0}
+              onClick={() => openEdit(p)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(p); } }}
+              onMouseEnter={() => setHoverKey(p.key)}
+              onMouseLeave={() => setHoverKey(null)}
+              title="Cliquer pour ajuster manuellement"
+              className="flex-1 rounded-2xl p-5 relative"
+              style={{
+                minWidth: 160, cursor: "pointer", background: T.card,
+                border: `1px solid ${hovered ? T.violet : (overridden ? `${T.violet}66` : T.border)}`,
+                boxShadow: hovered ? glow(T.violet, 22, "33") : "none",
+                transition: "border-color .15s ease, box-shadow .15s ease",
+              }}>
+              <div className="flex items-start justify-between">
+                <span className="text-sm" style={{ color: T.muted }}>{p.label}</span>
+                <Icon size={18} style={{ color: p.color }} />
+              </div>
+              <div className="text-2xl font-bold mt-3 flex items-center gap-2" style={{ color: p.color }}>
+                {eur(p.value)}
+                {overridden && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                    title="Montant modifié manuellement — cliquer pour ajuster ou réinitialiser"
+                    style={{ background: `${T.violet}1f`, color: T.violet, fontSize: 11, fontWeight: 700 }}>
+                    <Pencil size={10} /> Manuel
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Modale d'édition rapide d'un pilier */}
+      {editPillar && createPortal(
+        <div onClick={closeEdit}
+          style={{ position: "fixed", inset: 0, zIndex: 3000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, width: 420, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold" style={{ color: T.text }}>Ajuster les données — {editPillar.label}</h3>
+              <button onClick={closeEdit} aria-label="Fermer" style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 10, width: 36, height: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={16} /></button>
+            </div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Montant (€)</label>
+            <input type="number" autoFocus value={editVal}
+              onChange={(e) => setEditVal(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); }}
+              style={{ ...makeInputStyle(T), width: "100%", fontSize: 18, fontWeight: 700 }} />
+            <p className="text-xs mt-3" style={{ color: T.muted, lineHeight: 1.6 }}>
+              Cet ajustement modifiera manuellement le total de cette catégorie pour le mois en cours ({curMonthLabel}).
+              {monthAdj[editKey] == null && <> Total automatique actuel : <b style={{ color: T.text }}>{eur(baseTotals?.[editKey] ?? 0)}</b>.</>}
+            </p>
+            <div className="flex items-center gap-2 mt-5">
+              {monthAdj[editKey] != null && (
+                <button onClick={resetEdit}
+                  style={{ marginRight: "auto", background: "none", border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 14px", color: T.muted, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  Réinitialiser (auto : {eur(baseTotals?.[editKey] ?? 0)})
+                </button>
+              )}
+              <button onClick={closeEdit}
+                style={{ marginLeft: monthAdj[editKey] != null ? 0 : "auto", background: "none", border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 16px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                Annuler
+              </button>
+              <button onClick={saveEdit}
+                style={{ background: T.violet, border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Évolution réelle du patrimoine net (snapshots mensuels auto) */}
       <Card>
@@ -6375,17 +6469,45 @@ export default function App() {
     setView("dashboard");
   };
 
-  const totals = useMemo(() => {
+  // Totaux calculés à partir des transactions (somme automatique).
+  const baseTotals = useMemo(() => {
     const sum = (t) => transactions.filter((x) => x.type === t).reduce((s, x) => s + Math.abs(x.amount), 0);
-    const revenus     = sum("revenu");
-    const chargesFixes = sum("charge_fixe");
-    const depensesVar = sum("depense_variable");
-    const invest      = sum("investissement");
-    const restant     = revenus - chargesFixes - depensesVar - invest;
-    const conso       = chargesFixes + depensesVar;
-    const tauxEpargne = revenus > 0 ? ((revenus - conso) / revenus) * 100 : 0;
-    return { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne };
+    return {
+      revenus: sum("revenu"),
+      chargesFixes: sum("charge_fixe"),
+      depensesVar: sum("depense_variable"),
+      invest: sum("investissement"),
+    };
   }, [transactions]);
+
+  // Surcharges manuelles par mois : { "AAAA-MM": { revenus?, chargesFixes?, depensesVar?, invest? } }.
+  // Persistées (clé wt_ → synchro cloud). Prioritaires sur la somme automatique.
+  const [adjustments, setAdjustments] = useLocalStorage("wt_manual_adjustments", {});
+  const CUR_YM = new Date().toISOString().slice(0, 7);
+  const monthAdj = adjustments[CUR_YM] || {};
+  const setPillarAdj = useCallback((key, value) => {
+    setAdjustments((prev) => {
+      const cur = { ...(prev[CUR_YM] || {}) };
+      if (value == null || Number.isNaN(value)) delete cur[key]; // null → retour à l'auto
+      else cur[key] = value;
+      const next = { ...prev };
+      if (Object.keys(cur).length) next[CUR_YM] = cur; else delete next[CUR_YM];
+      return next;
+    });
+  }, [setAdjustments, CUR_YM]);
+
+  // Totaux effectifs = surcharge manuelle si présente, sinon somme auto.
+  // Tous les calculs aval (score santé, taux d'épargne, scénarios) en héritent.
+  const totals = useMemo(() => {
+    const revenus      = monthAdj.revenus      ?? baseTotals.revenus;
+    const chargesFixes = monthAdj.chargesFixes ?? baseTotals.chargesFixes;
+    const depensesVar  = monthAdj.depensesVar  ?? baseTotals.depensesVar;
+    const invest       = monthAdj.invest       ?? baseTotals.invest;
+    const restant      = revenus - chargesFixes - depensesVar - invest;
+    const conso        = chargesFixes + depensesVar;
+    const tauxEpargne  = revenus > 0 ? ((revenus - conso) / revenus) * 100 : 0;
+    return { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne };
+  }, [baseTotals, monthAdj]);
 
   // Revenu de référence : lissé (moyenne 12 mois) quand le revenu est variable
   // (intérim/freelance), sinon le mois courant. Sert aux ratios de capacité/effort.
@@ -6526,7 +6648,7 @@ export default function App() {
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
-        {view === "dashboard"    && <Dashboard totals={totals} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
+        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}

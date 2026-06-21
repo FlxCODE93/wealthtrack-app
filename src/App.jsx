@@ -577,7 +577,6 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "pricing",     label: "Tarifs",             icon: Crown },
-    { id: "profil",      label: "Profil",             icon: User },
   ];
   const planInfo = PLANS[plan] || PLANS.free;
   return (
@@ -632,9 +631,23 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             </span>
           </button>
         )}
-        <div className="px-3 py-4 flex items-center gap-3">
+        <button
+          onClick={() => setView("profil")}
+          className="w-full flex items-center gap-3 rounded-xl transition text-left"
+          style={{
+            paddingTop: 12, paddingBottom: 12, paddingRight: 16,
+            paddingLeft: view === "profil" ? 13 : 16,
+            background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
+            borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
+            boxShadow: "none", border: "none", cursor: "pointer",
+          }}
+        >
           <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
-            style={{ background: "rgba(91,141,239,0.12)", color: T.blue, border: `1px solid ${T.blue}22` }}>
+            style={{
+              background: view === "profil" ? T.gradientPrimary : "rgba(91,141,239,0.12)",
+              color: view === "profil" ? "#fff" : T.blue,
+              border: `1px solid ${T.blue}22`,
+            }}>
             {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "—"}
           </div>
           <div className="min-w-0">
@@ -645,7 +658,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
               {planInfo.label}
             </div>
           </div>
-        </div>
+        </button>
         <div className="px-3 pb-4">
           <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
             <Shield size={11} />
@@ -5924,7 +5937,18 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               <option value={36}>3 ans</option>
             </select>
           </div>
-          <ExpandableChart height={280} title="Évolution du patrimoine">
+          <ExpandableChart height={280} title="Évolution du patrimoine"
+            controls={
+              <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
+                style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
+                <option value={3}>3 derniers mois</option>
+                <option value={6}>6 derniers mois</option>
+                <option value={12}>12 derniers mois</option>
+                <option value={24}>2 ans</option>
+                <option value={36}>3 ans</option>
+              </select>
+            }
+          >
             <AreaChart data={chartHist}>
               <defs>
                 <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
@@ -5933,7 +5957,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 12 }} interval={histRange > 12 ? 2 : 0} />
+              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histRange > 12 ? 55 : 38} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
@@ -5952,7 +5976,19 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
           </div>
           <div className="relative">
-            <ExpandableChart height={240} title="Répartition du patrimoine">
+            <ExpandableChart height={240} title="Répartition du patrimoine"
+              legend={
+                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+                  {allSlices.map((s, i) => (
+                    <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+                      {s.name}
+                      <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                    </span>
+                  ))}
+                </div>
+              }
+            >
               <PieChart>
                 <Pie data={allSlices} dataKey="value" nameKey="name"
                   innerRadius={62} outerRadius={92} paddingAngle={2}
@@ -6545,6 +6581,25 @@ function BankConnectModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 /*  APP                                                                */
 /* ------------------------------------------------------------------ */
+const VIEW_LABELS = {
+  dashboard:   "Tableau de bord",
+  finances:    "Budget",
+  credits:     "Mes crédits",
+  patrimoine:  "Patrimoine",
+  simulations: "Simulations",
+  plans:       "Plan d'action",
+  frais:       "Analyse des frais",
+  objectifs:   "Objectifs",
+  fiscalite:   "Fiscalité",
+  couple:      "Couple / Famille",
+  pricing:     "Tarifs",
+  profil:      "Profil",
+  importer:    "Importer un relevé",
+  crypto:      "Crypto Portfolio",
+  fi:          "Indépendance Financière",
+  immobilier:  "Immobilier",
+};
+
 export default function App() {
   const T = useT();
   const [view,       setView]       = useState("dashboard"); // cockpit principal (Budget fusionné dedans)
@@ -6788,40 +6843,37 @@ export default function App() {
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* Barre haut : avatar profil (gauche) + déconnexion (droite) */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          {/* Bulle avatar — accès direct au profil */}
-          <button
-            onClick={() => setView("profil")}
-            aria-label="Mon profil"
-            title="Mon profil"
-            style={{
-              width: 40, height: 40, borderRadius: 9999, flexShrink: 0,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              border: `1px solid ${view === "profil" ? T.violet : T.border}`,
-              background: T.gradientPrimary, color: "#fff", fontWeight: 800, fontSize: 14,
-              cursor: "pointer", boxShadow: glow(T.violet, 24, "33"),
-            }}
-          >
-            {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={18} />}
-          </button>
-          {supabase && (
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil
-                window.location.reload();
-              }}
-              style={{
-                padding: "8px 14px", fontSize: 12, fontWeight: 600,
-                border: `1px solid ${T.border}`, borderRadius: 8,
-                background: "transparent", color: T.muted, cursor: "pointer",
-              }}
-              aria-label="Déconnexion"
-            >
-              Déconnexion
-            </button>
-          )}
+        {/* Barre haut : logo + breadcrumb (gauche) + déconnexion (droite) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Logo — toujours visible (mobile : seul repère ; desktop : complète la sidebar) */}
+              <div className="rounded-lg p-1.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
+                <BarChart3 size={16} style={{ color: T.blue }} />
+              </div>
+              <div>
+                <div className="font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", fontSize: 14, lineHeight: 1.2 }}>WealthTrack</div>
+                <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.2 }}>{VIEW_LABELS[view] || view}</div>
+              </div>
+            </div>
+            {supabase && (
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil
+                  window.location.reload();
+                }}
+                style={{
+                  padding: "8px 14px", fontSize: 12, fontWeight: 600,
+                  border: `1px solid ${T.border}`, borderRadius: 8,
+                  background: "transparent", color: T.muted, cursor: "pointer",
+                }}
+                aria-label="Déconnexion"
+              >
+                Déconnexion
+              </button>
+            )}
+          </div>
         </div>
 
         {/* nav mobile */}
@@ -6852,7 +6904,7 @@ export default function App() {
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} setView={setView} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
-        {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
+        {view === "importer"     && <TransactionImportTab onImport={handleImport} onBack={() => setView("finances")} />}
         {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "portefeuille" && <Portefeuille />}
 

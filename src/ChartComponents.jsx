@@ -14,7 +14,7 @@ import { useT } from "./ThemeProvider.jsx";
 /* graphique recharts BRUT (children = l'élément chart sans          */
 /* ResponsiveContainer, fourni ici). Utilisable dans tous les fichiers. */
 /* ─────────────────────────────────────────────────────────────── */
-export function ExpandableChart({ children, height = 280, title }) {
+export function ExpandableChart({ children, height = 280, title, controls, legend }) {
   const T = useT();
   const [full, setFull] = useState(false);
   const body = (h) => (
@@ -33,12 +33,17 @@ export function ExpandableChart({ children, height = 280, title }) {
         <div onClick={() => setFull(false)} className="wt-fade-in"
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "48px 16px 16px", width: "100%", maxWidth: 1000, position: "relative" }}>
-            {title && <h3 style={{ position: "absolute", top: 16, left: 20, color: T.text, fontWeight: 700, fontSize: 16, margin: 0 }}>{title}</h3>}
-            <button onClick={() => setFull(false)} aria-label="Fermer" style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: T.muted, cursor: "pointer", minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-              <X size={20} />
-            </button>
-            {body("70vh")}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px", width: "100%", maxWidth: 1000, position: "relative" }}>
+            {/* Fullscreen header: title | controls | close */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              {title && <h3 style={{ color: T.text, fontWeight: 700, fontSize: 16, margin: 0, flexShrink: 0 }}>{title}</h3>}
+              {controls && <div style={{ flex: 1 }}>{controls}</div>}
+              <button onClick={() => setFull(false)} aria-label="Fermer" style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <X size={20} />
+              </button>
+            </div>
+            {body("65vh")}
+            {legend && <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>{legend}</div>}
           </div>
         </div>,
         document.body

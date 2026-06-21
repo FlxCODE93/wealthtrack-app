@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
-import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle } from "lucide-react";
+import { Upload, RefreshCw, Check, X, Sparkles, AlertTriangle, ChevronLeft } from "lucide-react";
 import { C, eur } from "./theme.js";
 import { authHeader } from "./supabaseClient.js";
 import * as pdfjsLib from "pdfjs-dist";
@@ -205,7 +205,7 @@ function ConfidenceBadge({ confidence, userConfirmed }) {
 }
 
 /* ─── Composant principal ───────────────────────────────────────────── */
-export default function TransactionImportTab({ onImport }) {
+export default function TransactionImportTab({ onImport, onBack }) {
   const [transactions, setTransactions] = useState([]);
   const [dragOver, setDragOver]         = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -348,6 +348,13 @@ export default function TransactionImportTab({ onImport }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
+        {onBack && (
+          <button onClick={onBack}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px", color: C.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <ChevronLeft size={16} style={{ color: C.blue }} />
+            Retour
+          </button>
+        )}
         <h1 className="text-3xl font-bold" style={{ color: C.text }}>Importer un relevé</h1>
         <p style={{ color: C.muted }}>CSV ou OFX — catégorisation automatique par mots-clés</p>
       </div>

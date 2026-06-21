@@ -43,7 +43,7 @@ import {
   creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
-import { useLocalStorage } from "./storage.js";
+import { useLocalStorage, clearLocalAppData } from "./storage.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
 import { TX, HISTO, WHATIF, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
@@ -6539,6 +6539,7 @@ export default function App() {
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
+                clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil
                 window.location.reload();
               }}
               style={{

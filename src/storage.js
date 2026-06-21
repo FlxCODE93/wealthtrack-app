@@ -67,6 +67,27 @@ export function useLocalStorage(key, defaultValue) {
 const SYNC_PREFIX = "wt_";
 const isSyncableKey = (key) => typeof key === "string" && key.startsWith(SYNC_PREFIX);
 
+/* Marqueur du PROPRIÉTAIRE des données locales (user.id). Volontairement SANS
+   préfixe `wt_` → jamais synchronisé ni purgé par clearLocalAppData(). Sert à
+   détecter un changement d'utilisateur sur un appareil partagé (cf. syncOnLogin). */
+const OWNER_KEY = "wealthtrack_data_owner";
+
+/** Supprime TOUTES les données applicatives locales (`wt_*`) + écritures en attente.
+   Appelé quand un AUTRE utilisateur se connecte sur le même appareil : sans ça,
+   l'utilisateur B verrait — et pousserait dans SON cloud — les données de A. */
+export function clearLocalAppData() {
+  // Annule les pushes en attente (ils porteraient des valeurs d'un autre user).
+  Object.keys(pushTimers).forEach((k) => clearTimeout(pushTimers[k]));
+  Object.keys(pushTimers).forEach((k) => delete pushTimers[k]);
+  Object.keys(pendingValues).forEach((k) => delete pendingValues[k]);
+  const toRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && isSyncableKey(key)) toRemove.push(key);
+  }
+  toRemove.forEach((k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
+}
+
 /* Écriture DEBOUNCÉE par clé : on regroupe les frappes rapprochées en un
    seul upsert (800 ms après la dernière modif) → évite de spammer le réseau. */
 const DEBOUNCE_MS = 800;
@@ -154,6 +175,19 @@ export async function hydrateFromCloud(userId) {
 export async function syncOnLogin(userId) {
   if (!supabase || !userId) return;
   activeUserId = userId;
+
+  // ── ISOLATION MULTI-UTILISATEUR (appareil partagé) ──────────────────────
+  // Si les données locales appartiennent à un AUTRE utilisateur (ou propriétaire
+  // inconnu), on les PURGE avant toute hydratation. Sinon, sur un téléphone où le
+  // frère s'est déjà connecté, l'utilisateur verrait — et pousserait dans SON
+  // cloud — les données du frère. On ne ré-sème le cloud depuis le local QUE pour
+  // le même utilisateur de retour (édition hors-ligne légitime).
+  let prevOwner = null;
+  try { prevOwner = localStorage.getItem(OWNER_KEY); } catch { /* ignore */ }
+  const sameOwner = prevOwner === userId;
+  if (!sameOwner) clearLocalAppData();
+  try { localStorage.setItem(OWNER_KEY, userId); } catch { /* ignore */ }
+
   try {
     const { data, error } = await supabase
       .from("user_data")
@@ -169,13 +203,15 @@ export async function syncOnLogin(userId) {
     }
 
     const syncable = (data || []).filter((row) => isSyncableKey(row.key));
-    if (syncable.length === 0) {
-      await pushAllToCloud(userId); // cloud vide (de données app) → on pousse le local
-    } else {
+    if (syncable.length > 0) {
       for (const row of syncable) {
         try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch { /* ignore */ }
       }
+    } else if (sameOwner) {
+      // Même utilisateur, cloud vide → 1re synchro : on sème le cloud depuis son local.
+      await pushAllToCloud(userId);
     }
+    // Nouvel utilisateur + cloud vide → local déjà purgé : démarrage vierge (sûr).
   } catch {
     /* hors-ligne : on garde le cache local */
   }
@@ -220,13 +256,15 @@ export function useAuthState() {
     // le storage, zéro réseau) et SURTOUT PAS getUser() : ce dernier valide le
     // token côté serveur et, s'il tombe sur un token périmé, DÉTRUIT la session
     // courante (même fraîchement créée) → SIGNED_OUT → déconnexion fantôme.
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       const sessionUser = data?.session?.user;
       if (sessionUser) {
         activeUserId = sessionUser.id;
+        // On ATTEND la sync AVANT de monter l'app : elle purge les données d'un
+        // éventuel autre utilisateur (appareil partagé) et hydrate les bonnes.
+        // Bornée à 4 s → ne bloque jamais durablement la connexion.
+        await withTimeout(syncOnLogin(sessionUser.id), 4000);
         if (mounted) setUser(sessionUser);
-        // Sync en arrière-plan — ne bloque jamais le rendu
-        withTimeout(syncOnLogin(sessionUser.id), 4000);
       }
       if (mounted) setLoading(false);
     });
@@ -244,11 +282,13 @@ export function useAuthState() {
     // et le bounce vers la Landing 0,5 s après un login pourtant réussi.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         activeUserId = session.user.id;
+        // À la connexion, on ATTEND la sync (purge multi-utilisateur + hydratation)
+        // AVANT de monter l'app, pour ne jamais afficher les données d'un autre.
+        if (event === "SIGNED_IN") await withTimeout(syncOnLogin(session.user.id), 4000);
         if (mounted) setUser(session.user);
-        if (event === "SIGNED_IN") withTimeout(syncOnLogin(session.user.id), 4000);
       }
       // Aucun cas ne remet l'user à null — voir RÈGLE STRICTE ci-dessus.
       if (mounted) setLoading(false);

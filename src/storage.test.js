@@ -19,7 +19,7 @@ vi.mock("./supabaseClient.js", () => ({
   isSupabaseConfigured: true,
 }));
 
-import { storage, hydrateFromCloud, pushAllToCloud, clearCloudSync, flushPendingCloudWrites } from "./storage.js";
+import { storage, hydrateFromCloud, pushAllToCloud, clearCloudSync, flushPendingCloudWrites, syncOnLogin, clearLocalAppData } from "./storage.js";
 
 /* ── Stub localStorage (Map en mémoire) ──────────────────────────────── */
 function makeLocalStorage() {
@@ -126,5 +126,46 @@ describe("write-through cloud", () => {
     storage.set("wt_x", 1);
     await Promise.resolve();
     expect(upserts).toHaveLength(0);
+  });
+});
+
+/* ── Isolation multi-utilisateur (appareil partagé) — SÉCURITÉ ──────────── */
+describe("isolation multi-utilisateur", () => {
+  it("purge les données d'un autre utilisateur au login et ne les pousse PAS dans le nouveau compte", async () => {
+    // Le frère s'est connecté avant : ses données traînent en local.
+    storage.set("wt_transactions", [{ id: 1, amount: -9999 }]);
+    localStorage.setItem("wealthtrack_data_owner", "frere-uid");
+    cloudRows = [];        // le nouvel utilisateur a un cloud VIDE
+    upserts.length = 0;
+
+    await syncOnLogin("moi-uid");
+
+    // Les données du frère sont parties, rien n'a été poussé dans mon compte.
+    expect(storage.get("wt_transactions", null)).toBeNull();
+    expect(upserts).toHaveLength(0);
+    expect(localStorage.getItem("wealthtrack_data_owner")).toBe("moi-uid");
+  });
+
+  it("conserve et sème le cloud pour le MÊME utilisateur de retour (cloud vide)", async () => {
+    storage.set("wt_transactions", [{ id: 2, amount: -42 }]);
+    localStorage.setItem("wealthtrack_data_owner", "moi-uid");
+    cloudRows = [];
+    upserts.length = 0;
+
+    await syncOnLogin("moi-uid");
+
+    // Mêmes données conservées + poussées en cloud (1re synchro).
+    expect(storage.get("wt_transactions", null)).toEqual([{ id: 2, amount: -42 }]);
+    expect(upserts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("hydrate depuis le cloud du bon utilisateur après changement de compte", async () => {
+    storage.set("wt_transactions", [{ id: 1, amount: -9999 }]); // données du frère
+    localStorage.setItem("wealthtrack_data_owner", "frere-uid");
+    cloudRows = [{ key: "wt_transactions", value: [{ id: 3, amount: -7 }] }]; // mon cloud
+
+    await syncOnLogin("moi-uid");
+
+    expect(storage.get("wt_transactions", null)).toEqual([{ id: 3, amount: -7 }]);
   });
 });

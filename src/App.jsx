@@ -4613,8 +4613,9 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
       <div>
         {setView && (
           <button onClick={() => setView("simulations")}
-            className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <ChevronLeft size={15} /> Simulations
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <ChevronLeft size={16} style={{ color: T.blue }} />
+            Retour aux Simulations
           </button>
         )}
         <h1 className="text-3xl font-bold" style={{ color: T.text }}>Simulateur Immobilier</h1>

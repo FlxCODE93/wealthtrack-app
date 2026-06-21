@@ -6846,11 +6846,11 @@ export default function App() {
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* Barre haut : logo + breadcrumb (gauche) + déconnexion (droite) */}
+        {/* Barre haut : logo mobile uniquement (sidebar absente) + déconnexion (droite) */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Logo — toujours visible (mobile : seul repère ; desktop : complète la sidebar) */}
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+            {/* Logo masqué sur desktop : déjà présent dans la sidebar */}
+            <div className="flex md:hidden items-center gap-2.5" style={{ marginRight: "auto" }}>
               <div className="rounded-lg p-1.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
                 <BarChart3 size={16} style={{ color: T.blue }} />
               </div>

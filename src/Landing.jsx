@@ -802,13 +802,13 @@ export default function Landing({ onStart }) {
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-left sm:text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>
-          <span style={{ background: "linear-gradient(135deg, #3b82f6 0%, #60a5fa 60%, #f8fafc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ color: T.text }}>
             Simulez.
           </span>{" "}
-          <span style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #e2e8f0 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ color: T.text }}>
             Comprenez.
           </span>
-          <br /><span className="wt-shiny-text" style={{ backgroundImage: `linear-gradient(110deg, #1d4ed8 20%, #93c5fd 45%, ${T.shineAccent} 55%, #60a5fa 70%, #3b82f6 90%)` }}>Décidez.</span>
+          <br /><span className="wt-shiny-text" style={{ backgroundImage: "linear-gradient(110deg, #3b82f6 20%, #60a5fa 45%, #bfdbfe 55%, #60a5fa 70%, #3b82f6 90%)", animationDuration: "8.5s", textShadow: "0 0 12px rgba(59,130,246,0.28)" }}>Décidez.</span>
         </h1>
         <p className="text-base sm:text-lg md:text-xl mb-4 max-w-2xl sm:mx-auto leading-relaxed wt-slide-up wt-hero-enter" style={{ color: T.muted }}>
           Reliez vos comptes, et{" "}

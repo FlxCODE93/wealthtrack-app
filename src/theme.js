@@ -43,8 +43,8 @@ C.bgGradient = `
   ${C.bg}
 `;
 
-// Brand gradient — violet + indigo (Stripe-like, premium)
-C.gradientPrimary = "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)";
+// Brand gradient — bleu navy institutionnel
+C.gradientPrimary = "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%)";
 
 // ─────────────────────────────────────────────────────────────────
 // Light Mode — même structure que C, surfaces et textes inversés
@@ -86,7 +86,7 @@ CL.bgGradient = `
   ${CL.bg}
 `;
 
-CL.gradientPrimary = "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)";
+CL.gradientPrimary = "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%)";
 
 // ─────────────────────────────────────────────────────────────────
 // Couleurs canoniques par classe d'actif — UNE couleur par actif,

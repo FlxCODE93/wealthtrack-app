@@ -1224,7 +1224,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <button
             onClick={() => setObjectiveOpen(true)}
             className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
-            style={{ background: "rgba(59,130,246,0.1)", border: `1px solid rgba(59,130,246,0.3)`, color: T.text }}>
+            style={{ background: "rgba(29,78,216,0.85)", border: "none", color: "#fff" }}>
             <Sparkles size={18} /> Optimiser mon mois par IA
           </button>
         </Card>

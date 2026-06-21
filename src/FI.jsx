@@ -540,7 +540,7 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
               )}
               {!syncMode && (
                 <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>
-                  Les données du Patrimoine, Profil et Finances ne sont pas utilisées.
+                  Les données du Patrimoine, Profil et Budget ne sont pas utilisées.
                 </div>
               )}
             </div>

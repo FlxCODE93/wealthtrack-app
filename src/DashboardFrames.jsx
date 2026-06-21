@@ -63,7 +63,7 @@ const SIM_BTC  = genSeries(10000, 0.09);
    - tier "pro"     : verrouillé même en Premium (réservé au plan Pro) */
 const NAV_ITEMS = [
   { id: "dashboard",   label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "finances",    label: "Finances",        icon: ListTree },
+  { id: "finances",    label: "Budget",          icon: ListTree },
   { id: "simulations", label: "Simulations",     icon: TrendingUp },
   { id: "patrimoine",  label: "Patrimoine",      icon: Wallet },
   { id: "fi",          label: "FIRE",            icon: Flag,          tier: "premium" },

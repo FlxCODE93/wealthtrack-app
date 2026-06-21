@@ -565,7 +565,7 @@ function PricingPage({ plan, setPlan }) {
 function Sidebar({ view, setView, profile, plan, setPlan }) {
   const T = useT();
   const items = [
-    { id: "finances",    label: "Finances",           icon: ListTree },
+    { id: "finances",    label: "Budget",             icon: ListTree },
     { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
     { id: "credits",     label: "Mes crédits",        icon: CreditCard },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
@@ -1529,7 +1529,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Finances</h1>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Budget</h1>
           <p style={{ color: T.muted }}>Transactions, budgets et récurrences</p>
         </div>
         <div className="flex gap-3 flex-wrap">
@@ -4064,7 +4064,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
           value={debtRatio == null ? "—" : `${debtRatio.toFixed(1).replace(".", ",")} %`}
           valueColor={debtColor}
           sub={debtRatio == null
-            ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Finances</button>
+            ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Budget</button>
             : <span style={{ color: T.muted }}>{incomeIsSmoothed ? "basé sur votre revenu moyen (12 mois) · seuil 35 %" : "mensualités ÷ revenus · seuil 35 %"}</span>} />
       </div>
 
@@ -6639,7 +6639,7 @@ export default function App() {
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
           {["finances", "dashboard", "credits", "patrimoine", "simulations", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Finances", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", finances: "Budget", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>

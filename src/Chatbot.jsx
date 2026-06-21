@@ -408,7 +408,7 @@ function mkEmergencyFund(ctx, params) {
     bullets,
     note: monthly > 0
       ? `Avec ${eur(monthly)}/mois de dépenses, vos cibles sont ${eur(tLow)} (${lowMonths} mois) et ${eur(tHigh)} (${highMonths} mois).`
-      : "Renseignez vos dépenses dans Finances pour un calcul personnalisé.",
+      : "Renseignez vos dépenses dans Budget pour un calcul personnalisé.",
     chips: ["Livret A / Livrets", "Comment épargner plus ?", "Allocation idéale"],
   };
 }

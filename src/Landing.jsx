@@ -46,7 +46,7 @@ const HERO_ALLOC = [
 
 const SIDEBAR_PREVIEW_ITEMS = [
   { label: "Tableau de bord", icon: LayoutDashboard, active: true },
-  { label: "Finances", icon: ListTree },
+  { label: "Budget", icon: ListTree },
   { label: "Simulations", icon: TrendingUp },
   { label: "Patrimoine", icon: Wallet },
   { label: "FIRE", icon: Flag },

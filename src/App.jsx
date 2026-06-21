@@ -1869,18 +1869,23 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   // 7 scénarios = les 7 actifs simulables. Tous recalculés en direct depuis les
   // paramètres communs (apport initial, mensuel, horizon) → table 100 % réactive.
   const RATE_PER_COMP = 0.05; // rendement net retenu pour la projection PER (cf. PERSimulator)
+  const PER_SCENARIO = { pess: 0.02, base: RATE_PER_COMP, opt: 0.08 }; // fonds euro → UC actions
   const compare = useMemo(() => {
     const perCap = Math.round(fv(initial, monthly, RATE_PER_COMP, horizon));
+    // Fourchette de rendement annuel (scénario prudent → favorable). Le Capital
+    // final ci-dessous est calculé sur le scénario MÉDIAN (base).
+    const pf = (x) => `${(x * 100).toFixed(Math.abs(x * 100) % 1 === 0 ? 0 : 1).replace(".", ",")}`.replace("-", "−");
+    const rng = (s) => `${pf(s.pess)} – ${pf(s.opt)} %`;
     return [
-      { name: "Livret A",   tab: "defensif", rate: "1,5 %",     color: ASSET.livret, risk: "Très faible", apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_C, 10)),                       yN: Math.round(sim.C.cap),   gain: Math.round(sim.C.gain) },
-      { name: "Immobilier", tab: "immo",     rate: "≈2 %/an",   color: ASSET.immo,   risk: "Faible",      apport: sim.B.apport, y10: Math.round(immoEquityAt(10)),                                       yN: Math.round(sim.B.cap),   gain: Math.round(sim.B.gain) },
-      { name: "ETF World",  tab: "etf",      rate: "10,5 %",    color: ASSET.etf,    risk: "Faible",      apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_A, 10)),                       yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
-      { name: "Or",         tab: "or",       rate: `${(orNetRate * 100).toFixed(1).replace(".", ",")} %`, color: "#f59e0b", risk: "Moyen", apport: orTotalVerse, y10: Math.round(fv(initial, monthly, orNetRate, 10)), yN: Math.round(orCapFinal), gain: Math.round(orGain) },
-      { name: "PER",        tab: "per",      rate: "≈5 %",      color: T.violet,     risk: "Moyen",       apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_PER_COMP, 10)),                yN: perCap,                  gain: perCap - Math.round(sim.apports) },
-      { name: "Bitcoin",    tab: "btc",      rate: "12 % méd.", color: ASSET.btc,    risk: "Extrême",     apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_SCENARIOS.btc.base, 10)),      yN: Math.round(sim.BTC.cap), gain: Math.round(sim.BTC.gain) },
-      { name: "Ethereum",   tab: "eth",      rate: "10 % méd.", color: ASSET.eth,    risk: "Extrême+",    apport: sim.apports,  y10: Math.round(fv(initial, monthly, RATE_SCENARIOS.eth.base, 10)),      yN: Math.round(sim.ETH.cap), gain: Math.round(sim.ETH.gain) },
+      { name: "Livret A",   tab: "defensif", rateRange: rng(RATE_SCENARIOS.livret), color: ASSET.livret, risk: "Très faible", apport: sim.apports,  yN: Math.round(sim.C.cap),   gain: Math.round(sim.C.gain) },
+      { name: "Immobilier", tab: "immo",     rateRange: rng(RATE_SCENARIOS.immo),   color: ASSET.immo,   risk: "Faible",      apport: sim.B.apport, yN: Math.round(sim.B.cap),   gain: Math.round(sim.B.gain) },
+      { name: "ETF World",  tab: "etf",      rateRange: rng(RATE_SCENARIOS.etf),    color: ASSET.etf,    risk: "Faible",      apport: sim.apports,  yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
+      { name: "Or",         tab: "or",       rateRange: rng(orScenario),            color: "#f59e0b",    risk: "Moyen",       apport: orTotalVerse, yN: Math.round(orCapFinal),  gain: Math.round(orGain) },
+      { name: "PER",        tab: "per",      rateRange: rng(PER_SCENARIO),          color: T.violet,     risk: "Moyen",       apport: sim.apports,  yN: perCap,                  gain: perCap - Math.round(sim.apports) },
+      { name: "Bitcoin",    tab: "btc",      rateRange: rng(RATE_SCENARIOS.btc),    color: ASSET.btc,    risk: "Extrême",     apport: sim.apports,  yN: Math.round(sim.BTC.cap), gain: Math.round(sim.BTC.gain) },
+      { name: "Ethereum",   tab: "eth",      rateRange: rng(RATE_SCENARIOS.eth),    color: ASSET.eth,    risk: "Extrême+",    apport: sim.apports,  yN: Math.round(sim.ETH.cap), gain: Math.round(sim.ETH.gain) },
     ];
-  }, [initial, monthly, horizon, price, sim, orNetRate, orCapFinal, orTotalVerse, orGain]);
+  }, [initial, monthly, horizon, price, sim, orScenario, orCapFinal, orTotalVerse, orGain]);
 
   const TABS = [
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
@@ -2223,8 +2228,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               </thead>
               <tbody>
                 {[
-                  { key: "rate",     label: "Rendement annuel", render: (c) => <span style={{ color: c.color, fontWeight: 700 }}>{c.rate}</span> },
-                  { key: "final",    label: `Capital final (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
+                  { key: "rate",     label: "Rendement annuel (fourchette)", render: (c) => <span style={{ color: c.color, fontWeight: 700 }}>{c.rateRange}</span> },
+                  { key: "final",    label: `Capital final · médian (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
                   { key: "gain",     label: "Gains générés", render: (c) => <span style={{ color: c.gain >= 0 ? T.green : T.red }}>{(c.gain >= 0 ? "+" : "") + eur(c.gain)}</span> },
                   { key: "apport",   label: "Apports cumulés", render: (c) => <span style={{ color: T.muted }}>{eur(c.apport)}</span> },
                   { key: "multiple", label: "Multiple", render: (c) => `${c.apport > 0 ? (c.yN / c.apport).toFixed(1) : "—"}×` },

@@ -593,6 +593,37 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           <div className="text-xs" style={{ color: T.muted }}>Gestion patrimoniale</div>
         </div>
       </div>
+
+      {/* Accès profil — avatar cliquable, au-dessus de la navigation */}
+      <button
+        onClick={() => setView("profil")}
+        aria-label="Mon profil"
+        className="flex items-center gap-3 py-3 rounded-xl text-left transition mb-1"
+        style={{
+          paddingLeft: view === "profil" ? 13 : 16, paddingRight: 16,
+          background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
+          borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
+          boxShadow: "none", border: "none", cursor: "pointer",
+        }}
+      >
+        <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
+          style={{
+            background: view === "profil" ? T.gradientPrimary : "rgba(91,141,239,0.12)",
+            color: view === "profil" ? "#fff" : T.blue,
+            border: `1px solid ${T.blue}22`,
+          }}>
+          {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={16} />}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate" style={{ color: T.text }}>
+            {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Mon compte"}
+          </div>
+          <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
+            {planInfo.label}
+          </div>
+        </div>
+      </button>
+
       {items.map((it) => {
         const active = view === it.id;
         const locked = !canAccess(plan, it.id);
@@ -631,35 +662,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             </span>
           </button>
         )}
-        <button
-          onClick={() => setView("profil")}
-          className="w-full flex items-center gap-3 rounded-xl transition text-left"
-          style={{
-            paddingTop: 12, paddingBottom: 12, paddingRight: 16,
-            paddingLeft: view === "profil" ? 13 : 16,
-            background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
-            borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
-            boxShadow: "none", border: "none", cursor: "pointer",
-          }}
-        >
-          <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
-            style={{
-              background: view === "profil" ? T.gradientPrimary : "rgba(91,141,239,0.12)",
-              color: view === "profil" ? "#fff" : T.blue,
-              border: `1px solid ${T.blue}22`,
-            }}>
-            {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || "—"}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate" style={{ color: T.text }}>
-              {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Mon compte"}
-            </div>
-            <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
-              {planInfo.label}
-            </div>
-          </div>
-        </button>
-        <div className="px-3 pb-4">
+        <div className="px-3 py-4">
           <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
             <Shield size={11} />
             <span>Données locales par défaut</span>

@@ -1364,13 +1364,41 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
   const [editBuf, setEditBuf]  = useState({});
   const [newTx, setNewTx]      = useState({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
 
-  const list = filter === "tout" ? tx : filter === "recurring" ? tx.filter(t => t.recurring) : tx.filter((t) => t.type === filter);
+  // ── Gestion du temps : chaque transaction porte une date (les anciennes sans
+  //    date sont rattachées au mois courant pour rester visibles). ───────────
+  const CUR_YM = new Date().toISOString().slice(0, 7); // "AAAA-MM"
+  const txYM = (t) => (typeof t.date === "string" && t.date.length >= 7 ? t.date.slice(0, 7) : CUR_YM);
+  const monthLabel = (ym) => {
+    const d = new Date(`${ym}-01T00:00:00`);
+    const s = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  const rowDate = (t) =>
+    t.date ? new Date(`${t.date}T00:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : null;
+
+  // Mois disponibles (présents dans les transactions) + mois courant, triés récent → ancien.
+  const months = useMemo(() => {
+    const set = new Set(tx.map(txYM));
+    set.add(CUR_YM);
+    return [...set].sort().reverse();
+  }, [tx]);
+
+  const [period, setPeriod] = useState(CUR_YM);
+  // Si le mois sélectionné n'existe plus (suppression), on retombe sur le plus récent.
+  useEffect(() => {
+    if (!months.includes(period)) setPeriod(months[0] || CUR_YM);
+  }, [months]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const byType = filter === "tout" ? tx : filter === "recurring" ? tx.filter(t => t.recurring) : tx.filter((t) => t.type === filter);
+  const list = byType
+    .filter((t) => txYM(t) === period)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   const handleAdd = () => {
     const amount = parseFloat(newTx.amount);
     if (!newTx.label.trim() || !amount) return;
     const signed = newTx.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
-    onAdd?.({ ...newTx, amount: signed, id: Date.now() });
+    onAdd?.({ ...newTx, amount: signed, id: Date.now(), date: new Date().toISOString().slice(0, 10) });
     setNewTx({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
     setShowAdd(false);
   };
@@ -1491,7 +1519,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 
       {mainTab === "transactions" && (
         <>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap items-center">
             <Pill active={filter === "tout"} onClick={() => setFilter("tout")}>Tout</Pill>
             {Object.entries(TYPE_META).map(([k, v]) => (
               <Pill key={k} active={filter === k} onClick={() => setFilter(k)}>{v.label}</Pill>
@@ -1499,13 +1527,24 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             <Pill active={filter === "recurring"} onClick={() => setFilter("recurring")}>
               <Repeat size={13} className="inline mr-1" />Récurrentes
             </Pill>
+            {/* Sélecteur de période — par défaut le mois courant */}
+            <div className="ml-auto flex items-center gap-2">
+              <Calendar size={15} style={{ color: T.muted }} />
+              <select value={period} onChange={(e) => setPeriod(e.target.value)}
+                style={{ ...inpSt, paddingRight: 30, cursor: "pointer", fontWeight: 600,
+                  appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#', '')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}>
+                {months.map((ym) => <option key={ym} value={ym}>{monthLabel(ym)}</option>)}
+              </select>
+            </div>
           </div>
 
           <Card>
             <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>
-              Transactions ({list.length})
+              Transactions de {monthLabel(period)} ({list.length})
             </h2>
-            {list.length === 0 && <p style={{ color: T.muted, fontSize: 13 }}>Aucune transaction dans ce filtre.</p>}
+            {list.length === 0 && <p style={{ color: T.muted, fontSize: 13 }}>Aucune transaction pour {monthLabel(period)}{filter !== "tout" ? " dans ce filtre" : ""}.</p>}
             {list.map((t) => {
               const meta = TYPE_META[t.type] || { label: t.type, color: T.muted };
               const isEditing = editId === t.id;
@@ -1550,8 +1589,13 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                             {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
                           </span>
                         </div>
-                        {/* Ligne 2 : cat + badge type + boutons */}
+                        {/* Ligne 2 : date + cat + badge type + boutons */}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {rowDate(t) && (
+                            <span className="text-xs inline-flex items-center gap-1" style={{ color: T.muted }}>
+                              <Calendar size={11} />{rowDate(t)}
+                            </span>
+                          )}
                           <span className="text-xs" style={{ color: T.muted }}>{t.cat}</span>
                           <span className="px-2 py-0.5 rounded-md text-xs font-medium"
                             style={{ background: meta.color + "22", color: meta.color }}>{meta.label}</span>

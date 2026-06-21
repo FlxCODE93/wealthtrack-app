@@ -4,16 +4,16 @@
    ──────────────────────────────────────────────────────────────────── */
 
 export const TX = [
-  { id: 1, label: "Versement programmé", cat: "WPEA", type: "investissement", amount: -500 },
-  { id: 2, label: "Investissement Bourse", cat: "Bourse", type: "investissement", amount: -489 },
-  { id: 3, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4781 },
-  { id: 4, label: "Loyer appartement", cat: "Logement", type: "charge_fixe", amount: -900 },
-  { id: 5, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -200 },
-  { id: 6, label: "Frais professionnels", cat: "Frais pro", type: "charge_fixe", amount: -251 },
-  { id: 7, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -100 },
-  { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -381 },
-  { id: 9, label: "Loisirs & sorties", cat: "Loisirs", type: "depense_variable", amount: -269 },
-  { id: 10, label: "Transport", cat: "Transport", type: "depense_variable", amount: -187 },
+  { id: 1, label: "Versement programmé", cat: "WPEA", type: "investissement", amount: -500, date: "2026-06-02" },
+  { id: 2, label: "Investissement Bourse", cat: "Bourse", type: "investissement", amount: -489, date: "2026-06-05" },
+  { id: 3, label: "Honoraires clients", cat: "Freelance", type: "revenu", amount: 4781, date: "2026-06-03" },
+  { id: 4, label: "Loyer appartement", cat: "Logement", type: "charge_fixe", amount: -900, date: "2026-06-04" },
+  { id: 5, label: "Assurances", cat: "Assurances", type: "charge_fixe", amount: -200, date: "2026-06-06" },
+  { id: 6, label: "Frais professionnels", cat: "Frais pro", type: "charge_fixe", amount: -251, date: "2026-06-08" },
+  { id: 7, label: "Abonnements", cat: "Abonnements", type: "charge_fixe", amount: -100, date: "2026-06-10" },
+  { id: 8, label: "Courses alimentaires", cat: "Alimentation", type: "depense_variable", amount: -381, date: "2026-06-12" },
+  { id: 9, label: "Loisirs & sorties", cat: "Loisirs", type: "depense_variable", amount: -269, date: "2026-06-15" },
+  { id: 10, label: "Transport", cat: "Transport", type: "depense_variable", amount: -187, date: "2026-06-18" },
 ];
 
 export const HISTO = [

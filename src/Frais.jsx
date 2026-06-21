@@ -225,9 +225,9 @@ export default function Frais() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 16 }}>
           <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>
-            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Gérer soi-même ou déléguer ?</h3>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#22c55e" }}>Vous gérez vous-même :</strong> vous choisissez où va votre argent. Le moins cher, et vous gardez le contrôle.</p>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Vous déléguez :</strong> quelqu'un (ou un robot) décide à votre place selon votre profil. Plus simple, mais 0,3 à 0,9 %/an de frais en plus.</p>
+            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Gestion libre ou gestion pilotée ?</h3>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#22c55e" }}>Gestion libre :</strong> vous choisissez vous-même où va votre argent. Le moins cher, et vous gardez le contrôle.</p>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Gestion pilotée :</strong> quelqu'un (ou un robot) décide à votre place selon votre profil. Plus simple, mais 0,3 à 0,9 %/an de frais en plus.</p>
             <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 600 }}>Si vous savez expliquer où va votre argent, gérez-le vous-même.</div>
           </div>
           <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>

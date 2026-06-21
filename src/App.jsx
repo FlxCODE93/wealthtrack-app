@@ -1879,8 +1879,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     return [
       { name: "Livret A",   tab: "defensif", rateRange: "1,5 %",                    color: ASSET.livret, risk: "Très faible", apport: sim.apports,  yN: Math.round(sim.C.cap),   gain: Math.round(sim.C.gain) },
       { name: "Immobilier", tab: "immo",     rateRange: "2 – 5 %",                  color: ASSET.immo,   risk: "Faible",      apport: sim.B.apport, yN: Math.round(sim.B.cap),   gain: Math.round(sim.B.gain) },
-      { name: "ETF World",  tab: "etf",      rateRange: "8 – 12 %",                 color: ASSET.etf,    risk: "Faible",      apport: sim.apports,  yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
-      { name: "Or",         tab: "or",       rateRange: "5 %",                      color: "#f59e0b",    risk: "Moyen",       apport: orTotalVerse, yN: Math.round(orCapFinal),  gain: Math.round(orGain) },
+      { name: "ETF World",  tab: "etf",      rateRange: "8 – 12 %",                 color: ASSET.etf,    risk: "Moyen",       apport: sim.apports,  yN: Math.round(sim.A.cap),   gain: Math.round(sim.A.gain) },
+      { name: "Or",         tab: "or",       rateRange: "5 %",                      color: "#f59e0b",    risk: "Faible",      apport: orTotalVerse, yN: Math.round(orCapFinal),  gain: Math.round(orGain) },
       { name: "PER",        tab: "per",      rateRange: rng(PER_SCENARIO),          color: T.violet,     risk: "Moyen",       apport: sim.apports,  yN: perCap,                  gain: perCap - Math.round(sim.apports) },
       { name: "Bitcoin",    tab: "btc",      rateRange: rng(RATE_SCENARIOS.btc),    color: ASSET.btc,    risk: "Extrême",     apport: sim.apports,  yN: Math.round(sim.BTC.cap), gain: Math.round(sim.BTC.gain) },
       { name: "Ethereum",   tab: "eth",      rateRange: rng(RATE_SCENARIOS.eth),    color: ASSET.eth,    risk: "Extrême+",    apport: sim.apports,  yN: Math.round(sim.ETH.cap), gain: Math.round(sim.ETH.gain) },
@@ -2232,7 +2232,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
                   { key: "apport",   label: "Apports cumulés", render: (c) => <span style={{ color: T.muted }}>{eur(c.apport)}</span> },
                   { key: "final",    label: `Capital final (${horizon} ans)`, highlight: true, render: (c) => <span style={{ color: c.color, fontWeight: 800 }}>{eur(c.yN)}</span> },
                   { key: "gain",     label: "Gains générés", render: (c) => <span style={{ color: c.gain >= 0 ? T.green : T.red }}>{(c.gain >= 0 ? "+" : "") + eur(c.gain)}</span> },
-                  { key: "multiple", label: "Multiple", render: (c) => `${c.apport > 0 ? (c.yN / c.apport).toFixed(1) : "—"}×` },
                   { key: "risk",     label: "Risque", render: (c) => <span className="text-xs" style={{ color: T.muted }}>{c.risk}</span> },
                 ].map((row) => (
                   <tr key={row.key}

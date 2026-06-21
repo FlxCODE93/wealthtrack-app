@@ -585,11 +585,11 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
       style={{ width: 270, borderRight: `1px solid ${T.border}`, borderRadius: 0 }}
     >
       <div className="flex items-center gap-3 px-3 py-5 mb-1">
-        <div className="rounded-lg p-1.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-          <BarChart3 size={18} style={{ color: T.blue }} />
+        <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
+          <BarChart3 size={26} style={{ color: T.blue }} />
         </div>
         <div>
-          <span className="text-base font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+          <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
           <div className="text-xs" style={{ color: T.muted }}>Gestion patrimoniale</div>
         </div>
       </div>

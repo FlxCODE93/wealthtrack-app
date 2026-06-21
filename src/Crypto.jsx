@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, Plus, Trash2, Download, AlertTriangle, TrendingUp, TrendingDown,
   Trophy, Zap, ExternalLink, Star, Wallet, Layers, Percent, Lock,
-  Shield, ShieldAlert, ShieldOff, ShieldQuestion, Search, X, Coins,
+  Shield, ShieldAlert, ShieldOff, ShieldQuestion, Search, X, Coins, ChevronLeft,
 } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { ExpandableChart } from "./ChartComponents.jsx";
@@ -412,7 +412,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
 }
 
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
-export default function Crypto() {
+export default function Crypto({ setView }) {
   const T = useT();
   const [holdings, setHoldings]     = useLocalStorage("wt_crypto_holdings", DEFAULT_HOLDINGS);
   const [prices, setPrices]         = useState({});
@@ -597,6 +597,12 @@ export default function Crypto() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
+          {setView && (
+            <button onClick={() => setView("patrimoine")}
+              className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              <ChevronLeft size={15} /> Patrimoine
+            </button>
+          )}
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Crypto Portfolio</h1>
           <p style={{ color: T.muted }}>
             Prix live · Staking · Fiscalité

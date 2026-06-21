@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Flag, TrendingUp, Zap, Check, AlertTriangle, ChevronUp, ChevronDown, Mountain, RefreshCw, Trophy, Rocket } from "lucide-react";
+import { Flag, TrendingUp, Zap, Check, AlertTriangle, ChevronUp, ChevronDown, ChevronLeft, Mountain, RefreshCw, Trophy, Rocket } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine, Legend,
@@ -271,7 +271,7 @@ function computeBlendedReturn(patrimoine) {
 }
 
 /* ─── Composant principal ───────────────────────────────────────────── */
-export default function FI({ patrimoine, totals, simParams, profile }) {
+export default function FI({ patrimoine, totals, simParams, profile, setView }) {
   const T = useT();
 
   /* ── Valeurs réelles calculées depuis l'app ── */
@@ -505,6 +505,12 @@ export default function FI({ patrimoine, totals, simParams, profile }) {
 
       {/* ── En-tête ── */}
       <div>
+        {setView && (
+          <button onClick={() => setView("simulations")}
+            className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <ChevronLeft size={15} /> Simulations
+          </button>
+        )}
         <h1 className="text-3xl font-bold" style={{ color: T.text }}>Indépendance Financière</h1>
         <p style={{ color: T.muted }}>Règle des 4 % · Intérêts composés · Votre date de liberté</p>
       </div>

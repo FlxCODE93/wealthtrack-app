@@ -20,7 +20,7 @@ import {
   Users, Building2, Briefcase, Check, X, RefreshCw,
   ExternalLink, Landmark, ChevronDown, ChevronUp, CreditCard,
   MessageCircle, Lightbulb, Bitcoin, AlertTriangle, AlertCircle, Calculator, Flag, Info,
-  Crown, Star, FileText, ChevronRight, Calendar,
+  Crown, Star, FileText, ChevronRight, ChevronLeft, Calendar,
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap, Coins, Percent,
@@ -564,20 +564,18 @@ function PricingPage({ plan, setPlan }) {
 
 function Sidebar({ view, setView, profile, plan, setPlan }) {
   const T = useT();
+  // Taxonomie consolidée : 9 piliers (+ Couple conditionnel). Budget est fusionné
+  // dans le Tableau de bord ; Crédits/Crypto sous Patrimoine ; Immobilier/FIRE
+  // sous Simulations — accessibles via boutons internes, hors sidebar.
   const items = [
-    { id: "finances",    label: "Budget",             icon: ListTree },
     { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
-    { id: "credits",     label: "Mes crédits",        icon: CreditCard },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
     { id: "simulations", label: "Simulations",        icon: TrendingUp },
-    { id: "fi",          label: "FIRE",               icon: Flag },
-    { id: "crypto",      label: "Crypto",             icon: Bitcoin },
-    { id: "immobilier",  label: "Immobilier",         icon: Building2 },
+    { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "frais",       label: "Analyse des frais",  icon: Percent },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
-    { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "pricing",     label: "Tarifs",             icon: Crown },
     { id: "profil",      label: "Profil",             icon: User },
   ];
@@ -890,6 +888,19 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         </div>,
         document.body
       )}
+
+      {/* Accès au détail Budget (transactions, budgets par catégorie, import, banque) */}
+      <button onClick={() => setView("finances")}
+        className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 w-full"
+        style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+        <span className="flex items-center gap-3" style={{ color: T.text, fontWeight: 600 }}>
+          <ListTree size={18} style={{ color: T.blue }} />
+          Voir toutes les transactions
+        </span>
+        <span className="flex items-center gap-1 text-sm" style={{ color: T.muted }}>
+          Budget & catégories <ChevronRight size={16} />
+        </span>
+      </button>
 
       {/* Évolution réelle du patrimoine net (snapshots mensuels auto) */}
       <Card>
@@ -1529,6 +1540,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <button onClick={() => setView("dashboard")}
+            className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <ChevronLeft size={15} /> Tableau de bord
+          </button>
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Budget</h1>
           <p style={{ color: T.muted }}>Transactions, budgets et récurrences</p>
         </div>
@@ -2074,6 +2089,32 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           <RefreshCw size={12} style={{ opacity: 0.7 }} />
         </button>
       </div>
+
+      {/* Accès aux simulations approfondies */}
+      {setView && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { id: "fi",         label: "FIRE — Indépendance financière", desc: "À quel âge êtes-vous libre ?", icon: Flag, color: T.green },
+            { id: "immobilier", label: "Immobilier — achat vs location", desc: "Rendement locatif, LMNP, crédit", icon: Building2, color: T.blue },
+          ].map((s) => {
+            const Icon = s.icon;
+            return (
+              <button key={s.id} onClick={() => setView(s.id)}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left"
+                style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${s.color}1a` }}>
+                  <Icon size={17} style={{ color: s.color }} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-sm truncate" style={{ color: T.text }}>{s.label}</span>
+                  <span className="block text-xs truncate" style={{ color: T.muted }}>{s.desc}</span>
+                </span>
+                <ChevronRight size={16} style={{ color: T.muted, marginLeft: "auto", flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Paramètres communs */}
       <Card>
@@ -4041,6 +4082,12 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
+          {setView && (
+            <button onClick={() => setView("patrimoine")}
+              className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              <ChevronLeft size={15} /> Patrimoine
+            </button>
+          )}
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Mes crédits</h1>
           <p style={{ color: T.muted }}>Suivez vos crédits et prêts en cours.</p>
         </div>
@@ -4191,7 +4238,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
 /* ------------------------------------------------------------------ */
 /*  FEATURE 5: SIMULATEUR IMMOBILIER AVANCÉ                            */
 /* ------------------------------------------------------------------ */
-function Immobilier({ totals, simParams, patrimoine, transactions }) {
+function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
@@ -4438,6 +4485,12 @@ function Immobilier({ totals, simParams, patrimoine, transactions }) {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
+        {setView && (
+          <button onClick={() => setView("simulations")}
+            className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <ChevronLeft size={15} /> Simulations
+          </button>
+        )}
         <h1 className="text-3xl font-bold" style={{ color: T.text }}>Simulateur Immobilier</h1>
         <p style={{ color: T.muted }}>Analysez un projet d'achat, calculez votre apport et comparez achat vs location.</p>
       </div>
@@ -5427,7 +5480,7 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : PATRIMOINE                                                 */
 /* ------------------------------------------------------------------ */
-function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
+function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const T = useT();
   const chartTip = makeChartTip(T);
   const [editMode, setEditMode] = useState(false);
@@ -5631,6 +5684,33 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank }) {
           {editMode ? "Verrouiller" : "Mode édition"}
         </button>
       </div>
+
+      {/* Accès rapides aux composantes du patrimoine */}
+      {setView && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { id: "credits", label: "Mes crédits", desc: "Prêts & passifs", icon: CreditCard, color: T.red },
+            { id: "crypto",  label: "Crypto",      desc: "Portefeuille & cours live", icon: Bitcoin, color: T.amber },
+            { id: "importer", label: "Importer / Banque", desc: "Relevés & connexion", icon: Landmark, color: T.blue },
+          ].map((s) => {
+            const Icon = s.icon;
+            return (
+              <button key={s.id} onClick={() => (s.id === "importer" ? onConnectBank() : setView(s.id))}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left"
+                style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${s.color}1a` }}>
+                  <Icon size={17} style={{ color: s.color }} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-sm truncate" style={{ color: T.text }}>{s.label}</span>
+                  <span className="block text-xs truncate" style={{ color: T.muted }}>{s.desc}</span>
+                </span>
+                <ChevronRight size={16} style={{ color: T.muted, marginLeft: "auto", flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* État vide — aucune donnée patrimoniale saisie */}
       {!hasData && (
@@ -6358,7 +6438,7 @@ function BankConnectModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 export default function App() {
   const T = useT();
-  const [view,       setView]       = useState("finances"); // 1re vue : là où l'on connecte sa banque / importe
+  const [view,       setView]       = useState("dashboard"); // cockpit principal (Budget fusionné dedans)
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
   const [showBankConnect, setShowBankConnect] = useState(false);
 
@@ -6637,9 +6717,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["finances", "dashboard", "credits", "patrimoine", "simulations", "fi", "crypto", "immobilier", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "plans", "pricing", "profil"].map((v) => (
+          {["dashboard", "patrimoine", "simulations", "plans", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", finances: "Budget", credits: "Crédits", simulations: "Simul.", patrimoine: "Patrimoine", fi: "IF", crypto: "Crypto", immobilier: "Immo", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", plans: "Plan", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", patrimoine: "Patrimoine", simulations: "Simul.", plans: "Plan", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -6661,7 +6741,7 @@ export default function App() {
           />}
         {view === "objectifs"    && <ObjectifsView goals={goals} setGoals={setGoals} totals={totals} />}
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
-        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} />}
+        {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} setView={setView} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
         {view === "importer"     && <TransactionImportTab onImport={handleImport} />}
         {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
@@ -6669,10 +6749,10 @@ export default function App() {
 
         {/* Vues Premium */}
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "frais"        && <Frais />}
-        {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 
         {/* Vues Pro */}

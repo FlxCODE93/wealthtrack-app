@@ -4209,8 +4209,9 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
         <div>
           {setView && (
             <button onClick={() => setView("patrimoine")}
-              className="flex items-center gap-1 text-sm mb-2" style={{ color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <ChevronLeft size={15} /> Patrimoine
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+              <ChevronLeft size={16} style={{ color: T.blue }} />
+              Retour au Patrimoine
             </button>
           )}
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Mes crédits</h1>

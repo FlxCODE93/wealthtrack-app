@@ -590,7 +590,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         </div>
         <div>
           <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
-          <div className="text-xs" style={{ color: T.muted }}>Gestion patrimoniale</div>
+          <div className="text-xs" style={{ color: T.muted }}>Gestion financière</div>
         </div>
       </div>
 

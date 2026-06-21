@@ -49,9 +49,9 @@ export default function PaperShaderBackground() {
     container.appendChild(renderer.domElement);
 
     const planes = [
-      { pos: [0, 0, 0], c1: "#7c3aed", c2: "#0891b2" },
-      { pos: [-0.5, 0.3, 0], c1: "#4f46e5", c2: "#7c3aed" },
-      { pos: [0.5, -0.3, 0], c1: "#0d9488", c2: "#4f46e5" },
+      { pos: [0, 0, 0], c1: "#1e293b", c2: "#0891b2" },
+      { pos: [-0.5, 0.3, 0], c1: "#0f1f3d", c2: "#3b82f6" },
+      { pos: [0.5, -0.3, 0], c1: "#0d9488", c2: "#1e3a5f" },
     ].map(({ pos, c1, c2 }) => {
       const uniforms = {
         time: { value: 0 },

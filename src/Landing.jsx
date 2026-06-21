@@ -378,9 +378,9 @@ function FooterLink({ href, onClick, children }) {
 function HeroOrbs() {
   return (
     <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "100vh", overflow: "hidden", pointerEvents: "none", zIndex: 1 }}>
-      <div style={{ position: "absolute", width: 700, height: 700, top: -280, left: -160, borderRadius: "50%", background: "#7c3aed", opacity: 0.11, filter: "blur(130px)", animation: "wt-orb-drift 22s ease-in-out infinite", willChange: "transform" }} />
-      <div style={{ position: "absolute", width: 500, height: 500, top: -80, right: -120, borderRadius: "50%", background: "#4f46e5", opacity: 0.09, filter: "blur(110px)", animation: "wt-orb-drift 28s ease-in-out infinite", animationDelay: "-9s", willChange: "transform" }} />
-      <div style={{ position: "absolute", width: 280, height: 280, top: "45%", left: "35%", borderRadius: "50%", background: "#6366f1", opacity: 0.06, filter: "blur(80px)", animation: "wt-orb-drift 17s ease-in-out infinite", animationDelay: "-5s", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 700, height: 700, top: -280, left: -160, borderRadius: "50%", background: "#1e293b", opacity: 0.55, filter: "blur(130px)", animation: "wt-orb-drift 22s ease-in-out infinite", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 500, height: 500, top: -80, right: -120, borderRadius: "50%", background: "#3b82f6", opacity: 0.08, filter: "blur(110px)", animation: "wt-orb-drift 28s ease-in-out infinite", animationDelay: "-9s", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 280, height: 280, top: "45%", left: "35%", borderRadius: "50%", background: "#0891b2", opacity: 0.06, filter: "blur(80px)", animation: "wt-orb-drift 17s ease-in-out infinite", animationDelay: "-5s", willChange: "transform" }} />
     </div>
   );
 }

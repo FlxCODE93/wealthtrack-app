@@ -37,7 +37,7 @@ const DEVICES = [
     rendementBrut: RATE_ETF_WORLD * 100,
     type: "mixte",
     avantages: ["Fiscalité successorale avantageuse", "Gestion libre ou pilotée", "Arbitrages possibles"],
-    inconvenients: ["Frais enveloppe (0,5–1%) + frais UC (0,5–1%)", "Rendement amputé vs ETF en direct"],
+    inconvenients: ["Frais du contrat (0,5–1%) + frais des placements (0,5–1%)", "Rapporte moins qu'un ETF acheté en direct"],
     note: "Frais enveloppe ~0,7% + frais des UC ~0,7%. Comparer les contrats (Linxea, Yomoni, WeSave).",
   },
   {
@@ -82,7 +82,7 @@ const DEVICES = [
   {
     id: "scpi",
     name: "SCPI",
-    label: "SCPI (Pierre-Papier)",
+    label: "SCPI (immobilier sans gestion)",
     color: "#f97316",
     fraisEntree: 10.0,
     fraisAnnuels: 1.0,
@@ -96,13 +96,13 @@ const DEVICES = [
 
 const GLOSSAIRE = [
   { term: "Frais d'entrée", def: "Prélevés une fois à la souscription (ex: 3% sur un versement de 10 000€ = 300€ perdus immédiatement). Négociables ou nuls en ligne." },
-  { term: "Frais de gestion annuels", def: "Prélevés chaque année sur l'encours (ex: 1,5% sur 50 000€ = 750€/an). Compoundés : sur 20 ans, 1,5%/an efface ~25% du capital." },
-  { term: "TER (Total Expense Ratio)", def: "Ratio de frais global d'un ETF ou fonds. Tout inclus. Un TER de 0,25% signifie 2,50€/an pour 1 000€ investis." },
-  { term: "Frais d'enveloppe", def: "Frais propres au contrat (AV, PER), distincts des frais des fonds logés. Cumulatifs : enveloppe 0,7% + UC 0,7% = 1,4% total." },
-  { term: "Commission de surperformance", def: "Frais additionnels si le fonds dépasse son benchmark (ex: 20% de la surperformance). Réducteurs de rendement en période favorable." },
-  { term: "Gestion libre", def: "Vous choisissez vous-même les supports (ETF, UC, fonds €). Contrôle total, coût minimal, nécessite de l'implication." },
-  { term: "Gestion pilotée", def: "Un algorithme ou un gérant choisit l'allocation selon votre profil. Frais supplémentaires ~0,3–0,9%. Pratique mais coûteux." },
-  { term: "Unités de Compte (UC)", def: "Supports non garantis en capital (actions, ETF, fonds mixtes) logés dans une AV ou un PER. Potentiel de rendement élevé, risque de perte." },
+  { term: "Frais de gestion annuels", def: "Prélevés chaque année sur tout l'argent placé (ex : 1,5 % sur 50 000 € = 750 €/an). Année après année, 1,5 %/an efface environ 25 % du capital sur 20 ans." },
+  { term: "TER (Total Expense Ratio)", def: "Le total des frais annuels d'un ETF ou d'un fonds, tout compris. Un TER de 0,25 %, c'est 2,50 € par an pour 1 000 € placés." },
+  { term: "Frais d'enveloppe", def: "Les frais du contrat lui-même (assurance-vie, PER), en plus des frais des placements qu'il contient. Ils s'additionnent : 0,7 % de contrat + 0,7 % de placement = 1,4 % au total." },
+  { term: "Commission sur les gains", def: "Des frais en plus quand le fonds dépasse son objectif (ex : 20 % des gains supplémentaires). Ils réduisent votre rendement justement les bonnes années." },
+  { term: "Gestion libre", def: "Vous choisissez vous-même où va votre argent (ETF, fonds €…). Le moins cher, mais demande un peu d'implication." },
+  { term: "Gestion pilotée", def: "Un robot ou un gérant décide à votre place selon votre profil. Plus simple, mais 0,3 à 0,9 % de frais en plus chaque année." },
+  { term: "Unités de Compte (UC)", def: "Les placements d'une assurance-vie ou d'un PER dont la valeur peut monter ou baisser (actions, ETF…). Plus de potentiel, mais risque de perte." },
   { term: "Fonds euros", def: "Support garanti en capital dans une AV. Rendement faible (~2–3%). Idéal pour la partie sécurisée d'un contrat multi-support." },
   { term: "Effet de capitalisation des frais", def: "1€ de frais prélevé aujourd'hui coûte bien plus que 1€ futur — car ces 1€ n'a pas pu croître pendant des années." },
 ];
@@ -208,9 +208,9 @@ export default function Frais() {
         <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Comprendre les frais</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
           {[
-            { title: "Frais d'entrée", color: "#ef4444", icon: "✗", desc: "Prélevés une seule fois à la souscription (ex : 3% sur 10 000 € = 300 € perdus dès le départ). Négociables ou nuls en ligne.", tip: "Visez 0% — ils n'existent plus chez les courtiers en ligne." },
-            { title: "Frais de gestion annuels", color: "#f59e0b", icon: "%", desc: "Prélevés chaque année sur votre encours. L'effet de capitalisation les rend dévastateurs : 1,5 %/an sur 20 ans ≈ 25 % du capital final sacrifié.", tip: "ETF PEA : ~0,25 %/an. Fonds actifs : 1,5–2,5 %/an." },
-            { title: "Commission de surperformance", color: "#8b5cf6", icon: "⚠", desc: "Certains fonds prélèvent 10–20 % des gains dépassant leur indice — applicable même si votre capital a baissé en absolu.", tip: "Préférer les fonds sans commission de performance." },
+            { title: "Frais d'entrée", color: "#ef4444", icon: "✗", desc: "Prélevés une seule fois, au moment où vous placez votre argent. Exemple : 3 % sur 10 000 €, c'est 300 € perdus dès le premier jour.", tip: "Visez 0 % : ils ont disparu chez les courtiers en ligne." },
+            { title: "Frais de gestion annuels", color: "#f59e0b", icon: "%", desc: "Prélevés chaque année sur tout l'argent que vous avez placé. Le piège : 1,5 %/an pendant 20 ans, c'est environ 25 % de votre capital final qui part en frais.", tip: "ETF en PEA : ~0,25 %/an. Fonds gérés activement : 1,5 à 2,5 %/an." },
+            { title: "Commission sur les gains", color: "#8b5cf6", icon: "⚠", desc: "Certains fonds prennent 10 à 20 % de vos gains au-delà d'un objectif — parfois même les années où votre épargne a baissé.", tip: "Préférez les fonds qui n'en prélèvent pas." },
           ].map((f) => (
             <div key={f.title} style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${f.color}33` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -225,16 +225,16 @@ export default function Frais() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 16 }}>
           <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>
-            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Gestion libre vs gestion pilotée</h3>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#22c55e" }}>Gestion libre :</strong> vous choisissez vous-même les supports (ETF, fonds €, UC). Coût minimal, contrôle total.</p>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Gestion pilotée :</strong> algorithme selon votre profil. Frais supplémentaires ~0,3–0,9 %/an. Pratique mais coûteux sur le long terme.</p>
-            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 600 }}>Si vous pouvez nommer ce que vous investissez → choisissez la gestion libre.</div>
+            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Gérer soi-même ou déléguer ?</h3>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#22c55e" }}>Vous gérez vous-même :</strong> vous choisissez où va votre argent. Le moins cher, et vous gardez le contrôle.</p>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Vous déléguez :</strong> quelqu'un (ou un robot) décide à votre place selon votre profil. Plus simple, mais 0,3 à 0,9 %/an de frais en plus.</p>
+            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(34,197,94,0.08)", color: "#22c55e", fontWeight: 600 }}>Si vous savez expliquer où va votre argent, gérez-le vous-même.</div>
           </div>
           <div style={{ borderRadius: 14, padding: 16, background: T.veil1, border: `1px solid ${T.border}` }}>
-            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Unités de Compte vs fonds euros</h3>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#f59e0b" }}>Fonds euros :</strong> capital garanti, rendement ~2–3 %. Idéal pour la partie sécurisée de votre AV ou PER.</p>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Unités de Compte (UC) :</strong> supports non garantis (actions, ETF, SCPI…). Potentiel supérieur, risque de perte en capital.</p>
-            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.08)", color: "#f59e0b", fontWeight: 600 }}>Jeune = UC dominants · Proche retraite = glissement progressif vers fonds €.</div>
+            <h3 style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Sécurisé ou plus rémunérateur ?</h3>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: "#f59e0b" }}>Le sûr (fonds euros) :</strong> votre argent ne peut pas baisser, mais rapporte peu (~2–3 %/an). Pour l'épargne que vous voulez protéger.</p>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: "#3b82f6" }}>Le dynamique (actions, ETF, immobilier) :</strong> peut rapporter plus, mais peut aussi baisser. Pour faire croître votre argent sur le long terme.</p>
+            <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.08)", color: "#f59e0b", fontWeight: 600 }}>Jeune : surtout du dynamique. Proche de la retraite : sécurisez peu à peu.</div>
           </div>
         </div>
       </Card>
@@ -351,11 +351,11 @@ export default function Frais() {
                         </div>
                       </div>
                       <div style={{ borderRadius: 8, padding: "10px 12px", background: "rgba(255,255,255,0.03)" }}>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Rendement brut indicatif</div>
+                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Rendement avant frais (indicatif)</div>
                         <div style={{ color: T.text, fontWeight: 700 }}>{d.rendementBrut.toFixed(1).replace(".", ",")}%/an</div>
                       </div>
                       <div style={{ borderRadius: 8, padding: "10px 12px", background: `${d.color}10` }}>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Capital net sur 20 ans*</div>
+                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Capital estimé dans 20 ans*</div>
                         <div style={{ color: d.color, fontWeight: 700 }}>{eur(final20)}</div>
                       </div>
                     </div>

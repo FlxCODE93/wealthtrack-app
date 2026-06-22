@@ -38,8 +38,8 @@ const DEVICES = [
     rendementBrut: RATE_ETF_WORLD * 100,
     type: "mixte",
     avantages: ["Fiscalité successorale avantageuse", "Gestion libre ou pilotée", "Arbitrages possibles"],
-    inconvenients: ["Frais du contrat (0,5–1%) + frais des placements (0,5–1%)", "Rapporte moins qu'un ETF acheté en direct"],
-    note: "Frais du contrat ~0,7 % + frais des supports ~0,7 %. Comparez les contrats : visez moins de 0,6 % de frais de contrat.",
+    inconvenients: ["Frais du contrat (0,5–1%) + frais des placements (0,5–1%)", "Double couche de frais vs un ETF acheté en direct"],
+    note: "En 2025 : frais de contrat ~0,82 %/an + frais des supports UC ~1,60 %/an en moyenne. En ligne, on descend à 0,4–0,6 % de contrat. Comparez avant de souscrire.",
   },
   {
     id: "av_fonds_euro",
@@ -47,12 +47,12 @@ const DEVICES = [
     label: "Assurance-Vie fonds euros",
     color: "#f59e0b",
     fraisEntree: 0,
-    fraisAnnuels: 0.8,
-    rendementBrut: 2.5,
+    fraisAnnuels: 0.66,
+    rendementBrut: 2.6,
     type: "garanti",
-    avantages: ["Capital garanti", "Liquidité sous 72h", "Rendement net récent ~2%"],
-    inconvenients: ["Rendement faible sur longue durée", "Frais du contrat déduits avant revalorisation"],
-    note: "Rendement brut récent ~2,5%, net après frais ~1,7%. Bon pour l'épargne de précaution à moyen terme.",
+    avantages: ["Capital garanti", "Liquidité sous 72h", "Pas de frais d'entrée en ligne"],
+    inconvenients: ["Frais de gestion déduits avant revalorisation", "Frais d'enveloppe parfois élevés en banque traditionnelle"],
+    note: "Frais de gestion du fonds euros ~0,66 %/an en moyenne (2025, France Assureurs), prélevés avant revalorisation. 0 % de frais d'entrée chez les contrats en ligne.",
   },
   {
     id: "per",
@@ -78,7 +78,7 @@ const DEVICES = [
     type: "actif",
     avantages: ["Gestion professionnelle active", "Diversification automatique"],
     inconvenients: ["Frais d'entrée 0–5% + gestion 1,5–2,5%", "80% des fonds actifs sous-performent leur indice sur 10 ans (SPIVA)"],
-    note: "Les frais élevés sont rarement compensés par la surperformance. Préférer les ETF à frais identiques.",
+    note: "Frais annuels moyens des fonds UC ~1,60 %/an en 2025, + entrée 0–5 %. Rarement compensés par la surperformance. Préférer les ETF.",
   },
   {
     id: "scpi",
@@ -87,11 +87,11 @@ const DEVICES = [
     color: "#f97316",
     fraisEntree: 10.0,
     fraisAnnuels: 1.0,
-    rendementBrut: 4.5,
+    rendementBrut: 4.9,
     type: "immo",
-    avantages: ["Exposition immobilière sans gestion", "Rendement distribué ~4–5%", "Diversification géographique"],
-    inconvenients: ["Frais d'entrée 8–12% (one-shot)", "Liquidité faible (délai de revente)", "Risque immobilier"],
-    note: "Frais d'entrée très élevés : il faut ~5 ans pour les amortir. Horizon recommandé : 10+ ans.",
+    avantages: ["Exposition immobilière sans gestion", "Pas de frais d'entrée sur certaines SCPI récentes", "Diversification géographique"],
+    inconvenients: ["Frais d'entrée 8–12% (one-shot)", "Frais de gestion ~1%/an prélevés sur les loyers", "Liquidité faible (délai de revente)"],
+    note: "Frais d'entrée souvent 8–12 % (one-shot), certaines SCPI à 0 %. Frais de gestion ~1 %/an. Les frais d'entrée demandent ~5 ans pour être amortis.",
   },
 ];
 
@@ -361,15 +361,19 @@ export default function Frais({ invested = 0, setView }) {
 
       {/* Tableau comparatif */}
       <Card>
-        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparer les placements</h2>
-        <p style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>PEA, assurance-vie, PER, fonds actifs et SCPI. Cliquez sur un placement pour voir le détail.</p>
+        <h2 style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Comparer les frais par enveloppe</h2>
+        <p style={{ color: T.muted, fontSize: 13, marginBottom: 12 }}>PEA, assurance-vie, PER, fonds actifs et SCPI. Cliquez sur une enveloppe pour voir le détail.</p>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8, padding: "10px 12px", marginBottom: 20 }}>
+          <Info size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
+          <span style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>
+            Fourchettes <strong style={{ color: T.text }}>moyennes du marché</strong>, à titre indicatif. Vos frais réels dépendent du contrat et du courtier choisis — un même produit peut coûter 0,5 % ou 3 %/an. Vérifiez toujours les conditions avant de souscrire.
+          </span>
+        </div>
 
         {/* Mobile-friendly: cards stacked */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {DEVICES.map((d) => {
             const isOpen = expanded === d.id;
-            const netRate = d.rendementBrut - d.fraisAnnuels;
-            const final20 = Math.round(fv(10000 * (1 - d.fraisEntree / 100), 0, netRate / 100, 20));
             return (
               <div key={d.id}
                 style={{ borderRadius: 12, border: `1.5px solid ${isOpen ? d.color + "88" : T.border}`, overflow: "hidden", transition: "border-color 0.2s" }}>
@@ -393,9 +397,6 @@ export default function Frais({ invested = 0, setView }) {
                     <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: `${d.color}18`, color: d.color }}>
                       {d.fraisAnnuels.toFixed(2).replace(".", ",")}%/an
                     </span>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(255,255,255,0.04)", color: T.muted }}>
-                      {eur(final20)} à 20 ans*
-                    </span>
                   </div>
                 </button>
 
@@ -413,14 +414,6 @@ export default function Frais({ invested = 0, setView }) {
                         <div style={{ color: d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e", fontWeight: 700 }}>
                           {d.fraisAnnuels.toFixed(2).replace(".", ",")}%
                         </div>
-                      </div>
-                      <div style={{ borderRadius: 8, padding: "10px 12px", background: "rgba(255,255,255,0.03)" }}>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Rendement avant frais (indicatif)</div>
-                        <div style={{ color: T.text, fontWeight: 700 }}>{d.rendementBrut.toFixed(1).replace(".", ",")}%/an</div>
-                      </div>
-                      <div style={{ borderRadius: 8, padding: "10px 12px", background: `${d.color}10` }}>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Capital estimé dans 20 ans*</div>
-                        <div style={{ color: d.color, fontWeight: 700 }}>{eur(final20)}</div>
                       </div>
                     </div>
                     <div style={{ marginBottom: 12 }}>
@@ -445,9 +438,6 @@ export default function Frais({ invested = 0, setView }) {
             );
           })}
         </div>
-        <p style={{ color: T.muted, fontSize: 11, marginTop: 14 }}>
-          * Simulation sur 10 000 € initial, 0 versement mensuel, 20 ans. Frais d'entrée déduits du capital de départ. Rendement brut indicatif variable selon les dispositifs. Non garanti.
-        </p>
       </Card>
 
       {/* Alerte OPCVM */}

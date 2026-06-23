@@ -807,7 +807,11 @@ export default function Landing({ onStart, onLogin = onStart }) {
           avant de prendre la moindre décision.
         </p>
         <p className="text-sm mb-8 wt-slide-up" style={{ color: T.muted }}>
-          Vision patrimoniale · PEA, AV, Crypto & Immo · Objectif FIRE
+          <span className="block sm:inline">Vue à 360° du patrimoine</span>
+          <span className="hidden sm:inline"> · </span>
+          <span className="block sm:inline">PEA, AV, Crypto & Immobilier</span>
+          <span className="hidden sm:inline"> · </span>
+          <span className="block sm:inline">Objectif FIRE</span>
         </p>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-6 wt-slide-up">
           <button onClick={onStart}

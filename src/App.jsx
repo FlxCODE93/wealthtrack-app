@@ -24,6 +24,7 @@ import {
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap, Coins, Percent,
+  Copy, Mail,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -194,9 +195,9 @@ const PLANS = {
 };
 
 const PLAN_ACCESS = {
-  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais"],
+  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais", "parrainage"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais", "parrainage"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais", "parrainage"],
 };
 
 function canAccess(plan, feature) {
@@ -577,6 +578,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "pricing",     label: "Tarifs",             icon: Crown },
+    { id: "parrainage",  label: "Premium offert",     icon: Gift },
   ];
   const planInfo = PLANS[plan] || PLANS.free;
   return (
@@ -6562,6 +6564,86 @@ function BankConnectModal({ onClose }) {
 /* ------------------------------------------------------------------ */
 /*  APP                                                                */
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : PARRAINAGE — « Premium offert »                           */
+/* ------------------------------------------------------------------ */
+function refCode(seed) {
+  let h = 0;
+  const s = (seed || "WT") + "wealthtrack";
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h.toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6).padEnd(6, "X");
+}
+
+function ReferralPage({ profile }) {
+  const T = useT();
+  const code = useMemo(() => refCode(profile?.email || profile?.firstName), [profile?.email, profile?.firstName]);
+  const link = `${window.location.origin}/parrainage/${code}`;
+  const [copied, setCopied] = useState(null);
+  const copy = (txt, which) => {
+    navigator.clipboard?.writeText(txt);
+    setCopied(which);
+    setTimeout(() => setCopied(null), 1800);
+  };
+
+  const cards = [
+    { icon: Gift, title: "Ce que vous obtenez", body: "Pour chaque proche qui s'inscrit et connecte ses comptes, vous recevez 1 mois de WealthTrack Pro offert — cumulable sans limite." },
+    { icon: Mail, title: "Ce qu'obtiennent vos amis", body: "Un mois de Pro pour tester les simulations sur 30 ans, la fiscalité nette et le plan d'action chiffré." },
+    { icon: Check, title: "Comment être éligible", body: "Être membre Gratuit ou abonné via le site. Le filleul doit créer son compte avec votre lien puis renseigner son patrimoine." },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Hero */}
+      <div className="rounded-3xl p-6 sm:p-8" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+        <h1 className="text-2xl sm:text-3xl font-black leading-tight" style={{ color: T.text }}>Invitez vos proches,</h1>
+        <h1 className="text-2xl sm:text-3xl font-black leading-tight mb-5" style={{ color: T.blue }}>obtenez du Pro gratuitement !</h1>
+        <div className="text-xs font-bold mb-5" style={{ color: T.amber, letterSpacing: 0.6 }}>COMMENT ÇA MARCHE ?</div>
+
+        <div className="text-xs mb-2" style={{ color: T.muted }}>Votre lien de parrainage</div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <div className="text-sm font-medium truncate flex-1 min-w-0" style={{ color: T.text, paddingBottom: 8, borderBottom: `1px solid ${T.border}` }}>{link}</div>
+          <button onClick={() => copy(link, "link")} className="inline-flex items-center justify-center gap-2 shrink-0"
+            style={{ minHeight: 44, padding: "10px 20px", borderRadius: 999, background: T.blue, color: "#fff", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            {copied === "link" ? <Check size={16} /> : <Copy size={16} />} {copied === "link" ? "Copié !" : "Copier"}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-sm" style={{ color: T.muted }}>
+          Code de parrainage : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1 }}>{code}</span>
+          <button onClick={() => copy(code, "code")} aria-label="Copier le code"
+            style={{ background: "none", border: "none", color: copied === "code" ? T.green : T.muted, cursor: "pointer", padding: 4, display: "inline-flex" }}>
+            {copied === "code" ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* 3 colonnes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.title} className="rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <span className="rounded-lg p-2 shrink-0" style={{ background: `${T.blue}1a` }}><Icon size={16} style={{ color: T.blue }} /></span>
+                <span className="font-bold text-sm" style={{ color: T.text }}>{c.title}</span>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{c.body}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Récompenses */}
+      <div>
+        <h2 className="text-xl font-bold mb-3" style={{ color: T.text }}>Vos récompenses</h2>
+        <div className="rounded-2xl p-8 text-center" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+          <Gift size={28} style={{ color: T.muted, margin: "0 auto 10px" }} />
+          <div className="text-sm" style={{ color: T.muted }}>Aucune récompense pour l'instant. Partagez votre lien pour commencer à gagner des mois de Pro.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const VIEW_LABELS = {
   dashboard:   "Tableau de bord",
   finances:    "Budget",
@@ -6574,6 +6656,7 @@ const VIEW_LABELS = {
   fiscalite:   "Fiscalité",
   couple:      "Couple / Famille",
   pricing:     "Tarifs",
+  parrainage:  "Premium offert",
   profil:      "Profil",
   importer:    "Importer un relevé",
   crypto:      "Crypto Portfolio",
@@ -6916,9 +6999,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "patrimoine", "simulations", "plans", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "profil"].map((v) => (
+          {["dashboard", "patrimoine", "simulations", "plans", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", patrimoine: "Patrimoine", simulations: "Simul.", plans: "Plan", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", couple: "Couple", pricing: "Tarifs", profil: "Profil" }[v]}
+              {{ dashboard: "Tableau", patrimoine: "Patrimoine", simulations: "Simul.", plans: "Plan", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", couple: "Couple", pricing: "Tarifs", parrainage: "Premium", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -6929,6 +7012,7 @@ export default function App() {
         )}
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
+        {view === "parrainage"   && <ReferralPage profile={profile} />}
         {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}

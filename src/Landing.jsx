@@ -790,7 +790,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-left sm:text-center">
+      <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>
           <span style={{ color: T.text }}>
@@ -809,7 +809,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
         <p className="text-sm mb-8 wt-slide-up" style={{ color: T.muted }}>
           Vision patrimoniale · PEA, AV, Crypto & Immo · Objectif FIRE
         </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3 mb-6 wt-slide-up">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-6 wt-slide-up">
           <button onClick={onStart}
             className="relative group overflow-hidden flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold wt-button-press w-full sm:w-auto"
             style={btn.primary} {...primaryHover}>

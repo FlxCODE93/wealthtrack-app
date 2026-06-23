@@ -580,6 +580,15 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "parrainage",  label: "Premium offert",     icon: Gift },
   ];
   const planInfo = PLANS[plan] || PLANS.free;
+  // Sous-outils du groupe dépliant "Outils" (style Finary).
+  const TOOLS = [
+    { id: "frais",     label: "Mes frais" },
+    { id: "interets",  label: "Intérêts composés" },
+    { id: "fiscalite", label: "Fiscalité" },
+    { id: "marches",   label: "Marché crypto" },
+  ];
+  const toolActive = TOOLS.some((t) => t.id === view);
+  const [outilsOpen, setOutilsOpen] = useState(toolActive);
   return (
     <aside
       className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
@@ -597,9 +606,58 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
       </div>
 
       {items.map((it) => {
+        const Icon = it.icon;
+
+        // Groupe dépliant "Outils"
+        if (it.id === "outils") {
+          return (
+            <div key="outils" className="flex flex-col">
+              <button
+                onClick={() => setOutilsOpen((o) => !o)}
+                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                style={{
+                  paddingLeft: 16, paddingRight: 16,
+                  background: "transparent", border: "none", cursor: "pointer",
+                  borderLeft: "3px solid transparent",
+                  color: toolActive ? T.text : T.muted,
+                  fontWeight: toolActive ? 600 : 500,
+                }}
+              >
+                <Icon size={20} />
+                <span style={{ flex: 1 }}>Outils</span>
+                <ChevronDown size={16} style={{ transition: "transform 0.2s", transform: outilsOpen ? "rotate(180deg)" : "none" }} />
+              </button>
+              {outilsOpen && (
+                <div className="flex flex-col">
+                  {TOOLS.map((t) => {
+                    const sActive = view === t.id;
+                    const sLocked = !canAccess(plan, t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setView(t.id)}
+                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        style={{
+                          paddingLeft: 30, paddingRight: 16,
+                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
+                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
+                          fontWeight: sActive ? 600 : 500,
+                        }}
+                      >
+                        <span style={{ flex: 1 }}>{t.label}</span>
+                        {sLocked && <Lock size={11} style={{ color: T.muted, opacity: 0.5 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
+
         const active = view === it.id;
         const locked = !canAccess(plan, it.id);
-        const Icon = it.icon;
         return (
           <button
             key={it.id}

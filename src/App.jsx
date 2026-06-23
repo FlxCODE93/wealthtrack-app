@@ -6377,8 +6377,8 @@ function ObjectifsView({ goals, setGoals, totals }) {
   const [newGoal, setNewGoal] = useState({ name: "", icon: "autre", target: 10000, saved: 0, monthly: 200, color: "#6366f1" });
 
   const addGoal = () => {
-    if (!newGoal.name.trim() || !newGoal.target) return;
-    setGoals(gs => [...gs, { ...newGoal, id: Date.now() }]);
+    if (!newGoal.name.trim() || !(+newGoal.target)) return;
+    setGoals(gs => [...gs, { ...newGoal, target: +newGoal.target || 0, saved: +newGoal.saved || 0, monthly: +newGoal.monthly || 0, id: Date.now() }]);
     setNewGoal({ name: "", icon: "autre", target: 10000, saved: 0, monthly: 200, color: "#6366f1" });
     setShowAdd(false);
   };
@@ -6436,13 +6436,13 @@ function ObjectifsView({ goals, setGoals, totals }) {
               <input value={newGoal.name} placeholder="Mon objectif" style={inpG} onChange={e => setNewGoal(g => ({ ...g, name: e.target.value }))} />
             </Field>
             <Field label="Montant cible (€)">
-              <input type="number" value={newGoal.target} style={inpG} onChange={e => setNewGoal(g => ({ ...g, target: +e.target.value || 0 }))} />
+              <input type="number" min={0} value={newGoal.target} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, target: e.target.value }))} />
             </Field>
             <Field label="Déjà épargné (€)">
-              <input type="number" value={newGoal.saved} style={inpG} onChange={e => setNewGoal(g => ({ ...g, saved: +e.target.value || 0 }))} />
+              <input type="number" min={0} value={newGoal.saved} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, saved: e.target.value }))} />
             </Field>
             <Field label="Versement mensuel (€)">
-              <input type="number" value={newGoal.monthly} style={inpG} onChange={e => setNewGoal(g => ({ ...g, monthly: +e.target.value || 0 }))} />
+              <input type="number" min={0} value={newGoal.monthly} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, monthly: e.target.value }))} />
             </Field>
           </div>
           <div className="flex gap-3 mt-3">

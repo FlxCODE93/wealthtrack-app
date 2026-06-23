@@ -800,7 +800,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-left sm:text-center">
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter"
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>
           <span style={{ color: T.text }}>
             Simulez.

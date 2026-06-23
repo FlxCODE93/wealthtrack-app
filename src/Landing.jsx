@@ -815,7 +815,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span style={{ color: T.text, fontWeight: 600 }}>projetez votre patrimoine à 10, 20 ou 30 ans</span>{" "}
           avant de prendre la moindre décision.
         </p>
-        <p className="text-sm mb-8 wt-slide-up" style={{ color: T.subtle1 }}>
+        <p className="text-sm mb-8 wt-slide-up" style={{ color: T.muted }}>
           Vision patrimoniale · PEA, AV, Crypto & Immo · Objectif FIRE
         </p>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3 mb-6 wt-slide-up">

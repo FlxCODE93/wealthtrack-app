@@ -98,7 +98,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
   if (isRecovery) return (
     <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", padding: 16 }}>
       <Suspense fallback={null}><PaperShaderBackground /></Suspense>
-      <div style={{ maxWidth: 400, width: "100%", padding: 32, borderRadius: 16, border: `1px solid ${T.border}`, background: "rgba(22,27,46,0.82)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)" }}>
+      <div style={{ maxWidth: 400, width: "100%", padding: 32, borderRadius: 16, border: `1px solid ${T.border}`, background: "rgba(22,27,46,0.64)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)" }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: 0 }}>Nouveau mot de passe</h1>
           <p style={{ fontSize: 13, color: T.muted, margin: "8px 0 0 0" }}>Choisissez un mot de passe sécurisé</p>
@@ -145,7 +145,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
           padding: 32,
           borderRadius: 16,
           border: `1px solid ${T.border}`,
-          background: "rgba(22,27,46,0.82)",
+          background: "rgba(22,27,46,0.64)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)",

@@ -96,7 +96,7 @@ export default function Onboarding({ onComplete, onLogin }) {
   // Fond transparent : laisse apparaître le shader animé (fixed, derrière).
   const wrap   = { position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", padding: 20 };
   // Carte légèrement translucide + flou : le fond animé respire derrière.
-  const card   = { width: "100%", maxWidth: 540, background: "rgba(22,27,46,0.82)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${T.border}`, borderRadius: 24, padding: "32px 36px", maxHeight: "94vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)" };
+  const card   = { width: "100%", maxWidth: 540, background: "rgba(22,27,46,0.64)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${T.border}`, borderRadius: 24, padding: "32px 36px", maxHeight: "94vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)" };
   const input  = { width: "100%", padding: "13px 15px", borderRadius: 12, border: `1px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 16, outline: "none", boxSizing: "border-box" };
   const lbl    = { fontSize: 12, color: T.muted, fontWeight: 600, marginBottom: 8, display: "block" };
   const h2     = { color: T.text, fontWeight: 700, fontSize: 26, lineHeight: 1.2, margin: "0 0 8px", fontFamily: "'Lora', Georgia, serif" };

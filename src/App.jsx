@@ -582,7 +582,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   return (
     <aside
       className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
-      style={{ width: 270, borderRight: `1px solid ${T.border}`, borderRadius: 0 }}
+      style={{ width: 270, borderRight: `1px solid ${T.border}`, borderRadius: 0,
+               position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}
     >
       <div className="flex items-center gap-3 px-3 py-5 mb-1">
         <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>

@@ -718,7 +718,7 @@ function PourquoiModal({ onClose }) {
 
 /* ── Composant principal ───────────────────────────────────────── */
 
-export default function Landing({ onStart }) {
+export default function Landing({ onStart, onLogin = onStart }) {
   const { isDark } = useTheme();
   const T = isDark ? C : CL;
   const [openFaq, setOpenFaq] = useState(null);
@@ -782,7 +782,7 @@ export default function Landing({ onStart }) {
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onStart} className="relative group overflow-hidden hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
+          <button onClick={onLogin} className="relative group overflow-hidden hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
             style={{ color: T.muted }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>

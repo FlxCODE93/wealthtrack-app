@@ -3,11 +3,11 @@ import { supabase } from "./supabaseClient.js";
 import { useT } from "./ThemeProvider.jsx";
 import { LogIn, Mail, Lock, AlertCircle } from "lucide-react";
 
-export default function Auth({ onAuthSuccess }) {
+export default function Auth({ onAuthSuccess, startSignup = false }) {
   const T = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(!startSignup);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -112,7 +112,7 @@ export default function Auth({ onAuthSuccess }) {
               <span style={{ fontSize: 13, color: "#fca5a5" }}>{error}</span>
             </div>
           )}
-          <button type="submit" disabled={loading} style={{ padding: "11px 16px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>
+          <button type="submit" disabled={loading} style={{ padding: "11px 16px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>
             {loading ? "Mise à jour..." : "Enregistrer"}
           </button>
         </form>
@@ -240,7 +240,7 @@ export default function Auth({ onAuthSuccess }) {
               padding: "11px 16px",
               borderRadius: 8,
               border: "none",
-              background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
               color: "#fff",
               fontWeight: 700,
               fontSize: 14,

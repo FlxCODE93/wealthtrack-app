@@ -6658,7 +6658,7 @@ export default function App() {
 
   const [transactions, setTransactions] = useLocalStorage("wt_transactions", TX);
   const [histo,      setHisto]      = useLocalStorage("wt_histo", HISTO);
-  const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false });
+  const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false, country: "", knowledge: "", goal: "", wealthBracket: "" });
   const [simParams,  setSimParams]  = useLocalStorage("wt_simParams", { monthly: 500, initial: 10000, price: 200000, horizon: 20 });
   const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", DEFAULT_PATRIMOINE);
   const [credits,    setCredits]    = useLocalStorage("wt_credits", []);
@@ -6682,8 +6682,58 @@ export default function App() {
   const [trialPopupSeen, setTrialPopupSeen] = useLocalStorage("wt_trial_popup_seen", null);
   const [showTrialPopup, setShowTrialPopup] = useState(false);
 
-  // Déclenche onboarding si pas encore fait ET prénom vide
-  const showOnboarding = !onboarded && !profile.firstName;
+  // Applique les réponses du questionnaire pré-inscription (Onboarding.jsx),
+  // persistées dans localStorage avant la création du compte.
+  useEffect(() => {
+    let pending;
+    try {
+      const raw = localStorage.getItem("wt_onboarding_pending");
+      if (!raw) return;
+      pending = JSON.parse(raw);
+    } catch { return; }
+    localStorage.removeItem("wt_onboarding_pending");
+    if (!pending) return;
+
+    setProfile(p => ({
+      ...p,
+      firstName: pending.firstName || p.firstName,
+      age: Math.min(100, Math.max(16, +pending.age || p.age || 30)),
+      country: pending.country || p.country || "",
+      knowledge: pending.knowledge || p.knowledge || "",
+      goal: pending.goal || p.goal || "",
+      wealthBracket: pending.wealthBracket || p.wealthBracket || "",
+    }));
+
+    const ts = Date.now();
+    const tx = [];
+    if (pending.revenus > 0) tx.push({ id: ts + 1, label: "Salaire / Revenus", cat: "Salaire",  type: "revenu",         amount:  pending.revenus, recurring: true });
+    if (pending.loyer   > 0) tx.push({ id: ts + 2, label: "Loyer / Mensualité", cat: "Logement", type: "charge_fixe",     amount: -pending.loyer,   recurring: true });
+    if (pending.epargne > 0) tx.push({ id: ts + 3, label: "Épargne mensuelle",  cat: "Épargne",   type: "investissement",  amount: -pending.epargne, recurring: true });
+    if (tx.length) setTransactions(tx);
+
+    setPatrimoine(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const setGroup = (id, items) => { const g = next.actifs.find(a => a.id === id); if (g) g.items = items; };
+      const r = pending.repart || {};
+      const liq = [];
+      if (r.livrets > 0) liq.push({ label: "Livrets", value: r.livrets });
+      else if (pending.epargneTotale > 0) liq.push({ label: "Épargne", value: pending.epargneTotale });
+      setGroup("liquidites", liq);
+      const inv = [];
+      if (r.av  > 0) inv.push({ label: "Assurance vie", value: r.av });
+      if (r.pea > 0) inv.push({ label: "PEA / CTO",     value: r.pea });
+      if (r.per > 0) inv.push({ label: "PER",           value: r.per });
+      setGroup("investissements", inv);
+      setGroup("immobilier", pending.immo > 0 ? [{ label: "Patrimoine immobilier", value: pending.immo }] : []);
+      setGroup("autres", []);
+      return next;
+    });
+    setOnboarded(true);
+  }, []);
+
+  // Filet de sécurité : ancien wizard intégré si compte sans prénom et sans questionnaire en attente.
+  const showOnboarding = !onboarded && !profile.firstName
+    && typeof localStorage !== "undefined" && !localStorage.getItem("wt_onboarding_pending");
 
   // Ouvre le modal FIRE pour les 10 premiers clics
   useEffect(() => {

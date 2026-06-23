@@ -4,6 +4,7 @@ import { supabase } from "./supabaseClient.js";
 import Auth from "./Auth.jsx";
 import App from "./App.jsx";
 import Landing from "./Landing.jsx";
+import Onboarding from "./Onboarding.jsx";
 
 const DEV_SKIP_AUTH =
   import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_AUTH === "true";
@@ -12,7 +13,8 @@ export default function AuthGate() {
   if (DEV_SKIP_AUTH) return <App />;
 
   const [user, loading] = useAuthState();
-  const [showAuth, setShowAuth] = useState(false);
+  // 'landing' | 'onboarding' | 'signup' | 'login'
+  const [view, setView] = useState("landing");
   const [isRecovery, setIsRecovery] = useState(
     window.location.hash.includes("type=recovery")
   );
@@ -21,7 +23,7 @@ export default function AuthGate() {
     if (!supabase) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setIsRecovery(true);
-      if (event === "USER_UPDATED") { setIsRecovery(false); setShowAuth(false); }
+      if (event === "USER_UPDATED") { setIsRecovery(false); setView("landing"); }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -36,6 +38,27 @@ export default function AuthGate() {
 
   if (user) return <App />;
   if (isRecovery) return <Auth onAuthSuccess={() => setIsRecovery(false)} />;
-  if (showAuth) return <Auth onAuthSuccess={() => setShowAuth(false)} />;
-  return <Landing onStart={() => setShowAuth(true)} />;
+
+  if (view === "onboarding") {
+    return (
+      <Onboarding
+        onComplete={() => setView("signup")}
+        onLogin={() => setView("login")}
+      />
+    );
+  }
+  if (view === "signup") {
+    // Le questionnaire vient d'être complété → création de compte directe.
+    return <Auth startSignup onAuthSuccess={() => setView("landing")} />;
+  }
+  if (view === "login") {
+    return <Auth onAuthSuccess={() => setView("landing")} />;
+  }
+
+  return (
+    <Landing
+      onStart={() => setView("onboarding")}
+      onLogin={() => setView("login")}
+    />
+  );
 }

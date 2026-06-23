@@ -24,7 +24,7 @@ import {
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap, Coins, Percent,
-  Copy, Mail,
+  Copy, Mail, Wrench,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -195,9 +195,9 @@ const PLANS = {
 };
 
 const PLAN_ACCESS = {
-  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais", "parrainage"],
-  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais", "parrainage"],
-  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais", "parrainage"],
+  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais", "parrainage", "outils", "interets", "marches"],
+  pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais", "parrainage", "outils", "interets", "marches"],
+  couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais", "parrainage", "outils", "interets", "marches"],
 };
 
 function canAccess(plan, feature) {
@@ -569,13 +569,12 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // dans le Tableau de bord ; Crédits/Crypto sous Patrimoine ; Immobilier/FIRE
   // sous Simulations — accessibles via boutons internes, hors sidebar.
   const items = [
-    { id: "dashboard",   label: "Tableau de bord",   icon: LayoutDashboard },
+    { id: "dashboard",   label: "Budget",             icon: LayoutDashboard },
     { id: "patrimoine",  label: "Patrimoine",         icon: Wallet },
     { id: "simulations", label: "Simulations",        icon: TrendingUp },
+    { id: "outils",      label: "Outils",             icon: Wrench },
     { id: "plans",       label: "Plan d'action",      icon: Star },
-    { id: "frais",       label: "Mes frais",          icon: Percent },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
-    { id: "fiscalite",   label: "Fiscalité",          icon: Calculator },
     ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "pricing",     label: "Tarifs",             icon: Crown },
     { id: "parrainage",  label: "Premium offert",     icon: Gift },
@@ -865,7 +864,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Tableau de bord</h1>
+        <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Budget</h1>
         <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
       </div>
 
@@ -6644,9 +6643,178 @@ function ReferralPage({ profile }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : OUTILS — hub regroupant 4 outils                          */
+/* ------------------------------------------------------------------ */
+function OutilsHub({ setView, plan }) {
+  const T = useT();
+  const tools = [
+    { id: "frais",     icon: Percent,    color: T.blue,  title: "Mes frais",                        desc: "Comparez les frais par enveloppe et leur impact sur le long terme." },
+    { id: "interets",  icon: Calculator, color: T.green, title: "Calculatrice d'intérêts composés", desc: "Projetez la croissance d'un capital avec versements et intérêts composés." },
+    { id: "fiscalite", icon: Landmark,   color: T.amber, title: "Fiscalité",                        desc: "Capital net après impôts : PEA, CTO, AV, crypto, immobilier.", lock: !canAccess(plan, "fiscalite") },
+    { id: "marches",   icon: Bitcoin,    color: "#f59e0b", title: "Marché des cryptoactifs",        desc: "Cours live du top 100, capitalisation et variations sur 7 jours." },
+  ];
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: T.text }}>Outils</h1>
+        <p style={{ color: T.muted }}>Calculatrices et explorateurs pour affiner vos décisions.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {tools.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.id} onClick={() => setView(t.id)}
+              className="text-left rounded-2xl p-5 flex items-start gap-4 transition"
+              style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+              <span className="rounded-xl p-3 shrink-0" style={{ background: `${t.color}1a` }}><Icon size={20} style={{ color: t.color }} /></span>
+              <span className="min-w-0">
+                <span className="flex items-center gap-2">
+                  <span className="font-bold" style={{ color: T.text }}>{t.title}</span>
+                  {t.lock && <Lock size={13} style={{ color: T.muted }} />}
+                </span>
+                <span className="block text-sm mt-1 leading-relaxed" style={{ color: T.muted }}>{t.desc}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ÉCRAN : CALCULATRICE D'INTÉRÊTS COMPOSÉS                          */
+/* ------------------------------------------------------------------ */
+function CompoundCalc({ setView }) {
+  const T = useT();
+  const [initial, setInitial] = useState("10000");
+  const [monthly, setMonthly] = useState("100");
+  const [years, setYears]     = useState("20");
+  const [rate, setRate]       = useState("5");
+  const [cap, setCap]         = useState("annuelle"); // mensuelle | annuelle
+  const num = (v) => Math.max(0, +v || 0);
+  const P0 = num(initial), PM = num(monthly), Y = Math.max(1, Math.min(60, Math.round(num(years)) || 1)), R = num(rate) / 100;
+
+  const series = useMemo(() => {
+    const arr = [{ year: 0, total: Math.round(P0), versements: Math.round(P0) }];
+    let bal = P0, contrib = P0;
+    for (let y = 1; y <= Y; y++) {
+      if (cap === "mensuelle") {
+        const rm = R / 12;
+        for (let m = 0; m < 12; m++) { bal = bal * (1 + rm) + PM; contrib += PM; }
+      } else {
+        bal = bal * (1 + R) + PM * 12;
+        contrib += PM * 12;
+      }
+      arr.push({ year: y, total: Math.round(bal), versements: Math.round(contrib) });
+    }
+    return arr;
+  }, [P0, PM, Y, R, cap]);
+
+  const last = series[series.length - 1];
+  const capitalFinal = last.total;
+  const totalVersements = last.versements;
+  const interets = Math.max(0, capitalFinal - totalVersements);
+
+  const inputBox = { display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${T.border}`, paddingBottom: 8 };
+  const inputEl = { flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 26, fontWeight: 700 };
+  const lbl = { fontSize: 13, color: T.muted, marginBottom: 8, display: "block" };
+
+  const Champ = ({ label, value, set, unit, step }) => (
+    <div className="mb-5">
+      <label style={lbl}>{label}</label>
+      <div style={inputBox}>
+        <input type="number" inputMode="numeric" min={0} step={step} value={value}
+          onChange={(e) => set(e.target.value)} style={inputEl} />
+        <span style={{ color: T.muted, fontSize: 18, fontWeight: 600 }}>{unit}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        {setView && (
+          <button onClick={() => setView("outils")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <ChevronLeft size={16} style={{ color: T.blue }} /> Retour aux Outils
+          </button>
+        )}
+        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: T.text }}>Calculatrice d'intérêts composés</h1>
+        <p style={{ color: T.muted }}>Projetez la croissance d'un capital avec versements réguliers.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Paramètres */}
+        <div className="rounded-2xl p-6" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+          <Champ label="Capital initial" value={initial} set={setInitial} unit="€" step={500} />
+          <Champ label="Épargne mensuelle" value={monthly} set={setMonthly} unit="€" step={50} />
+          <Champ label="Horizon de placement" value={years} set={setYears} unit="ans" step={1} />
+          <Champ label="Taux d'intérêt" value={rate} set={setRate} unit="%" step={0.5} />
+          <div>
+            <label style={lbl}>Capitalisation</label>
+            <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+              {["mensuelle", "annuelle"].map((c) => (
+                <button key={c} onClick={() => setCap(c)}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                    background: cap === c ? T.blue : "transparent", color: cap === c ? "#fff" : T.muted, textTransform: "capitalize" }}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Résultat */}
+        <div className="rounded-2xl p-6" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+          <div className="text-center mb-4">
+            <div className="text-xs mb-1" style={{ color: T.muted }}>Capital final</div>
+            <div className="text-4xl font-black" style={{ color: T.text }}>{eur(capitalFinal)}</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>après {Y} ans</div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${T.amber}1a`, color: T.amber }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: T.amber }} /> Intérêts {eur(interets)}
+            </span>
+            <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${T.blue}1a`, color: T.blue }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: T.blue }} /> Versements {eur(totalVersements)}
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={series} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="ciTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={T.amber} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={T.amber} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="ciVers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={T.blue} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="year" tickFormatter={(y) => (y === 0 ? "Auj." : `${y} an${y > 1 ? "s" : ""}`)} tick={{ fill: T.muted, fontSize: 11 }} interval="preserveStartEnd" />
+              <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} tick={{ fill: T.muted, fontSize: 11 }} width={38} />
+              <Tooltip formatter={(v, n) => [eur(v), n === "total" ? "Capital" : "Versements"]} labelFormatter={(y) => (y === 0 ? "Aujourd'hui" : `Dans ${y} an${y > 1 ? "s" : ""}`)} contentStyle={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12 }} />
+              <Area type="monotone" dataKey="total" stroke={T.amber} strokeWidth={2.5} fill="url(#ciTotal)" />
+              <Area type="monotone" dataKey="versements" stroke={T.blue} strokeWidth={2} fill="url(#ciVers)" />
+            </AreaChart>
+          </ResponsiveContainer>
+          <p className="text-sm text-center mt-4 leading-relaxed" style={{ color: T.muted }}>
+            Avec un capital initial de <strong style={{ color: T.text }}>{eur(P0)}</strong> et en investissant mensuellement <strong style={{ color: T.text }}>{eur(PM)}</strong> pendant <strong style={{ color: T.text }}>{Y} ans</strong> à <strong style={{ color: T.text }}>{num(rate)} %</strong>, vous obtenez <strong style={{ color: T.amber }}>{eur(capitalFinal)}</strong>.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const VIEW_LABELS = {
-  dashboard:   "Tableau de bord",
+  dashboard:   "Budget",
   finances:    "Budget",
+  outils:      "Outils",
+  interets:    "Calculatrice d'intérêts composés",
+  marches:     "Marché des cryptoactifs",
   credits:     "Mes crédits",
   patrimoine:  "Patrimoine",
   simulations: "Simulations",
@@ -6999,9 +7167,9 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "patrimoine", "simulations", "plans", "frais", "objectifs", "fiscalite", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
+          {["dashboard", "patrimoine", "simulations", "outils", "plans", "objectifs", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
-              {{ dashboard: "Tableau", patrimoine: "Patrimoine", simulations: "Simul.", plans: "Plan", frais: "Frais", objectifs: "Objectifs", fiscalite: "Fiscalité", couple: "Couple", pricing: "Tarifs", parrainage: "Premium", profil: "Profil" }[v]}
+              {{ dashboard: "Budget", patrimoine: "Patrimoine", simulations: "Simul.", outils: "Outils", plans: "Plan", objectifs: "Objectifs", couple: "Couple", pricing: "Tarifs", parrainage: "Premium", profil: "Profil" }[v]}
             </Pill>
           ))}
         </div>
@@ -7013,6 +7181,9 @@ export default function App() {
 
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
         {view === "parrainage"   && <ReferralPage profile={profile} />}
+        {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
+        {view === "interets"     && <CompoundCalc setView={setView} />}
+        {view === "marches"      && <Crypto setView={setView} marketsOnly />}
         {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}

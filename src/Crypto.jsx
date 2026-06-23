@@ -412,14 +412,14 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
 }
 
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
-export default function Crypto({ setView }) {
+export default function Crypto({ setView, marketsOnly = false }) {
   const T = useT();
   const [holdings, setHoldings]     = useLocalStorage("wt_crypto_holdings", DEFAULT_HOLDINGS);
   const [prices, setPrices]         = useState({});
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [tab, setTab]               = useState("holdings"); // holdings | marches | staking
+  const [tab, setTab]               = useState(marketsOnly ? "marches" : "holdings"); // holdings | marches | staking
   const [showForm, setShowForm]     = useState(false);
 
   // Marchés (explorateur de cryptos façon Finary)
@@ -598,15 +598,15 @@ export default function Crypto({ setView }) {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           {setView && (
-            <button onClick={() => setView("patrimoine")}
+            <button onClick={() => setView(marketsOnly ? "outils" : "patrimoine")}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", color: T.text, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <ChevronLeft size={16} style={{ color: T.blue }} />
-              Retour au Patrimoine
+              {marketsOnly ? "Retour aux Outils" : "Retour au Patrimoine"}
             </button>
           )}
-          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Crypto Portfolio</h1>
+          <h1 className="text-3xl font-bold" style={{ color: T.text }}>{marketsOnly ? "Marché des cryptoactifs" : "Crypto Portfolio"}</h1>
           <p style={{ color: T.muted }}>
-            Prix live · Staking · Fiscalité
+            {marketsOnly ? "Cours live · Top 100 · Capitalisation" : "Prix live · Staking · Fiscalité"}
             {lastUpdate && (
               <span style={{ fontSize: 11, marginLeft: 8 }}>
                 Mis à jour {lastUpdate.toLocaleTimeString("fr-FR")}
@@ -623,6 +623,7 @@ export default function Crypto({ setView }) {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             {loading ? "…" : "Actualiser"}
           </button>
+          {!marketsOnly && (
           <button onClick={() => exportCSV(holdings, prices)} title="Impôt PFU estimé par ligne — indicatif, ne remplace pas le calcul PMCA officiel"
             style={{
               background: "rgba(47,155,255,0.1)", border: `1px solid ${T.blue}44`,
@@ -631,15 +632,18 @@ export default function Crypto({ setView }) {
             }}>
             <Download size={14} /> Export CSV
           </button>
+          )}
         </div>
       </div>
 
+      {!marketsOnly && (
       <div className="flex items-start gap-2" style={{ color: T.muted, fontSize: 11, lineHeight: 1.5 }}>
         <AlertTriangle size={13} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} />
         <p style={{ margin: 0 }}>
           La colonne <strong>« Impôt PFU estimé »</strong> de l'export CSV calcule le gain ligne par ligne — ce n'est pas la méthode légale française (PMCA, art. 150 VH bis CGI). Elle suppose aussi une vente immédiate de toute la position : si vous ne vendez rien, ou si le total de vos cessions de l'année reste sous {SEUIL_EXONERATION_CESSION} €, votre plus-value est exonérée d'impôt. Contrairement aux actions (PEA/CTO), <strong>la durée de détention n'a aucune incidence</strong> sur la fiscalité des cryptomonnaies en France — le PFU de 30 % s'applique de la même façon après 1 jour ou après 10 ans. Pour votre déclaration, utilisez l'onglet <strong>Fiscalité</strong>, un outil dédié (Waltio, Koinly…) ou un expert-comptable.
         </p>
       </div>
+      )}
 
       {/* API error */}
       {error && (
@@ -653,6 +657,7 @@ export default function Crypto({ setView }) {
       )}
 
       {/* Summary cards */}
+      {!marketsOnly && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Valeur totale", value: eur(totalValue), color: T.text, Icon: Wallet },
@@ -671,9 +676,10 @@ export default function Crypto({ setView }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* Best / Worst */}
-      {best && worst && best.id !== worst.id && (
+      {!marketsOnly && best && worst && best.id !== worst.id && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
             { label: "Meilleure perf.", Icon: Trophy, h: best },
@@ -695,6 +701,7 @@ export default function Crypto({ setView }) {
       )}
 
       {/* Tabs */}
+      {!marketsOnly && (
       <div className="flex gap-1" style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 4 }}>
         {[
           { id: "marches",      label: "Marchés",                      Icon: Coins },
@@ -715,6 +722,7 @@ export default function Crypto({ setView }) {
           </button>
         ))}
       </div>
+      )}
 
       {/* ── TAB: Holdings ── */}
       {tab === "holdings" && (

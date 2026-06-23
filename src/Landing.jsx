@@ -790,7 +790,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
             Se connecter
           </button>
           <ThemeToggle />
-          <button onClick={onStart} className="relative group overflow-hidden text-sm font-semibold px-5 py-2.5 rounded-xl"
+          <button onClick={onStart} className="relative group overflow-hidden hidden sm:block text-sm font-semibold px-5 py-2.5 rounded-xl"
             style={btn.primary} {...primaryHover}>
             <NeonGlow />
             Commencer gratuitement
@@ -815,7 +815,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span style={{ color: T.text, fontWeight: 600 }}>projetez votre patrimoine à 10, 20 ou 30 ans</span>{" "}
           avant de prendre la moindre décision.
         </p>
-        <p className="text-sm mb-8 wt-slide-up hidden sm:block" style={{ color: T.subtle1 }}>
+        <p className="text-sm mb-8 wt-slide-up" style={{ color: T.subtle1 }}>
           Vision patrimoniale · PEA, AV, Crypto & Immo · Objectif FIRE
         </p>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-start sm:justify-center gap-3 mb-6 wt-slide-up">
@@ -833,17 +833,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
             Voir la démonstration
           </button>
         </div>
-        {/* Mobile trust line */}
-        <div className="flex items-center gap-3 sm:hidden mb-4 wt-slide-up">
-          <div className="flex items-center gap-1 text-xs" style={{ color: T.green }}>
-            <Shield size={11} /> Données locales
-          </div>
-          <span style={{ color: T.subtle1 }}>·</span>
-          <span className="text-xs" style={{ color: T.subtle1 }}>Gratuit pour commencer</span>
-          <span style={{ color: T.subtle1 }}>·</span>
-          <span className="text-xs" style={{ color: T.subtle1 }}>Pas de CB</span>
-        </div>
-        <div className="items-center gap-2 px-3 py-1 rounded-full text-xs mt-1 wt-slide-up hidden sm:inline-flex"
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs mt-1 wt-slide-up"
           style={{ background: `${T.blue}10`, border: `1px solid ${T.blue}25`, color: T.muted }}>
           <Shield size={10} /> Simulation uniquement · Non conseil en investissement (AMF)
         </div>

@@ -175,7 +175,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder=""
                 required
                 style={{
                   flex: 1,
@@ -200,7 +200,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder=""
                 required
                 style={{
                   flex: 1,

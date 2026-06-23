@@ -842,10 +842,10 @@ export function AssistantMessage({ data, onChip }) {
         <div className="flex flex-wrap gap-2">
           {data.chips.map((c) => (
             <button key={c} onClick={() => onChip(c)}
-              className="hover:bg-[rgba(139,92,246,0.16)] hover:border-[rgba(139,92,246,0.4)] transition-colors"
+              className="hover:bg-[rgba(59,130,246,0.16)] hover:border-[rgba(59,130,246,0.4)] transition-colors"
               style={{
-                background: "rgba(139,92,246,0.08)", border: `1px solid rgba(139,92,246,0.25)`,
-                borderRadius: 20, padding: "4px 12px", fontSize: 11, color: C.violet,
+                background: "rgba(59,130,246,0.08)", border: `1px solid rgba(59,130,246,0.25)`,
+                borderRadius: 20, padding: "4px 12px", fontSize: 11, color: C.blue,
                 cursor: "pointer", fontWeight: 500,
               }}>{c}</button>
           ))}

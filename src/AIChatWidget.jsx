@@ -122,7 +122,7 @@ function AIChatCard({ ctx, onClose, onSignup, seed, onSeedConsumed }) {
                     className="hover:bg-[rgba(59,130,246,0.16)] hover:border-[rgba(59,130,246,0.4)] transition-colors"
                     style={{
                       background: "rgba(59,130,246,0.08)", border: `1px solid rgba(59,130,246,0.25)`,
-                      borderRadius: 20, padding: "5px 12px", fontSize: 11, color: C.violet, cursor: "pointer",
+                      borderRadius: 20, padding: "5px 12px", fontSize: 11, color: C.blue, cursor: "pointer",
                     }}>{q}</button>
                 ))}
               </div>

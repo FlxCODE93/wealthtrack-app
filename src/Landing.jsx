@@ -776,10 +776,10 @@ export default function Landing({ onStart }) {
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-16 py-4"
         style={{ background: "transparent", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         <div className="flex items-center gap-3">
-          <div className="rounded-xl p-2" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}>
+          <div className="rounded-xl p-2" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>
             <BarChart3 size={18} color="#fff" />
           </div>
-          <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
+          <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={onStart} className="relative group overflow-hidden hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
@@ -1188,10 +1188,10 @@ export default function Landing({ onStart }) {
             {/* Logo + accroche */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}>
+                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>
                   <BarChart3 size={14} color="#fff" />
                 </div>
-                <span className="font-bold text-sm" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
+                <span className="font-bold text-sm" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
               </div>
               <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: T.muted }}>
                 L'outil de simulation patrimoniale pour comprendre et piloter vos finances.

@@ -910,7 +910,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         <div onClick={closeEdit}
           style={{ position: "fixed", inset: 0, zIndex: 3000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, width: 420, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}>
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "clamp(16px, 5vw, 24px)", width: 420, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold" style={{ color: T.text }}>Ajuster les données — {editPillar.label}</h3>
               <button onClick={closeEdit} aria-label="Fermer" style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 10, width: 36, height: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={16} /></button>
@@ -1749,7 +1749,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                 placeholder="Ex : 3 500"
                 value={soldeReelStr}
                 onChange={(e) => setSoldeReelMap(prev => ({ ...prev, [period]: e.target.value }))}
-                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.text, fontSize: 13, width: 120, outline: "none" }}
+                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, width: "100%", maxWidth: 120, outline: "none" }}
               />
             </div>
             {rapprochEcart !== null && (
@@ -2565,7 +2565,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           <div
             onClick={(e) => e.stopPropagation()}
             className="wt-scale-in"
-            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}
+            style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "clamp(16px, 5vw, 24px)", width: 480, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
@@ -2763,7 +2763,7 @@ function ETFHistoryTooltip() {
 
       <div className="mt-3 mb-3">
         <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
           {milestones.map((d) => (
             <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
               style={{
@@ -2889,7 +2889,7 @@ function CryptoHistoryTooltip({ coin }) {
       {/* Milestones grid */}
       <div className="mt-3 mb-3">
         <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DATES MARQUANTES</div>
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
           {milestones.map((d) => (
             <div key={d.label + d.event} className="rounded-lg p-1.5 text-center"
               style={{
@@ -3285,7 +3285,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         if (!last) return null;
         return (
           <div className="mt-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
                 { label: "Vos apports", value: eur(last.apports), color: T.muted },
@@ -3478,7 +3478,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
               <Line type="monotone" dataKey="Séparément" stroke={T.muted} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
             </LineChart>
           </ExpandableChart>
-          <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
             {[
               { label: "Ensemble", value: eur(last.Ensemble || 0), color: T.blue },
               { label: "Séparément", value: eur(last.Séparément || 0), color: T.muted },
@@ -4856,7 +4856,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
           </LineChart>
         </ExpandableChart>
 
-        <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
           <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
             <div className="text-xs mb-1" style={{ color: T.muted }}>Valeur du bien à {duration} ans</div>
             <div className="font-bold text-sm" style={{ color: T.amber }}>{eur(finalPropValue)}</div>
@@ -5719,7 +5719,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     <input
                       value={item.label}
                       onChange={e => updateItem(side, cat.id, idx, { label: e.target.value })}
-                      style={{ ...inp, width: 160, padding: "4px 10px", fontSize: 13 }}
+                      style={{ ...inp, width: "100%", maxWidth: 160, padding: "8px 10px", fontSize: 13 }}
                     />
                     <select
                       value={item.currency || "EUR"}
@@ -5740,7 +5740,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                         const cur = item.currency || "EUR";
                         updateItem(side, cat.id, idx, { valueNative: native, value: Math.round(toEUR(native, cur)) });
                       }}
-                      style={{ ...inp, width: 120, padding: "4px 10px", fontSize: 13 }}
+                      style={{ ...inp, width: "100%", maxWidth: 120, padding: "8px 10px", fontSize: 13 }}
                     />
                     {(item.currency && item.currency !== "EUR") && (
                       <span style={{ fontSize: 12, color: T.muted }}>= {eur(item.value)}</span>
@@ -6880,7 +6880,7 @@ export default function App() {
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
-      <main className="flex-1 p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
         {/* Barre haut : logo mobile uniquement (sidebar absente) + déconnexion (droite) */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
@@ -6902,7 +6902,7 @@ export default function App() {
                   window.location.reload();
                 }}
                 style={{
-                  padding: "8px 14px", fontSize: 12, fontWeight: 600,
+                  padding: "10px 16px", fontSize: 12, fontWeight: 600, minHeight: 44,
                   border: `1px solid ${T.border}`, borderRadius: 8,
                   background: "transparent", color: T.muted, cursor: "pointer",
                 }}

@@ -95,7 +95,7 @@ export function Pill({ children, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="px-4 py-2 rounded-xl text-sm font-medium transition"
+      className="px-4 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center justify-center whitespace-nowrap shrink-0 min-h-[44px]"
       style={{
         background: active ? T.blue : "rgba(255,255,255,0.04)",
         color: active ? "#fff" : T.muted,

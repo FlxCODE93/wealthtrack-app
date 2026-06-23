@@ -5798,7 +5798,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Patrimoine</h1>
-          <p style={{ color: T.muted }}>Suivi de votre richesse nette — net worth</p>
+          <p style={{ color: T.muted }}>Suivi de votre richesse nette</p>
         </div>
         <button onClick={() => setEditMode((e) => !e)}
           className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium"

@@ -1,34 +1,27 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
-import { C, CL } from "./theme.js";
+import React, { createContext, useEffect } from "react";
+import { C } from "./theme.js";
 import { storage } from "./storage.js";
 
 export const ThemeContext = createContext();
 
+// Thème sombre uniquement (Luxe Institutionnel). Aucun white mode possible.
 export const ThemeProvider = ({ children }) => {
-  const [isDark, setIsDark] = useState(() => {
-    const stored = storage.get("wealthtrack-theme", null);
-    return stored ? stored === "dark" : true; // Défaut : sombre
-  });
+  const isDark = true;
 
   useEffect(() => {
     try {
-      storage.set("wealthtrack-theme", isDark ? "dark" : "light");
-
-      // Update document background
-      document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-      document.documentElement.style.backgroundColor = isDark ? C.bg : CL.bg;
+      storage.set("wealthtrack-theme", "dark");
+      document.documentElement.style.colorScheme = "dark";
+      document.documentElement.setAttribute("data-theme", "dark");
+      document.documentElement.style.backgroundColor = C.bg;
     } catch {}
-  }, [isDark]);
-
-  const toggleTheme = useCallback(() => {
-    setIsDark((prev) => !prev);
   }, []);
 
-  const currentTheme = isDark ? C : CL;
+  // Conservé pour compatibilité d'API (anciens appelants) — sans effet.
+  const toggleTheme = () => {};
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme, theme: currentTheme }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, theme: C }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -42,7 +35,4 @@ export const useTheme = () => {
   return context;
 };
 
-export const useT = () => {
-  const { isDark } = React.useContext(ThemeContext);
-  return isDark ? C : CL;
-};
+export const useT = () => C;

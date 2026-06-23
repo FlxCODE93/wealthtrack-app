@@ -4,7 +4,6 @@ import "./animations.css";
 import { useScrollReveal } from "./hooks/useScrollReveal.js";
 // Three.js (~600 ko) isolé dans un chunk séparé — chargé après le 1er paint.
 const PaperShaderBackground = lazy(() => import("./PaperShaderBackground.jsx"));
-import ThemeToggle from "./ThemeToggle.jsx";
 import AIChatWidget from "./AIChatWidget.jsx";
 import NeonGlow from "./NeonGlow.jsx";
 import { useTheme } from "./ThemeProvider.jsx";
@@ -782,18 +781,11 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onLogin} className="relative group overflow-hidden hidden sm:block text-sm px-4 py-2 rounded-xl transition-colors"
-            style={{ color: T.muted }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; }}>
-            <NeonGlow color={T.violet} />
+          <button onClick={onLogin} className="text-sm px-4 py-2 rounded-xl transition-colors"
+            style={{ color: T.muted, border: `1px solid ${T.border}` }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.muted; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}>
             Se connecter
-          </button>
-          <ThemeToggle />
-          <button onClick={onStart} className="relative group overflow-hidden hidden sm:block text-sm font-semibold px-5 py-2.5 rounded-xl"
-            style={btn.primary} {...primaryHover}>
-            <NeonGlow />
-            Commencer gratuitement
           </button>
         </div>
       </nav>
@@ -883,7 +875,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
               {/* En-tête */}
               <div className="mb-5">
                 <div className="text-xl md:text-2xl font-black" style={{ color: T.text }}>Patrimoine</div>
-                <div className="text-xs" style={{ color: T.muted }}>Suivi de votre richesse nette — net worth</div>
+                <div className="text-xs" style={{ color: T.muted }}>Suivi de votre richesse nette</div>
               </div>
 
               {/* Accès rapides */}

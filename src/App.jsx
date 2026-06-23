@@ -619,53 +619,56 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         );
       })}
 
-      {/* Accès profil — avatar cliquable, sous la navigation (après Tarifs) */}
-      <button
-        onClick={() => setView("profil")}
-        aria-label="Profil"
-        className="flex items-center gap-3 py-3 rounded-xl text-left transition"
-        style={{
-          paddingLeft: view === "profil" ? 13 : 16, paddingRight: 16,
-          background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
-          borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
-          boxShadow: "none", border: "none", cursor: "pointer",
-        }}
-      >
-        <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
+      {/* Bloc compte ancré en bas : profil + upgrade (Gratuit) + statut de confiance.
+          mt-auto pousse l'ensemble en bas → le vide devient une respiration voulue. */}
+      <div className="mt-auto flex flex-col">
+        {/* Accès profil — avatar cliquable */}
+        <button
+          onClick={() => setView("profil")}
+          aria-label="Profil"
+          className="flex items-center gap-3 py-3 rounded-xl text-left transition"
           style={{
-            background: view === "profil" ? T.gradientPrimary : "rgba(91,141,239,0.12)",
-            color: view === "profil" ? "#fff" : T.blue,
-            border: `1px solid ${T.blue}22`,
-          }}>
-          {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={16} />}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-medium truncate" style={{ color: T.text }}>
-            {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Profil"}
+            paddingLeft: view === "profil" ? 13 : 16, paddingRight: 16,
+            background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
+            borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
+            boxShadow: "none", border: "none", cursor: "pointer",
+          }}
+        >
+          <div className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0"
+            style={{
+              background: view === "profil" ? T.gradientPrimary : "rgba(91,141,239,0.12)",
+              color: view === "profil" ? "#fff" : T.blue,
+              border: `1px solid ${T.blue}22`,
+            }}>
+            {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={16} />}
           </div>
-          <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
-            {planInfo.label}
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate" style={{ color: T.text }}>
+              {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Profil"}
+            </div>
+            <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
+              {planInfo.label}
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
 
-      <div className="mt-auto border-t" style={{ borderColor: T.border }}>
-        {/* Upgrade CTA */}
-        {plan !== "couple" && (
-          <button
-            onClick={() => setView("pricing")}
-            style={{ margin: "12px 12px 0", width: "calc(100% - 24px)", padding: "10px 14px", borderRadius: 12, border: `1px solid ${PLANS[plan === "free" ? "pro" : "couple"].color}44`, background: `${PLANS[plan === "free" ? "pro" : "couple"].color}10`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
-          >
-            <Crown size={14} style={{ color: PLANS[plan === "free" ? "pro" : "couple"].color, flexShrink: 0 }} />
-            <span style={{ color: PLANS[plan === "free" ? "pro" : "couple"].color, fontSize: 12, fontWeight: 700 }}>
-              {plan === "free" ? "Passer à Pro →" : "Passer à Couple →"}
-            </span>
-          </button>
-        )}
-        <div className="px-3 py-4">
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-            <Shield size={11} />
-            <span>Données locales par défaut</span>
+        <div className="border-t" style={{ borderColor: T.border }}>
+          {/* Upgrade CTA — uniquement plan Gratuit (levier de conversion).
+              Les abonnés payants ne sont pas relancés : ils gardent le signal de confiance. */}
+          {plan === "free" && (
+            <button
+              onClick={() => setView("pricing")}
+              style={{ margin: "12px 12px 0", width: "calc(100% - 24px)", padding: "10px 14px", borderRadius: 12, border: `1px solid ${PLANS.pro.color}44`, background: `${PLANS.pro.color}10`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <Crown size={14} style={{ color: PLANS.pro.color, flexShrink: 0 }} />
+              <span style={{ color: PLANS.pro.color, fontSize: 12, fontWeight: 700 }}>Passer à Pro →</span>
+            </button>
+          )}
+          <div className="px-3 py-4">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+              <Shield size={11} />
+              <span>Données locales par défaut</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2195,24 +2198,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Simulations</h1>
           <p style={{ color: T.muted }}>Projetez la croissance de votre capital sur le long terme.</p>
         </div>
-        <button
-          onClick={() => setLiveOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shrink-0 wt-button-press"
-          style={{
-            background: T.gradientPrimary,
-            color: "#fff", border: "none", cursor: "pointer",
-            boxShadow: glow(T.violet, 40, "33"),
-            transition: "transform 0.15s, box-shadow 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 56, "55"); }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 40, "33"); }}
-        >
-          {liveLoading
-            ? <RefreshCw size={14} className="animate-spin" />
-            : <TrendingUp size={14} />}
-          Cours en temps réel
-          <RefreshCw size={12} style={{ opacity: 0.7 }} />
-        </button>
       </div>
 
       {/* Accès aux simulations approfondies */}
@@ -5800,16 +5785,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Patrimoine</h1>
           <p style={{ color: T.muted }}>Suivi de votre richesse nette</p>
         </div>
-        <button onClick={() => setEditMode((e) => !e)}
-          className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium"
-          style={{
-            border: `1px solid ${editMode ? T.green : T.border}`,
-            color: editMode ? T.green : T.muted,
-            background: editMode ? "rgba(34,199,154,0.08)" : "rgba(255,255,255,0.03)",
-          }}>
-          {editMode ? <Lock size={16} /> : <Sun size={16} />}
-          {editMode ? "Verrouiller" : "Mode édition"}
-        </button>
       </div>
 
       {/* Accès rapides aux composantes du patrimoine */}

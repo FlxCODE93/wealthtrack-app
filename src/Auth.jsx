@@ -265,7 +265,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
         {/* Toggle */}
         <div style={{ marginTop: 20, textAlign: "center", fontSize: 13 }}>
           <span style={{ color: T.muted }}>
-            {isLogin ? "Pas de compte ? " : "Déjà inscrit ? "}
+            {isLogin ? "Vous n'avez pas de compte ? " : "Déjà inscrit ? "}
           </span>
           <button
             type="button"

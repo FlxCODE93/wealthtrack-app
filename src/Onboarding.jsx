@@ -188,7 +188,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             <h2 style={h2}>Quel est votre prénom ?</h2>
             <p style={sub}>On commence par faire connaissance.</p>
             <label style={lbl}>Votre prénom</label>
-            <input autoFocus value={prenom} placeholder="Marie"
+            <input autoFocus value={prenom} placeholder=""
               onChange={(e) => setPrenom(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue()) next(); }}
               style={input} />
@@ -200,7 +200,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             <h2 style={h2}>Enchanté {prenom || "👋"}, quel est votre âge ?</h2>
             <p style={sub}>Pour situer votre horizon d'investissement.</p>
             <label style={lbl}>Votre âge</label>
-            <input autoFocus type="number" inputMode="numeric" min={16} max={100} value={age} placeholder="30"
+            <input autoFocus type="number" inputMode="numeric" min={16} max={100} value={age} placeholder=""
               onChange={(e) => setAge(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue()) next(); }}
               style={input} />

@@ -1942,7 +1942,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                       type="number"
                       placeholder="illimité"
                       value={budgets?.[cat] || ""}
-                      onChange={e => setBudgets(b => ({ ...b, [cat]: +e.target.value || 0 }))}
+                      onFocus={(e) => e.target.select()} onChange={e => setBudgets(b => ({ ...b, [cat]: +e.target.value || 0 }))}
                       style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.04)", color: T.text, fontSize: 13, outline: "none" }}
                     />
                     <span style={{ color: T.muted, fontSize: 12 }}>€ max</span>
@@ -2023,7 +2023,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 18 }}>
         <Field label="Rendement (%/an)">
-          <input type="number" step="0.5" min={0} value={returnPct} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+          <input type="number" step="0.5" min={0} value={returnPct} onFocus={(e) => e.target.select()} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
         </Field>
         <Field label="Votre TMI aujourd'hui">
           <TmiSelect value={tmiNow} onChange={setTmiNow} />
@@ -2292,11 +2292,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Investissement mensuel (€)">
             <input type="number" value={monthly || ""} placeholder="0" style={inputStyle}
-              onChange={(e) => setMonthly(+e.target.value || 0)} />
+              onFocus={(e) => e.target.select()} onChange={(e) => setMonthly(+e.target.value || 0)} />
           </Field>
           <Field label="Épargne / apport initial (€)">
             <input type="number" value={initial || ""} placeholder="0" style={inputStyle}
-              onChange={(e) => setInitial(+e.target.value || 0)} />
+              onFocus={(e) => e.target.select()} onChange={(e) => setInitial(+e.target.value || 0)} />
           </Field>
           <Field label="Horizon">
             <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
@@ -3031,7 +3031,7 @@ function ImmoCard({ price, setPrice, horizon }) {
           <div style={{ flex: 1, minWidth: 200 }}>
             <Field label="Prix du bien immobilier (€)">
               <input type="number" value={price} style={inputStyle}
-                onChange={(e) => setPrice(+e.target.value || 0)} />
+                onFocus={(e) => e.target.select()} onChange={(e) => setPrice(+e.target.value || 0)} />
             </Field>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -3477,10 +3477,10 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
         <div className="text-xs font-semibold mb-3 mt-5" style={{ color: T.muted, letterSpacing: 1 }}>OBJECTIF COMMUN</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <Field label="Capital cible (€)">
-            <input type="number" value={goalTarget} style={inputStyle} onChange={(e) => setGoalTarget(+e.target.value || 0)} />
+            <input type="number" value={goalTarget} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setGoalTarget(+e.target.value || 0)} />
           </Field>
           <Field label="Épargne commune supplémentaire (€/mois)">
-            <input type="number" value={sharedMonthly} style={inputStyle} onChange={(e) => setSharedMonthly(+e.target.value || 0)} />
+            <input type="number" value={sharedMonthly} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setSharedMonthly(+e.target.value || 0)} />
           </Field>
         </div>
 
@@ -3667,7 +3667,7 @@ function Portefeuille() {
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: T.muted }}>Montant (€)</label>
-                  <input type="number" value={pos.amount} style={inputStyle} onChange={(e) => updatePos(pos.id, "amount", +e.target.value || 0)} />
+                  <input type="number" value={pos.amount} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => updatePos(pos.id, "amount", +e.target.value || 0)} />
                 </div>
                 <div className="flex items-end gap-2">
                   <div className="flex-1 rounded-xl px-3 py-2.5 font-bold text-sm"
@@ -3827,22 +3827,22 @@ function CreditArbitrage({ initial } = {}) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
           <Field label="Capital restant dû (€)">
-            <input type="number" min={0} value={remaining} onChange={e => setRemaining(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <input type="number" min={0} value={remaining} onFocus={(e) => e.target.select()} onChange={e => setRemaining(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Taux du prêt (%)">
-            <input type="number" step="0.1" min={0} value={ratePct} onChange={e => setRatePct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <input type="number" step="0.1" min={0} value={ratePct} onFocus={(e) => e.target.select()} onChange={e => setRatePct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Assurance (€/mois)">
-            <input type="number" min={0} value={insurance} onChange={e => setInsurance(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <input type="number" min={0} value={insurance} onFocus={(e) => e.target.select()} onChange={e => setInsurance(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Durée restante (ans)">
             <input type="number" step="1" min={1} value={yearsLeft} onChange={e => setYearsLeft(Math.max(1, +e.target.value || 1))} style={inputStyle} />
           </Field>
           <Field label="Épargne dispo (€)">
-            <input type="number" min={0} value={lumpSum} onChange={e => setLumpSum(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <input type="number" min={0} value={lumpSum} onFocus={(e) => e.target.select()} onChange={e => setLumpSum(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Rendement visé (%/an)">
-            <input type="number" step="0.5" min={0} value={returnPct} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <input type="number" step="0.5" min={0} value={returnPct} onFocus={(e) => e.target.select()} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
           </Field>
           <Field label="Fiscalité">
             <select value={envelope} onChange={e => setEnvelope(e.target.value)} style={inputStyle}>
@@ -4727,7 +4727,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
                 type="number"
                 min={0}
                 value={creditsExistants}
-                onChange={e => setCreditsManual(+e.target.value || 0)}
+                onFocus={(e) => e.target.select()} onChange={e => setCreditsManual(+e.target.value || 0)}
                 style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: T.amber, width: "100%" }}
               />
               <span className="text-xs shrink-0" style={{ color: T.muted }}>€/mois</span>
@@ -4796,14 +4796,14 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
-            <input type="number" value={price} style={inputStyle} onChange={(e) => setPrice(+e.target.value || 0)} />
+            <input type="number" value={price} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setPrice(+e.target.value || 0)} />
           </Field>
           <Field label={`Apport total, notaire inclus (${apportPct} % = ${eur(totalApport)})`}>
             <input type="range" min={5} max={50} step={1} value={apportPct} onChange={(e) => setApportPct(+e.target.value)}
               className="w-full" style={{ accentColor: T.blue }} />
           </Field>
           <Field label="Taux crédit (% / an)">
-            <input type="number" value={rate} step={0.1} style={inputStyle} onChange={(e) => setRate(+e.target.value || 0)} />
+            <input type="number" value={rate} step={0.1} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setRate(+e.target.value || 0)} />
           </Field>
           <Field label="Durée du crédit">
             <select value={duration} style={inputStyle} onChange={(e) => setDuration(+e.target.value)}>
@@ -4811,7 +4811,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
             </select>
           </Field>
           <Field label="Appréciation annuelle (%)">
-            <input type="number" value={appreciation} step={0.5} style={inputStyle} onChange={(e) => setAppreciation(+e.target.value || 0)} />
+            <input type="number" value={appreciation} step={0.5} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setAppreciation(+e.target.value || 0)} />
           </Field>
         </div>
       </Card>
@@ -4880,10 +4880,10 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
           <>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Field label="Loyer mensuel (si vous louiez)">
-              <input type="number" value={rentMonthly} style={inputStyle} onChange={(e) => setRentMonthly(+e.target.value || 0)} />
+              <input type="number" value={rentMonthly} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setRentMonthly(+e.target.value || 0)} />
             </Field>
             <Field label={<>Charges propriétaire (€/mois)<InfoTooltip text="Taxe foncière, assurance habitation, entretien et charges de copropriété — coûts récurrents du propriétaire qui n'existent pas (ou sont bien moindres) pour un locataire." align="left" /></>}>
-              <input type="number" value={resChargesProprio} style={inputStyle} onChange={(e) => setResChargesProprio(+e.target.value || 0)} />
+              <input type="number" value={resChargesProprio} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setResChargesProprio(+e.target.value || 0)} />
             </Field>
           </div>
           <div className="rounded-xl px-4 py-2.5 mb-4 text-xs flex flex-wrap gap-x-2 gap-y-1 items-center"
@@ -4968,7 +4968,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
-            <input type="number" value={locPrice} style={inputStyle} onChange={(e) => setLocPrice(+e.target.value || 0)} />
+            <input type="number" value={locPrice} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setLocPrice(+e.target.value || 0)} />
           </Field>
           <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
             <div className="flex items-center" style={{ minHeight: 44 }}>

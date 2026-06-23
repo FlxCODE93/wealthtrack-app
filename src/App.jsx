@@ -6853,7 +6853,28 @@ function CompoundCalc({ setView }) {
               </defs>
               <XAxis dataKey="year" tickFormatter={(y) => (y === 0 ? "Auj." : `${y} an${y > 1 ? "s" : ""}`)} tick={{ fill: T.muted, fontSize: 11 }} interval="preserveStartEnd" />
               <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} tick={{ fill: T.muted, fontSize: 11 }} width={38} />
-              <Tooltip formatter={(v, n) => [eur(v), n === "total" ? "Capital" : "Versements"]} labelFormatter={(y) => (y === 0 ? "Aujourd'hui" : `Dans ${y} an${y > 1 ? "s" : ""}`)} contentStyle={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12 }} />
+              <Tooltip cursor={{ stroke: T.border }} content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const tot = payload.find((p) => p.dataKey === "total")?.value ?? 0;
+                const vers = payload.find((p) => p.dataKey === "versements")?.value ?? 0;
+                const int = Math.max(0, tot - vers);
+                const row = (c, l, v) => (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 7, color: T.muted }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />{l}</span>
+                    <span style={{ color: T.text, fontWeight: 700 }}>{eur(v)}</span>
+                  </div>
+                );
+                return (
+                  <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", minWidth: 210, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+                    <div style={{ fontSize: 12, color: T.muted }}>{label === 0 ? "Aujourd'hui" : `Dans ${label} an${label > 1 ? "s" : ""}`}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(tot)}</div>
+                    <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+                      {row(T.amber, "Intérêts", int)}
+                      {row(T.blue, "Versements", vers)}
+                    </div>
+                  </div>
+                );
+              }} />
               <Area type="monotone" dataKey="total" stroke={T.amber} strokeWidth={2.5} fill="url(#ciTotal)" />
               <Area type="monotone" dataKey="versements" stroke={T.blue} strokeWidth={2} fill="url(#ciVers)" />
             </AreaChart>

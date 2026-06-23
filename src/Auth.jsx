@@ -236,7 +236,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
               type="button"
               onClick={handleResetPassword}
               disabled={loading}
-              style={{ alignSelf: "flex-end", background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", padding: 0 }}
+              style={{ alignSelf: "center", background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", padding: 0 }}
             >
               Mot de passe oublié ?
             </button>

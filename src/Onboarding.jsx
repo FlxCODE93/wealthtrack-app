@@ -105,8 +105,8 @@ export default function Onboarding({ onComplete, onLogin }) {
   /* ---- navigation ---- */
   const next = () => setStep((s) => Math.min(TOTAL - 1, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
-  // Sélection avec auto-avance (fluidité conversationnelle)
-  const pick = (setter, val) => { setter(val); window.setTimeout(next, 240); };
+  // Sélection : on enregistre le choix, l'utilisateur valide avec "Continuer".
+  const pick = (setter, val) => setter(val);
 
   const canContinue = () => {
     switch (step) {

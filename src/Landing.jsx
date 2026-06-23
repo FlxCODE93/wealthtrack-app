@@ -781,10 +781,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onLogin} className="text-sm px-4 py-2 rounded-xl transition-colors"
-            style={{ color: T.muted, border: `1px solid ${T.border}` }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.muted; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}>
+          <button onClick={onLogin} className="relative group overflow-hidden text-sm font-semibold px-5 py-2.5 rounded-xl"
+            style={btn.primary} {...primaryHover}>
+            <NeonGlow />
             Se connecter
           </button>
         </div>

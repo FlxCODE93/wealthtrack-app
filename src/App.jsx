@@ -2378,14 +2378,10 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     // Capital final calculé sur le rendement MÉDIAN (milieu de chaque fourchette).
     const apports = Math.round(sim.apports);
     const capAt = (r) => Math.round(fv(initial, monthly, r, horizon));
-    // Immobilier (achat à crédit) : equity au taux d'appréciation médian 3,5 %.
-    const immoMed = immoDetailedSeries(price, horizon, SIM_START_YEAR, { apprec: 0.035 });
-    const immoLast = immoMed[immoMed.length - 1];
     const mk = (name, tab, rateRange, color, risk, cap, apport) =>
       ({ name, tab, rateRange, color, risk, apport: Math.round(apport), yN: cap, gain: cap - Math.round(apport) });
     return [
       mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
-      mk("Immobilier", "immo",     "2 – 5 %",    ASSET.immo,   "Modéré",      Math.round(immoLast.capital),       immoLast.apports),
       mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Modéré",      capAt(0.10),                        apports),
       mk("Or",         "or",       "5 %",        "#f59e0b",    "Modéré",      capAt(0.05),                        apports),
       mk("PER",        "per",      "2 – 8 %",    T.violet,     "Modéré",      capAt(0.05),                        apports),
@@ -2398,7 +2394,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
     { id: "or",       label: "Or",         color: "#f59e0b" },
     { id: "defensif", label: "Livret A",   color: ASSET.livret },
-    { id: "immo",     label: "Immobilier", color: ASSET.immo },
     { id: "per",      label: "PER",        color: T.violet },
     { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
     { id: "eth",      label: "Ethereum",   color: ASSET.eth },
@@ -2628,7 +2623,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       </>}
 
       {/* ── TAB: IMMO ── */}
-      {activeTab === "immo" && <ImmoCard price={price} setPrice={setPrice} horizon={horizon} />}
 
       {/* ── TAB: DÉFENSIF ── */}
       {activeTab === "defensif" && (

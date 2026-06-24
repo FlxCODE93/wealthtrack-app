@@ -7099,12 +7099,24 @@ function ObjectifsView({ goals, setGoals, totals }) {
                 </button>
               </div>
 
-              {/* Progress bar */}
+              {/* Progress bar — segments verticaux façon Finary */}
               <div style={{ marginBottom: 10 }}>
-                <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: done ? T.green : g.color }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 12, color: T.muted }}>
+                {(() => {
+                  const N = 40;
+                  const filled = Math.round((pct / 100) * N);
+                  const barColor = done ? T.green : g.color;
+                  return (
+                    <div style={{ display: "flex", gap: 3, height: 18, alignItems: "stretch" }}>
+                      {Array.from({ length: N }).map((_, i) => (
+                        <div key={i} className="transition-all" style={{
+                          flex: 1, borderRadius: 2,
+                          background: i < filled ? barColor : "rgba(255,255,255,0.08)",
+                        }} />
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12, color: T.muted }}>
                   <span>{eur(g.saved)} épargné</span>
                   <span style={{ fontWeight: 700, color: g.color }}>{pct.toFixed(0)}%</span>
                   <span>sur {eur(g.target)}</span>

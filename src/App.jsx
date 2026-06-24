@@ -6573,8 +6573,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             <AreaChart data={chartHist}>
               <defs>
                 <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={T.violet} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
+                  <stop offset="0%" stopColor={T.blue} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -6582,7 +6582,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-              <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.violet} strokeWidth={2.5}
+              <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2.5}
                 fill="url(#gradNW)" dot={false} />
             </AreaChart>
           </ExpandableChart>

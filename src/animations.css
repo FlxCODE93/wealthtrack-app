@@ -387,6 +387,13 @@
   -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
+/* Masque la barre de défilement (sidebar) tout en gardant le scroll */
+.wt-no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.wt-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
 /* ── Gradient text animation (enhanced shine) ────────────────── */
 
 @keyframes wt-gradient-shift {

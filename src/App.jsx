@@ -5784,6 +5784,10 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   ];
 
   const ACCOUNT_OPTS = BANKS.map((b) => b.name);
+  // Types de compte bancaire (commun aux comptes courants & d'épargne).
+  const ACCOUNT_TYPES = ["Carte de crédit", "Compte courant", "Compte épargne (livret)", "Compte joint", "Compte à terme"];
+  // Types pour lesquels un taux d'intérêts est pertinent → champ ajouté.
+  const SAVINGS_TYPES = ["Compte épargne (livret)", "Compte à terme"];
 
   // Actions & ETF populaires (sélecteur pour Actions & Fonds, PEA, Assurance Vie).
   const INSTRUMENTS = [
@@ -5848,19 +5852,21 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
         { key: "price", label: "Prix d'achat", type: "number", suffix: "cur" },
       ] },
     { id: "courant", label: "Comptes courants", desc: "Comptes chèques, joints & pro", icon: Landmark, color: "#14b8a6", target: "liquidites",
-      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte courant",
+      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte bancaire",
       form: [
         { key: "name",  label: "Nom du compte",  type: "text",   placeholder: "Compte courant" },
-        { key: "type",  label: "Type de compte", type: "select", options: ["Compte courant", "Compte joint", "Compte professionnel", "Autre"] },
+        { key: "type",  label: "Type de compte", type: "select", options: ACCOUNT_TYPES, default: "Compte courant" },
         { key: "value", label: "Solde",          type: "number", suffix: "EUR" },
+        { key: "rate",  label: "Taux d'intérêts", type: "number", suffix: "%", showIf: (f) => SAVINGS_TYPES.includes(f.type) },
       ],
       compute: (f, p) => ({ label: `${(f.name || "").trim() || f.type} · ${p.name}`, value: num(f.value) }) },
     { id: "epargne", label: "Comptes d'épargne", desc: "Livret A, LDDS, LEP, PEL/CEL", icon: PiggyBank, color: "#0ea5e9", target: "liquidites",
-      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte d'épargne",
+      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte bancaire",
       form: [
         { key: "name",  label: "Nom du compte",  type: "text",   placeholder: "Livret A" },
-        { key: "type",  label: "Type de livret", type: "select", options: ["Livret A", "LDDS", "LEP", "Livret Jeune", "PEL / CEL", "Livret bancaire", "Autre"] },
+        { key: "type",  label: "Type de compte", type: "select", options: ACCOUNT_TYPES, default: "Compte épargne (livret)" },
         { key: "value", label: "Solde",          type: "number", suffix: "EUR" },
+        { key: "rate",  label: "Taux d'intérêts", type: "number", suffix: "%", showIf: (f) => SAVINGS_TYPES.includes(f.type) },
       ],
       compute: (f, p) => ({ label: `${(f.name || "").trim() || f.type} · ${p.name}`, value: num(f.value) }) },
     { id: "autres", label: "Autres actifs", desc: "Véhicules, objets de valeur, parts sociales", icon: Coins, color: "#f5a623", target: "autres",
@@ -5889,7 +5895,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   const initForm = (cat) => {
     const f = {};
     (cat.form || []).forEach((fl) => {
-      if (fl.type === "select" && !fl.placeholderOpt) f[fl.key] = fl.options[0];
+      if (fl.type === "select" && !fl.placeholderOpt) f[fl.key] = fl.default ?? fl.options[0];
     });
     setForm(f);
   };
@@ -5910,7 +5916,11 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
       label = r.label; value = r.value;
     }
     if (!label || value <= 0) return;
-    onManualAdd(pick.target, label, value);
+    // Champ taux d'intérêts conditionnel (comptes d'épargne) — stocké avec l'actif.
+    const extra = {};
+    const hasRate = (pick.form || []).some((f) => f.key === "rate" && (!f.showIf || f.showIf(form)));
+    if (hasRate && num(form.rate) > 0) extra.rate = num(form.rate);
+    onManualAdd(pick.target, label, value, extra);
   };
 
   const Back = ({ onClick }) => (
@@ -5966,7 +5976,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
               </div>
             </div>
           )}
-          {pick.form.map(renderField)}
+          {pick.form.filter((f) => !f.showIf || f.showIf(form)).map(renderField)}
         </div>
         <div className="flex justify-end mt-8">
           <button onClick={submit}
@@ -6226,14 +6236,14 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
 
   // Ajout manuel finalisé depuis la modale : insère la ligne avec sa valeur
   // réelle dans la bonne catégorie d'actifs, ouvre l'édition et déroule la catégorie.
-  const addManual = (target, label, value) => {
+  const addManual = (target, label, value, extra = {}) => {
     setShowComplete(false);
     const v = Math.round(value);
     setPatrimoine((p) => ({
       ...p,
       actifs: p.actifs.map((cat) =>
         cat.id === target
-          ? { ...cat, items: [...cat.items, { label, value: v, currency: "EUR", valueNative: v }] }
+          ? { ...cat, items: [...cat.items, { label, value: v, currency: "EUR", valueNative: v, ...extra }] }
           : cat
       ),
     }));

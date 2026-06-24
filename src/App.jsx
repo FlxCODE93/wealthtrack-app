@@ -608,20 +608,28 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // Mode réduit : la sidebar n'affiche que les icônes (style Finary). Persisté.
   const [collapsed, setCollapsed] = useLocalStorage("wt_sidebar_collapsed", false);
   // Logo — petite courbe de progression (croissance) façon graphe d'évolution.
+  // Conteneur du logo — bords fondus (dégradé doux + glow, pas de bordure dure).
+  const logoBox = {
+    background: "linear-gradient(150deg, rgba(91,141,239,0.20) 0%, rgba(139,92,246,0.10) 100%)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 20px -8px rgba(91,141,239,0.55)",
+  };
+
   const Logo = ({ size = 24 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <defs>
         <linearGradient id="wtLogoFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={T.blue} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={T.blue} stopOpacity="0.30" />
           <stop offset="100%" stopColor={T.blue} stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* Axes (ordonnée + abscisse) */}
-      <path d="M5 3 L5 19 L21 19" stroke={T.muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Aire sous la courbe, depuis l'origine (coin inférieur gauche) */}
-      <path d="M5 19 C8 17 10 12 13 10 C16 8 18 6 21 4 L21 19 Z" fill="url(#wtLogoFill)" />
+      {/* Axes (ordonnée + abscisse) — discrets */}
+      <path d="M6 4.5 L6 18 L19.5 18" stroke="rgba(255,255,255,0.28)" strokeWidth="1.4"
+        strokeLinecap="round" strokeLinejoin="round" />
+      {/* Aire sous la courbe, depuis l'origine */}
+      <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5 L19.5 18 Z" fill="url(#wtLogoFill)" />
       {/* Courbe de progression */}
-      <path d="M5 19 C8 17 10 12 13 10 C16 8 18 6 21 4" stroke={T.blue} strokeWidth="2.2"
+      <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5" stroke={T.blue} strokeWidth="2.1"
         strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
@@ -645,13 +653,13 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
       <div className="flex items-center py-5 mb-1" style={{ gap: collapsed ? 4 : 12, paddingLeft: collapsed ? 0 : 4, paddingRight: collapsed ? 0 : 4, justifyContent: collapsed ? "center" : "space-between" }}>
         {collapsed ? (
           /* Logo compact toujours visible à gauche du bouton */
-          <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 28, height: 28, background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-            <Logo size={17} />
+          <div className="flex items-center justify-center shrink-0" style={{ ...logoBox, width: 28, height: 28, borderRadius: 9 }}>
+            <Logo size={16} />
           </div>
         ) : (
           <div className="flex items-center gap-3 min-w-0">
-            <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-              <Logo size={26} />
+            <div className="flex items-center justify-center shrink-0" style={{ ...logoBox, width: 44, height: 44, borderRadius: 13 }}>
+              <Logo size={24} />
             </div>
             <div className="min-w-0">
               <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>

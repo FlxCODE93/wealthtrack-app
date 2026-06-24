@@ -5847,13 +5847,22 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
         { key: "qty",   label: "Quantité",     type: "number" },
         { key: "price", label: "Prix d'achat", type: "number", suffix: "cur" },
       ] },
-    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants", icon: Wallet, color: "#14b8a6", target: "liquidites",
+    { id: "courant", label: "Comptes courants", desc: "Comptes chèques, joints & pro", icon: Landmark, color: "#14b8a6", target: "liquidites",
+      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte courant",
       form: [
-        { key: "type",  label: "Type de compte", type: "select", options: ["Livret A", "LDDS", "LEP", "PEL / CEL", "Compte courant", "Autre"] },
-        { key: "bank",  label: "Banque",         type: "select", options: ACCOUNT_OPTS, placeholderOpt: true },
+        { key: "name",  label: "Nom du compte",  type: "text",   placeholder: "Compte courant" },
+        { key: "type",  label: "Type de compte", type: "select", options: ["Compte courant", "Compte joint", "Compte professionnel", "Autre"] },
         { key: "value", label: "Solde",          type: "number", suffix: "EUR" },
       ],
-      compute: (f) => ({ label: f.bank ? `${f.type} · ${f.bank}` : f.type, value: num(f.value) }) },
+      compute: (f, p) => ({ label: `${(f.name || "").trim() || f.type} · ${p.name}`, value: num(f.value) }) },
+    { id: "epargne", label: "Comptes d'épargne", desc: "Livret A, LDDS, LEP, PEL/CEL", icon: PiggyBank, color: "#0ea5e9", target: "liquidites",
+      picker: "bank", pickedLabel: "Banque", addTitle: "Ajouter un compte d'épargne",
+      form: [
+        { key: "name",  label: "Nom du compte",  type: "text",   placeholder: "Livret A" },
+        { key: "type",  label: "Type de livret", type: "select", options: ["Livret A", "LDDS", "LEP", "Livret Jeune", "PEL / CEL", "Livret bancaire", "Autre"] },
+        { key: "value", label: "Solde",          type: "number", suffix: "EUR" },
+      ],
+      compute: (f, p) => ({ label: `${(f.name || "").trim() || f.type} · ${p.name}`, value: num(f.value) }) },
     { id: "autres", label: "Autres actifs", desc: "Véhicules, objets de valeur, parts sociales", icon: Coins, color: "#f5a623", target: "autres",
       form: [
         { key: "name",  label: "Libellé",   type: "text",   placeholder: "Nom de l'actif" },
@@ -5867,7 +5876,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   const q = query.trim().toLowerCase();
   const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
   const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
-  const pickerSrc = pick?.picker === "crypto" ? CRYPTOS : INSTRUMENTS;
+  const pickerSrc = pick?.picker === "crypto" ? CRYPTOS : pick?.picker === "bank" ? BANKS : INSTRUMENTS;
   const iqq = iq.trim().toLowerCase();
   const pickerF = iqq ? pickerSrc.filter((i) => (i.name + " " + i.ticker).toLowerCase().includes(iqq)) : pickerSrc;
 
@@ -5894,8 +5903,8 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     let label, value;
     if (pick.picker) {
       if (!picked) return;
-      value = num(form.qty) * num(form.price);
-      label = picked.name;
+      if (pick.compute) { const r = pick.compute(form, picked); label = r.label; value = r.value; }
+      else { value = num(form.qty) * num(form.price); label = picked.name; }
     } else {
       const r = pick.compute(form);
       label = r.label; value = r.value;
@@ -5946,11 +5955,11 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     body = (
       <>
         <Back onClick={() => (pick.picker ? setPicked(null) : setManual(false))} />
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>{pick.addTitle || `Ajouter ${pick.label.toLowerCase()}`}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
           {pick.picker && (
             <div style={fieldWrap}>
-              <label style={fieldLabel}>Nom</label>
+              <label style={fieldLabel}>{pick.pickedLabel || "Nom"}</label>
               <div className="flex items-center gap-2.5">
                 <BankLogo name={picked.name} domain={picked.domain} color={pick.color} />
                 <span style={{ color: T.text, fontSize: 16 }} className="truncate">{picked.name}</span>
@@ -5973,25 +5982,25 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     body = (
       <>
         <Back onClick={() => setManual(false)} />
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>{pick.addTitle || `Ajouter ${pick.label.toLowerCase()}`}</h1>
         <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
           <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
           <input autoFocus value={iq} onChange={(e) => setIq(e.target.value)}
-            placeholder={pick.picker === "crypto" ? "Chercher une crypto" : "Chercher actions ou fonds"}
+            placeholder={pick.picker === "crypto" ? "Chercher une crypto" : pick.picker === "bank" ? "Chercher une banque" : "Chercher actions ou fonds"}
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }} />
         </div>
-        <div className="text-sm font-semibold mb-2" style={{ color: T.muted }}>Les plus populaires</div>
+        <div className="text-sm font-semibold mb-2" style={{ color: T.muted }}>{pick.picker === "bank" ? "Établissements les plus populaires" : "Les plus populaires"}</div>
         <div className="flex flex-col">
           {pickerF.map((i) => (
-            <button key={i.ticker + i.name} onClick={() => setPicked(i)}
+            <button key={(i.ticker || "") + i.name} onClick={() => setPicked(i)}
               className="flex items-center gap-3 py-3 px-2 rounded-xl text-left transition"
               style={{ background: "transparent", border: "none", cursor: "pointer" }}>
-              <BankLogo name={i.name} domain={i.domain} color={pick.color} />
+              <BankLogo name={i.name} domain={i.domain} color={pick.color || i.color} />
               <span className="min-w-0 flex-1">
                 <span className="block font-medium truncate" style={{ color: T.text }}>{i.name}</span>
-                <span className="block text-xs" style={{ color: T.muted }}>{i.ticker} · {i.cur}</span>
+                {i.ticker && <span className="block text-xs" style={{ color: T.muted }}>{i.ticker} · {i.cur}</span>}
               </span>
-              <TypeTag t={i.type} />
+              {i.type && <TypeTag t={i.type} />}
             </button>
           ))}
           {pickerF.length === 0 && <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat.</p>}

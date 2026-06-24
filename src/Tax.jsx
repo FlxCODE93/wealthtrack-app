@@ -229,28 +229,6 @@ const INPUT_FOCUS_CLASS = "focus:ring-2 focus:ring-[#5b8def]/30 transition-shado
 const COIN_ID = { BTC: "bitcoin", ETH: "ethereum", SOL: "solana", BNB: "binancecoin", MATIC: "matic-network", AVAX: "avalanche-2", DOT: "polkadot", LINK: "chainlink", ADA: "cardano", ATOM: "cosmos", XRP: "ripple" };
 
 /* ─── Listes à puces — icône par nature de règle ─────────────────────── */
-const RULE_ICON_MAP = {
-  good:   CheckCircle2,
-  bad:    XCircle,
-  tip:    Lightbulb,
-  warn:   AlertTriangle,
-  info:   Info,
-  cycle:  RotateCw,
-  global: Globe,
-  down:   TrendingDown,
-  time:   Clock,
-  gift:   Gift,
-  stat:   BarChart3,
-  note:   ClipboardList,
-  calc:   Calculator,
-  sofa:   Armchair,
-  job:    Briefcase,
-  best:   Trophy,
-  age:    User,
-  home:   Home,
-  zap:    Zap,
-};
-
 const RuleItem = ({ kind, children }) => {
   const T = useT();
   const RULE_ICON = {

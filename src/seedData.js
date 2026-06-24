@@ -31,13 +31,6 @@ export const HISTO = [
   { m: "Jul 2026", rev: 4781, dep: 2350, inv:  989 },
 ];
 
-export const WHATIF = [
-  { id: "salaire", label: "Négocier une augmentation de +15% sur mon salaire", gain: 717 },
-  { id: "fumer", label: "Arrêter de fumer / vapoter", gain: 90 },
-  { id: "abos", label: "Résilier mes abonnements optionnels", gain: 45 },
-  { id: "repas", label: "Réduire les livraisons de repas de moitié", gain: 60 },
-];
-
 /* ------------------------------------------------------------------ */
 /*  Profils de test                                                    */
 /* ------------------------------------------------------------------ */

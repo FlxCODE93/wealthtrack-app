@@ -1,9 +1,7 @@
 /* ────────────────────────────────────────────────────────────────────
-   Score de santé financière + scénarios what-if — logique pure.
+   Score de santé financière — logique pure.
    Extrait d'App.jsx.
    ──────────────────────────────────────────────────────────────────── */
-import { eur } from "./theme.js";
-import { RATE_A } from "./finance.js";
 
 export function calculateHealthScore(totals, patrimoine, simParams) {
   const breakdown = {};
@@ -41,32 +39,3 @@ export function getScoreBadge(score) {
   return               { level: "Critique",      color: "#d95454", ring: "rgba(217,84,84,0.2)"   };
 }
 
-export function calculateWhatIfScenarios(totals, simParams) {
-  const monthly = simParams?.monthly || 200;
-  const rate = RATE_A;
-  const mr = rate / 12;
-  const n = 20 * 12;
-  const fvFactor = (Math.pow(1 + mr, n) - 1) / mr;
-  const currentFV = Math.round(monthly * fvFactor);
-
-  return [
-    {
-      id: "epargne_plus", diff: "Moyen",
-      title: `Épargner +300 €/mois`,
-      description: `Passer de ${eur(monthly)} à ${eur(monthly + 300)} d'épargne mensuelle`,
-      impact20y: Math.round(300 * fvFactor),
-    },
-    {
-      id: "pea", diff: "Facile",
-      title: "Ouvrir un PEA",
-      description: "0 % d'impôts sur les gains après 5 ans (vs 30 % PFU)",
-      impact20y: Math.round(currentFV * 0.15),
-    },
-    {
-      id: "etf_ter", diff: "Facile",
-      title: "Réduire les frais ETF",
-      description: "TER 0,35 % → 0,15 % (CW8 → IWDA)",
-      impact20y: Math.round(monthly * ((Math.pow(1 + (rate + 0.002) / 12, n) - 1) / ((rate + 0.002) / 12) - fvFactor)),
-    },
-  ];
-}

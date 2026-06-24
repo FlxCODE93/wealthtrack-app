@@ -10,8 +10,7 @@ import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
 import Frais   from "./Frais.jsx";
 import {
-  FinTechLineChart, FinTechAreaChart, FinTechBarChart,
-  FinTechScatterChart, FinTechComposedChart, ExpandableChart,
+  FinTechBarChart, ExpandableChart,
 } from "./ChartComponents.jsx";
 import {
   BarChart3, TrendingUp, TrendingDown, Shield, Zap, Wallet, PiggyBank, Home,
@@ -1044,12 +1043,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   const [objectiveOpen, setObjectiveOpen] = useState(false); // flux IA : choix de l'objectif
   const [histoRange, setHistoRange] = useState(12);
 
-  // Taux d'épargne mensuel reconstitué à partir de l'historique réel (rev/dep)
-  const savingHisto = useMemo(
-    () => histo.map((h) => ({ m: h.m, v: h.rev > 0 ? Math.round(((h.rev - h.dep) / h.rev) * 1000) / 10 : 0 })),
-    [histo]
-  );
-
   // Série d'épargne positive : nombre de mois consécutifs (les plus récents) où rev > dep
   const savingsStreak = useMemo(() => {
     let streak = 0;
@@ -1137,7 +1130,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
       </div>
 
-      <div className="flex gap-4 flex-wrap">
+      {/* Synthèse du mois — 6 indicateurs réunis */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {PILLARS.map((p) => {
           const Icon = p.icon;
           const overridden = monthAdj[p.key] != null;
@@ -1149,30 +1143,47 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               onMouseEnter={() => setHoverKey(p.key)}
               onMouseLeave={() => setHoverKey(null)}
               title="Cliquer pour ajuster manuellement"
-              className="flex-1 rounded-2xl p-5 relative"
+              className="rounded-2xl p-4 relative"
               style={{
-                minWidth: 160, cursor: "pointer", background: T.card,
+                cursor: "pointer", background: T.card,
                 border: `1px solid ${hovered ? T.blue : (overridden ? `${T.blue}55` : T.border)}`,
                 boxShadow: hovered ? `0 0 0 1px ${T.blue}33` : "none",
                 transition: "border-color .15s ease, box-shadow .15s ease",
               }}>
-              <div className="flex items-start justify-between">
-                <span className="text-sm" style={{ color: T.muted }}>{p.label}</span>
-                <Icon size={18} style={{ color: p.color }} />
+              <div className="flex items-start justify-between gap-1">
+                <span className="text-xs" style={{ color: T.muted }}>{p.label}</span>
+                <Icon size={15} style={{ color: p.color, flexShrink: 0 }} />
               </div>
-              <div className="text-2xl font-bold mt-3 flex items-center gap-2" style={{ color: p.color }}>
+              <div className="text-xl font-bold mt-2 flex items-center gap-1.5 flex-wrap" style={{ color: p.color }}>
                 {eur(p.value)}
                 {overridden && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                  <span className="inline-flex items-center gap-1 px-1 py-0.5 rounded-md"
                     title="Montant modifié manuellement — cliquer pour ajuster ou réinitialiser"
-                    style={{ background: `${T.blue}18`, color: T.blue, fontSize: 11, fontWeight: 700 }}>
-                    <Pencil size={10} /> Manuel
+                    style={{ background: `${T.blue}18`, color: T.blue, fontSize: 10, fontWeight: 700 }}>
+                    <Pencil size={9} /> Manuel
                   </span>
                 )}
               </div>
             </div>
           );
         })}
+        {/* Restant à vivre (dérivé) */}
+        <div className="rounded-2xl p-4" style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.25)" }}>
+          <div className="flex items-start justify-between gap-1">
+            <span className="text-xs" style={{ color: T.muted }}>Restant à vivre</span>
+            <Wallet size={15} style={{ color: T.green, opacity: 0.6, flexShrink: 0 }} />
+          </div>
+          <div className="text-xl font-bold mt-2" style={{ color: T.green }}>{eur(restant)}</div>
+        </div>
+        {/* Taux d'épargne (dérivé) */}
+        <div className="rounded-2xl p-4" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)" }}>
+          <div className="flex items-start justify-between gap-1">
+            <span className="text-xs" style={{ color: T.muted }}>Taux d'épargne</span>
+            <ArrowUpRight size={15} style={{ color: T.blue, opacity: 0.6, flexShrink: 0 }} />
+          </div>
+          <div className="text-xl font-bold mt-2" style={{ color: savingsRateColor }}>{pct(tauxEpargne)}</div>
+          <div className="text-xs mt-0.5" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
+        </div>
       </div>
 
       {/* Modale d'édition rapide d'un pilier */}
@@ -1269,21 +1280,21 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                 </div>
               )}
             </div>
-            <div className="mb-4">
-              <span style={{ fontSize: 52, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
-              <span style={{ fontSize: 22, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
+            <div className="mb-3">
+              <span style={{ fontSize: 38, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
+              <span style={{ fontSize: 16, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
             </div>
             <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>
               DÉTAIL PAR CRITÈRE
             </div>
             {Object.values(healthScore.breakdown).map((b) => (
-              <div key={b.label} className="mb-3">
+              <div key={b.label} className="mb-2">
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: T.text }}>{b.label}</span>
                   <span style={{ color: badge.color }}>{b.score}/{b.max} pts</span>
                 </div>
-                <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-1.5 rounded-full"
+                <div className="h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-1 rounded-full"
                     style={{ width: `${(b.score / b.max) * 100}%`, background: badge.color }} />
                 </div>
               </div>
@@ -1328,25 +1339,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         </div>
         {shareOpen && <ShareScoreModal score={healthScore.overall} badge={badge} onClose={() => setShareOpen(false)} />}
       </Card>
-
-      {/* Restant à vivre + taux épargne */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card style={{ background: "rgba(34,199,154,0.06)", borderColor: "rgba(34,199,154,0.25)" }}>
-          <div className="flex justify-between items-start">
-            <span style={{ color: T.muted }}>Restant à vivre</span>
-            <Wallet size={28} style={{ color: T.green, opacity: 0.5 }} />
-          </div>
-          <div className="text-4xl font-bold mt-3" style={{ color: T.green }}>{eur(restant)}</div>
-        </Card>
-        <Card style={{ background: "rgba(59,130,246,0.06)", borderColor: "rgba(59,130,246,0.25)" }}>
-          <div className="flex justify-between items-start">
-            <span style={{ color: T.muted }}>Taux d'épargne</span>
-            <ArrowUpRight size={28} style={{ color: T.blue, opacity: 0.6 }} />
-          </div>
-          <div className="text-4xl font-bold mt-3" style={{ color: savingsRateColor }}>{pct(tauxEpargne)}</div>
-          <div className="text-sm mt-1" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
-        </Card>
-      </div>
 
       {/* Historique mensuel */}
       <Card>
@@ -1441,22 +1433,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           }}
         />
       )}
-
-      {/* Évolution taux épargne */}
-      <Card>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution du taux d'épargne</h2>
-          <p className="text-sm" style={{ color: T.muted }}>Calculé à partir de votre historique mensuel — période sélectionnée ci-dessus</p>
-        </div>
-        <FinTechAreaChart
-          data={savingHisto.slice(-histoRange)}
-          xKey="m"
-          areas={[{ dataKey: "v", fill: T.cyan, stroke: T.cyan }]}
-          format={(v) => v.toFixed(1) + "%"}
-          stacked={false}
-          ariaLabel="Savings rate evolution over time"
-        />
-      </Card>
 
       {/* Teaser Premium — visible en Free uniquement */}
       {plan === "free" && (

@@ -5769,19 +5769,63 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   const [picked, setPicked] = useState(null);  // titre/crypto sélectionné → formulaire
   const [iq, setIq] = useState("");            // recherche dans la liste de titres
   const [form, setForm] = useState({});        // valeurs du formulaire (clé → valeur)
+  const [tab, setTab] = useState("details");   // onglet du formulaire : details | detention
+  const [detention, setDetention] = useState("100"); // quotité détenue (%)
   const num = (x) => { const n = parseFloat(String(x ?? "").replace(",", ".")); return isNaN(n) ? 0 : n; };
 
-  // Établissements populaires (synchronisation automatique).
+  // Établissements : banques de réseau, banques en ligne, néobanques, courtiers
+  // et plateformes crypto. Les 8 premiers servent de "plus populaires".
   const BANKS = [
-    { name: "Crédit Agricole",  domain: "credit-agricole.fr", color: "#0a7d3c" },
-    { name: "BoursoBank",       domain: "boursobank.com",     color: "#e6007e" },
-    { name: "Crédit Mutuel",    domain: "creditmutuel.fr",    color: "#e2001a" },
-    { name: "Trade Republic",   domain: "traderepublic.com",  color: "#1c1c1e" },
-    { name: "Fortuneo",         domain: "fortuneo.fr",        color: "#7ab800" },
-    { name: "Société Générale", domain: "societegenerale.fr", color: "#e2001a" },
-    { name: "Boursorama",       domain: "boursorama.com",     color: "#ff5a00" },
-    { name: "Binance",          domain: "binance.com",        color: "#f0b90b" },
+    { name: "Crédit Agricole",     domain: "credit-agricole.fr",  color: "#0a7d3c" },
+    { name: "BoursoBank",          domain: "boursobank.com",      color: "#e6007e" },
+    { name: "Crédit Mutuel",       domain: "creditmutuel.fr",     color: "#e2001a" },
+    { name: "Trade Republic",      domain: "traderepublic.com",   color: "#1c1c1e" },
+    { name: "Fortuneo",            domain: "fortuneo.fr",         color: "#7ab800" },
+    { name: "Société Générale",    domain: "societegenerale.fr",  color: "#e2001a" },
+    { name: "Revolut",             domain: "revolut.com",         color: "#1c1c1e" },
+    { name: "BNP Paribas",         domain: "bnpparibas.fr",       color: "#00965e" },
+    // — Banques de réseau —
+    { name: "Caisse d'Épargne",    domain: "caisse-epargne.fr",   color: "#e2001a" },
+    { name: "Banque Populaire",    domain: "banquepopulaire.fr",  color: "#0046ad" },
+    { name: "LCL",                 domain: "lcl.fr",              color: "#003d7d" },
+    { name: "La Banque Postale",   domain: "labanquepostale.fr",  color: "#ffcc00" },
+    { name: "CIC",                 domain: "cic.fr",              color: "#d2002e" },
+    { name: "HSBC",                domain: "hsbc.fr",             color: "#db0011" },
+    { name: "AXA Banque",          domain: "axabanque.fr",        color: "#00008f" },
+    // — Banques en ligne —
+    { name: "Hello bank!",         domain: "hellobank.fr",        color: "#00a0e2" },
+    { name: "Monabanq",            domain: "monabanq.com",        color: "#e2001a" },
+    { name: "BforBank",            domain: "bforbank.com",        color: "#1c1c1e" },
+    // — Néobanques —
+    { name: "N26",                 domain: "n26.com",             color: "#36a18b" },
+    { name: "Nickel",              domain: "nickel.eu",           color: "#ff5a00" },
+    { name: "Lydia",               domain: "lydia-app.com",       color: "#0070f3" },
+    { name: "Qonto",               domain: "qonto.com",           color: "#1d1d3b" },
+    { name: "Shine",               domain: "shine.fr",            color: "#5b3df6" },
+    { name: "Wise",                domain: "wise.com",            color: "#163300" },
+    { name: "bunq",                domain: "bunq.com",            color: "#ed1c5f" },
+    // — Courtiers & investissement —
+    { name: "DEGIRO",              domain: "degiro.fr",           color: "#1c1c1e" },
+    { name: "Interactive Brokers", domain: "interactivebrokers.com", color: "#d81222" },
+    { name: "eToro",               domain: "etoro.com",           color: "#56b68b" },
+    { name: "Saxo Banque",         domain: "home.saxo",           color: "#1c1c1e" },
+    { name: "Bourse Direct",       domain: "boursedirect.fr",     color: "#003a70" },
+    { name: "Trading 212",         domain: "trading212.com",      color: "#00a8e8" },
+    { name: "Scalable Capital",    domain: "scalable.capital",    color: "#1c1c1e" },
+    { name: "Yomoni",              domain: "yomoni.fr",           color: "#00b8d9" },
+    { name: "Nalo",                domain: "nalo.fr",             color: "#2b6cb0" },
+    { name: "Ramify",              domain: "ramify.fr",           color: "#1c1c1e" },
+    { name: "Linxea",              domain: "linxea.com",          color: "#f59e0b" },
+    // — Plateformes crypto —
+    { name: "Binance",             domain: "binance.com",         color: "#f0b90b" },
+    { name: "Coinbase",            domain: "coinbase.com",        color: "#0052ff" },
+    { name: "Kraken",              domain: "kraken.com",          color: "#5741d9" },
+    { name: "Bitpanda",            domain: "bitpanda.com",        color: "#1c1c1e" },
+    { name: "Crypto.com",          domain: "crypto.com",          color: "#002d74" },
+    { name: "Ledger",              domain: "ledger.com",          color: "#1c1c1e" },
+    { name: "OKX",                 domain: "okx.com",             color: "#1c1c1e" },
   ];
+  const POPULAR_BANKS = BANKS.slice(0, 8);
 
   const ACCOUNT_OPTS = BANKS.map((b) => b.name);
   // Types de compte bancaire (commun aux comptes courants & d'épargne).
@@ -5880,7 +5924,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   ];
 
   const q = query.trim().toLowerCase();
-  const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
+  const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : POPULAR_BANKS;
   const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
   const pickerSrc = pick?.picker === "crypto" ? CRYPTOS : pick?.picker === "bank" ? BANKS : INSTRUMENTS;
   const iqq = iq.trim().toLowerCase();
@@ -5901,7 +5945,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   };
   const startManual = () => {
     if (pick.nav) { onPick(pick, "manual"); return; }
-    setPicked(null); setIq(""); initForm(pick); setManual(true);
+    setPicked(null); setIq(""); initForm(pick); setTab("details"); setDetention("100"); setManual(true);
   };
   const toCatalog = () => { setPick(null); setManual(false); setPicked(null); setForm({}); };
 
@@ -5915,11 +5959,15 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
       const r = pick.compute(form);
       label = r.label; value = r.value;
     }
+    // Quotité détenue : seule la quote-part de l'utilisateur entre au patrimoine.
+    const det = num(detention) || 100;
+    value = value * det / 100;
     if (!label || value <= 0) return;
-    // Champ taux d'intérêts conditionnel (comptes d'épargne) — stocké avec l'actif.
     const extra = {};
+    // Champ taux d'intérêts conditionnel (comptes d'épargne) — stocké avec l'actif.
     const hasRate = (pick.form || []).some((f) => f.key === "rate" && (!f.showIf || f.showIf(form)));
     if (hasRate && num(form.rate) > 0) extra.rate = num(form.rate);
+    if (det !== 100) extra.detention = det;
     onManualAdd(pick.target, label, value, extra);
   };
 
@@ -5965,18 +6013,46 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     body = (
       <>
         <Back onClick={() => (pick.picker ? setPicked(null) : setManual(false))} />
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>{pick.addTitle || `Ajouter ${pick.label.toLowerCase()}`}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
-          {pick.picker && (
-            <div style={fieldWrap}>
-              <label style={fieldLabel}>{pick.pickedLabel || "Nom"}</label>
-              <div className="flex items-center gap-2.5">
-                <BankLogo name={picked.name} domain={picked.domain} color={pick.color} />
-                <span style={{ color: T.text, fontSize: 16 }} className="truncate">{picked.name}</span>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>{pick.addTitle || `Ajouter ${pick.label.toLowerCase()}`}</h1>
+        <div className="flex flex-col sm:flex-row gap-6 pt-6" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="flex sm:flex-col gap-1 sm:w-40 shrink-0">
+            {[["details", "Détails"], ["detention", "Détention"]].map(([id, lbl]) => (
+              <button key={id} onClick={() => setTab(id)}
+                className="text-left px-3 py-2 rounded-lg text-sm transition"
+                style={{ background: tab === id ? "rgba(255,255,255,0.05)" : "transparent", color: tab === id ? T.amber : T.muted, border: "none", cursor: "pointer", fontWeight: tab === id ? 600 : 500 }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1">
+            {tab === "details" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
+                {pick.picker && (
+                  <div style={fieldWrap}>
+                    <label style={fieldLabel}>{pick.pickedLabel || "Nom"}</label>
+                    <div className="flex items-center gap-2.5">
+                      <BankLogo name={picked.name} domain={picked.domain} color={pick.color} />
+                      <span style={{ color: T.text, fontSize: 16 }} className="truncate">{picked.name}</span>
+                    </div>
+                  </div>
+                )}
+                {pick.form.filter((f) => !f.showIf || f.showIf(form)).map(renderField)}
               </div>
-            </div>
-          )}
-          {pick.form.filter((f) => !f.showIf || f.showIf(form)).map(renderField)}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>Quotité détenue</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" inputMode="decimal" value={detention} onChange={(e) => setDetention(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="100" />
+                    <span style={{ color: T.muted, fontSize: 14 }}>%</span>
+                  </div>
+                </div>
+                <p className="sm:col-span-2 text-xs leading-relaxed" style={{ color: T.muted, opacity: 0.85 }}>
+                  Part du bien qui vous appartient — ex. 50 % pour un compte joint. Seule votre quote-part est comptée dans votre patrimoine.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex justify-end mt-8">
           <button onClick={submit}
@@ -6002,7 +6078,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
         <div className="text-sm font-semibold mb-2" style={{ color: T.muted }}>{pick.picker === "bank" ? "Établissements les plus populaires" : "Les plus populaires"}</div>
         <div className="flex flex-col">
           {pickerF.map((i) => (
-            <button key={(i.ticker || "") + i.name} onClick={() => setPicked(i)}
+            <button key={(i.ticker || "") + i.name} onClick={() => { setPicked(i); setTab("details"); }}
               className="flex items-center gap-3 py-3 px-2 rounded-xl text-left transition"
               style={{ background: "transparent", border: "none", cursor: "pointer" }}>
               <BankLogo name={i.name} domain={i.domain} color={pick.color || i.color} />
@@ -6321,7 +6397,16 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm" style={{ color: T.muted }}>{item.label}</span>
+                    <div className="min-w-0">
+                      <span className="text-sm block truncate" style={{ color: T.muted }}>{item.label}</span>
+                      {(item.rate || (item.detention != null && item.detention !== 100)) && (
+                        <span className="text-xs" style={{ color: T.muted, opacity: 0.65 }}>
+                          {item.rate ? `${item.rate} %` : ""}
+                          {item.rate && item.detention != null && item.detention !== 100 ? " · " : ""}
+                          {item.detention != null && item.detention !== 100 ? `détenu à ${item.detention} %` : ""}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-right">
                       <span className="font-bold text-sm" style={{ color: T.text }}>
                         {isPassif ? "−" : ""}{eur(item.value)}

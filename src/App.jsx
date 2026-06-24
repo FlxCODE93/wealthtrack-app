@@ -11,7 +11,7 @@ import FI      from "./FI.jsx";
 import Frais   from "./Frais.jsx";
 import {
   FinTechLineChart, FinTechAreaChart, FinTechBarChart,
-  FinTechPieChart, FinTechScatterChart, FinTechComposedChart, ExpandableChart,
+  FinTechScatterChart, FinTechComposedChart, ExpandableChart,
 } from "./ChartComponents.jsx";
 import {
   BarChart3, TrendingUp, TrendingDown, Shield, Zap, Wallet, PiggyBank, Home,

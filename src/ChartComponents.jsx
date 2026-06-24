@@ -227,38 +227,6 @@ export const FinTechBarChart = ({
 );
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Pie/Donut Chart — allocation, distribution                      */
-/* ─────────────────────────────────────────────────────────────── */
-
-export const FinTechPieChart = ({
-  data,
-  colors = [],
-  title,
-  ariaLabel,
-  innerRadius = 0,
-}) => (
-  <ChartShell title={title} ariaLabel={ariaLabel}>
-    <PieChart>
-      <Pie
-        data={data}
-        cx="50%"
-        cy="50%"
-        innerRadius={innerRadius}
-        outerRadius={80}
-        paddingAngle={2}
-        dataKey="value"
-        isAnimationActive={false}
-      >
-        {data.map((entry, idx) => (
-          <Cell key={`cell-${idx}`} fill={colors[idx % colors.length] || C.amber} />
-        ))}
-      </Pie>
-      <Tooltip content={<CustomTooltip />} />
-    </PieChart>
-  </ChartShell>
-);
-
-/* ─────────────────────────────────────────────────────────────── */
 /* Scatter Chart — risk/return correlation                          */
 /* ─────────────────────────────────────────────────────────────── */
 

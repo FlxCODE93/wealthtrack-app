@@ -2652,7 +2652,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               "Cadre réglementaire en évolution — risque juridique selon les juridictions",
               "Allocation recommandée : 5 à 10 % maximum du portefeuille global",
             ],
-            disclaimer: "Projection indicative basée sur les rendements historiques. Les performances passées ne préjugent pas des performances futures. Horizon minimal conseillé : 5 ans.",
+
           }}
           riskBadges={[
             { label: "Volatilité annualisée ~65 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
@@ -2684,7 +2684,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               "Risque technologique : protocole en développement actif, exposition à la concurrence",
               "Allocation recommandée : 2 à 5 % maximum du portefeuille global",
             ],
-            disclaimer: "Projection indicative basée sur les rendements historiques. Les performances passées ne préjugent pas des performances futures. Horizon minimal conseillé : 5 ans.",
+
           }}
           riskBadges={[
             { label: "Volatilité annualisée ~75 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },

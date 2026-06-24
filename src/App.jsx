@@ -2360,9 +2360,9 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         </div>
       </div>
 
-      {/* Accès aux simulations approfondies */}
+      {/* Accès aux simulations approfondies — mobile uniquement (desktop = dépliant sidebar) */}
       {setView && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
           {[
             { id: "fi",         label: "FIRE — Indépendance financière", desc: "À quel âge êtes-vous libre ?", icon: Flag, color: T.green },
             { id: "immobilier", label: "Immobilier — achat vs location", desc: "Rendement locatif, LMNP, crédit", icon: Building2, color: T.blue },

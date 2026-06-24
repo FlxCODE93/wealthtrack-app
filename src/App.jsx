@@ -10,7 +10,7 @@ import Tax     from "./Tax.jsx";
 import FI      from "./FI.jsx";
 import Frais   from "./Frais.jsx";
 import {
-  FinTechBarChart, ExpandableChart,
+  ExpandableChart,
 } from "./ChartComponents.jsx";
 import {
   BarChart3, TrendingUp, TrendingDown, Shield, Zap, Wallet, PiggyBank, Home,
@@ -1041,7 +1041,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   const resetEdit = () => { onAdjust?.(editKey, null); setEditKey(null); };
   const [shareOpen, setShareOpen] = useState(false);
   const [objectiveOpen, setObjectiveOpen] = useState(false); // flux IA : choix de l'objectif
-  const [histoRange, setHistoRange] = useState(12);
 
   // Série d'épargne positive : nombre de mois consécutifs (les plus récents) où rev > dep
   const savingsStreak = useMemo(() => {
@@ -1338,33 +1337,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           </div>
         </div>
         {shareOpen && <ShareScoreModal score={healthScore.overall} badge={badge} onClose={() => setShareOpen(false)} />}
-      </Card>
-
-      {/* Historique mensuel */}
-      <Card>
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Historique mensuel</h2>
-          <select value={histoRange} onChange={(e) => setHistoRange(+e.target.value)}
-            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 9999, padding: "6px 14px", fontSize: 12, outline: "none", cursor: "pointer" }}>
-            <option value={1}>1 mois</option>
-            <option value={3}>3 mois</option>
-            <option value={6}>6 mois</option>
-            <option value={12}>12 mois</option>
-            <option value={24}>2 ans</option>
-            <option value={36}>3 ans</option>
-          </select>
-        </div>
-        <FinTechBarChart
-          data={histo.slice(-histoRange)}
-          xKey="m"
-          bars={[
-            { dataKey: "rev", fill: T.green, name: "Revenus" },
-            { dataKey: "dep", fill: T.red, name: "Dépenses" },
-            { dataKey: "inv", fill: T.cyan, name: "Investissements" },
-          ]}
-          format={(v) => (v >= 1000 ? (v / 1000).toFixed(0) + "k" : eur(v))}
-          ariaLabel="Monthly revenue, expenses, and investments"
-        />
       </Card>
 
       {/* Répartition des dépenses */}

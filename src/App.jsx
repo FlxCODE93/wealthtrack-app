@@ -28,6 +28,7 @@ import {
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart, Sector,
+  Sankey,
 } from "recharts";
 import {
   RATE_A, RATE_C, RATE_DISCLAIMER, RATE_GOLD,
@@ -1016,6 +1017,33 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         startAngle={startAngle} endAngle={endAngle} fill={fill} opacity={0.35} cornerRadius={4} />
     </g>
   );
+
+  // ── Sankey (flux de trésorerie) : nœud = rectangle coloré + libellé/valeur ──
+  const SankeyNode = ({ x, y, width, height, index, payload }) => {
+    const isSource = index === 0;
+    const color = payload.color || T.muted;
+    const lx = isSource ? x - 8 : x + width + 8;
+    const anchor = isSource ? "end" : "start";
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={Math.max(height, 1)} rx={2} fill={color} fillOpacity={0.95} />
+        <text x={lx} y={y + height / 2 - 5} textAnchor={anchor} dominantBaseline="middle"
+          fontSize={12} fontWeight={600} fill={T.text}>{payload.name}</text>
+        <text x={lx} y={y + height / 2 + 10} textAnchor={anchor} dominantBaseline="middle"
+          fontSize={11} fill={T.muted}>{eur(payload.value)}</text>
+      </g>
+    );
+  };
+  // Lien = bande dont la largeur est proportionnelle au flux, teintée par la cible.
+  const SankeyLink = ({ sourceX, sourceY, targetX, targetY, sourceControlX, targetControlX, linkWidth, payload }) => {
+    const color = payload?.target?.color || T.muted;
+    return (
+      <path d={`M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
+        fill="none" stroke={color} strokeWidth={Math.max(1, linkWidth)} strokeOpacity={0.22}
+        style={{ transition: "stroke-opacity .15s" }} />
+    );
+  };
+
   // Édition manuelle des 4 piliers (surcharge mensuelle)
   const curMonthLabel = (() => {
     const s = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -1129,8 +1157,10 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
       </div>
 
-      {/* Synthèse du mois — 6 indicateurs réunis */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      {/* Ligne 1 — synthèse du mois (gauche) + répartition des dépenses (droite) */}
+      <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+      <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-3">
         {PILLARS.map((p) => {
           const Icon = p.icon;
           const overridden = monthAdj[p.key] != null;
@@ -1184,6 +1214,91 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <div className="text-xs mt-0.5" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
         </div>
       </div>
+
+      {/* Droite : répartition des dépenses (donut) */}
+      <div className="lg:border-l lg:pl-6 flex flex-col" style={{ borderColor: T.border }}>
+        <h2 className="text-xl font-bold mb-2 text-center" style={{ color: T.text }}>Répartition dépenses</h2>
+        {(() => {
+          const expSlices = breakdown.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted }));
+          const expTotal = expSlices.reduce((s, b) => s + b.value, 0);
+          return (
+            <div className="relative flex-1 flex items-center justify-center">
+              <div className="w-full">
+                <ExpandableChart height={300} title="Répartition des dépenses">
+                  <PieChart>
+                    <Pie data={expSlices} dataKey="value" nameKey="name"
+                      innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                      stroke="none" startAngle={90} endAngle={-270}
+                      activeIndex={activeExpSlice ?? -1} activeShape={renderActiveSlice}
+                      onMouseEnter={(_, i) => setActiveExpSlice(i)} onMouseLeave={() => setActiveExpSlice(null)}>
+                      {expSlices.map((s, i) => (
+                        <Cell key={i} fill={s.color} opacity={activeExpSlice == null || activeExpSlice === i ? 1 : 0.42}
+                          style={{ transition: "opacity 0.2s" }} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ExpandableChart>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  {activeExpSlice != null && expSlices[activeExpSlice] ? (
+                    <>
+                      <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
+                      <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{eur(expSlices[activeExpSlice].value)}</span>
+                      <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                        {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
+                      <span className="text-2xl font-bold" style={{ color: T.text }}>{eur(expTotal)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        <button
+          onClick={() => setObjectiveOpen(true)}
+          className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
+          style={{ background: "rgba(29,78,216,0.85)", border: "none", color: "#fff" }}>
+          <Sparkles size={18} /> Optimiser mon mois par IA
+        </button>
+      </div>
+      </div>
+      </Card>
+
+      {/* Ligne 2 — flux de trésorerie (Sankey) : revenus → postes */}
+      {revenus > 0 && (() => {
+        const N = 7;
+        const top = breakdown.slice(0, N);
+        const autres = breakdown.slice(N).reduce((s, b) => s + b.amount, 0);
+        const dests = [
+          ...top.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted })),
+          ...(autres > 0 ? [{ name: "Autres", value: autres, color: T.muted }] : []),
+          ...(invest > 0 ? [{ name: "Investissements", value: invest, color: T.cyan }] : []),
+          ...(restant > 0 ? [{ name: "Restant à vivre", value: restant, color: T.green }] : []),
+        ].filter((d) => d.value > 0);
+        if (dests.length === 0) return null;
+        const data = {
+          nodes: [{ name: "Revenus", color: T.green }, ...dests.map((d) => ({ name: d.name, color: d.color }))],
+          links: dests.map((d, i) => ({ source: 0, target: i + 1, value: Math.max(1, Math.round(d.value)) })),
+        };
+        return (
+          <Card>
+            <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Flux de trésorerie</h2>
+            <p className="text-sm mb-4" style={{ color: T.muted }}>
+              De vos revenus vers vos postes de dépenses, investissements et épargne — largeur ∝ montant
+            </p>
+            <ExpandableChart height={Math.max(330, data.nodes.length * 38)} title="Flux de trésorerie">
+              <Sankey data={data} node={<SankeyNode />} link={<SankeyLink />}
+                nodeWidth={14} nodePadding={20} margin={{ top: 12, right: 168, bottom: 12, left: 96 }}>
+                <Tooltip formatter={(v) => eur(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10 }} itemStyle={{ color: T.text }} />
+              </Sankey>
+            </ExpandableChart>
+          </Card>
+        );
+      })()}
 
       {/* Modale d'édition rapide d'un pilier */}
       {editPillar && createPortal(
@@ -1338,60 +1453,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         </div>
         {shareOpen && <ShareScoreModal score={healthScore.overall} badge={badge} onClose={() => setShareOpen(false)} />}
       </Card>
-
-      {/* Répartition des dépenses */}
-      <div>
-        <Card className="flex flex-col">
-          <h2 className="text-xl font-bold mb-2 text-center" style={{ color: T.text }}>Répartition dépenses</h2>
-          {(() => {
-            const expSlices = breakdown.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted }));
-            const expTotal = expSlices.reduce((s, b) => s + b.value, 0);
-            return (
-              <div className="relative flex-1 flex items-center justify-center">
-                <div className="w-full">
-                  <ExpandableChart height={330} title="Répartition des dépenses">
-                    <PieChart>
-                      <Pie data={expSlices} dataKey="value" nameKey="name"
-                        innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-                        stroke="none" startAngle={90} endAngle={-270}
-                        activeIndex={activeExpSlice ?? -1} activeShape={renderActiveSlice}
-                        onMouseEnter={(_, i) => setActiveExpSlice(i)} onMouseLeave={() => setActiveExpSlice(null)}>
-                        {expSlices.map((s, i) => (
-                          <Cell key={i} fill={s.color} opacity={activeExpSlice == null || activeExpSlice === i ? 1 : 0.42}
-                            style={{ transition: "opacity 0.2s" }} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ExpandableChart>
-                  {/* Centre — total, ou détail du segment survolé */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    {activeExpSlice != null && expSlices[activeExpSlice] ? (
-                      <>
-                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
-                        <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{eur(expSlices[activeExpSlice].value)}</span>
-                        <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                          {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
-                        <span className="text-2xl font-bold" style={{ color: T.text }}>{eur(expTotal)}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-          <button
-            onClick={() => setObjectiveOpen(true)}
-            className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
-            style={{ background: "rgba(29,78,216,0.85)", border: "none", color: "#fff" }}>
-            <Sparkles size={18} /> Optimiser mon mois par IA
-          </button>
-        </Card>
-      </div>
 
       {objectiveOpen && (
         <ObjectiveModal

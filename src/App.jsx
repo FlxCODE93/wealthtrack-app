@@ -599,8 +599,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // Le header navigue vers la calculatrice d'intérêts composés ("interets").
   const SIMS = [
     { id: "simulations", label: "Projection d'Actifs" },
-    { id: "fi",          label: "FIRE — Indépendance financière" },
     { id: "immobilier",  label: "Immobilier : achat vs location" },
+    { id: "fi",          label: "FIRE — Indépendance financière" },
   ];
   const simActive = view === "interets" || SIMS.some((s) => s.id === view);
   const [simOpen, setSimOpen] = useState(simActive);

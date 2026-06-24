@@ -5734,6 +5734,164 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
 }
 
 /* ------------------------------------------------------------------ */
+/*  MODALE : COMPLÉTER MON PATRIMOINE (catalogue → méthode)           */
+/* ------------------------------------------------------------------ */
+function CompleterPatrimoineModal({ onClose, onPick }) {
+  const T = useT();
+  const [query, setQuery] = useState("");
+  const [pick, setPick] = useState(null); // catégorie sélectionnée → écran "méthode"
+
+  // Établissements populaires (synchronisation automatique).
+  const BANKS = [
+    { name: "Crédit Agricole",  color: "#0a7d3c" },
+    { name: "BoursoBank",       color: "#e6007e" },
+    { name: "Crédit Mutuel",    color: "#e2001a" },
+    { name: "Trade Republic",   color: "#1c1c1e" },
+    { name: "Fortuneo",         color: "#7ab800" },
+    { name: "Société Générale", color: "#e2001a" },
+    { name: "Boursorama",       color: "#ff5a00" },
+    { name: "Binance",          color: "#f0b90b" },
+  ];
+
+  // Catégories d'actifs/passifs. `target` = id de la catégorie patrimoine pour
+  // l'ajout manuel ; `nav` = redirection vers une page dédiée.
+  const CATALOG = [
+    { id: "immobilier", label: "Immobilier",        desc: "Résidence, locatif & SCPI françaises",          icon: Home,       color: T.blue,   side: "actifs", target: "immobilier" },
+    { id: "actions",    label: "Actions & Fonds",   desc: "PEA, Assurance Vie, Compte-Titres et plus",     icon: TrendingUp, color: T.cyan,   side: "actifs", target: "investissements" },
+    { id: "pea",        label: "PEA",               desc: "Plan d'épargne en actions & PEA-PME",           icon: Briefcase,  color: T.violet, side: "actifs", target: "investissements" },
+    { id: "av",         label: "Assurance Vie",     desc: "Contrats multisupports en France & UE",         icon: Shield,     color: T.green,  side: "actifs", target: "investissements" },
+    { id: "crypto",     label: "Crypto",            desc: "Bitcoin, Ethereum & altcoins",                  icon: Bitcoin,    color: T.amber,  nav: "crypto" },
+    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants",              icon: Wallet,     color: T.teal || "#14b8a6", side: "actifs", target: "liquidites" },
+    { id: "autres",     label: "Autres actifs",     desc: "Véhicules, objets de valeur, parts sociales",   icon: Coins,      color: "#f5a623", side: "actifs", target: "autres" },
+    { id: "credits",    label: "Crédits & dettes",  desc: "Prêts immo, conso, découverts",                 icon: CreditCard, color: T.red,    nav: "credits" },
+  ];
+
+  const q = query.trim().toLowerCase();
+  const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
+  const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
+
+  const initials = (name) => name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)",
+               display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "5vh 16px", overflowY: "auto" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 860, background: T.bg || T.card, border: `1px solid ${T.border}`,
+                 borderRadius: 20, padding: "28px 28px 32px", position: "relative" }}
+      >
+        <button onClick={onClose} aria-label="Fermer"
+          style={{ position: "absolute", top: 18, right: 18, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
+          <X size={22} />
+        </button>
+
+        {!pick ? (
+          <>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-5" style={{ color: T.text }}>Compléter mon patrimoine</h1>
+
+            <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+              <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
+              <input
+                autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder="BoursoBank, Immobilier, Bitcoin…"
+                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }}
+              />
+            </div>
+
+            {banksF.length > 0 && (
+              <>
+                <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Établissements les plus populaires</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4 mb-8">
+                  {banksF.map((b) => (
+                    <button key={b.name} onClick={() => onPick({ label: b.name }, "sync")}
+                      className="flex items-center gap-2.5 text-left" style={{ background: "transparent", border: "none", cursor: "pointer" }}>
+                      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+                        style={{ background: b.color, color: "#fff" }}>{initials(b.name)}</span>
+                      <span className="text-sm truncate" style={{ color: T.text }}>{b.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {catsF.length > 0 && (
+              <>
+                <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Toutes les catégories</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {catsF.map((c) => {
+                    const Icon = c.icon;
+                    return (
+                      <button key={c.id} onClick={() => setPick(c)}
+                        className="flex items-center gap-4 text-left rounded-2xl p-4 transition"
+                        style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                        <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${c.color}1a` }}>
+                          <Icon size={20} style={{ color: c.color }} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block font-semibold" style={{ color: T.text }}>{c.label}</span>
+                          <span className="block text-xs" style={{ color: T.muted }}>{c.desc}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {banksF.length === 0 && catsF.length === 0 && (
+              <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat pour « {query} ».</p>
+            )}
+          </>
+        ) : (
+          <>
+            <button onClick={() => setPick(null)}
+              className="flex items-center gap-2 mb-6 text-sm" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
+              <ChevronLeft size={18} /> Retour
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button onClick={() => onPick(pick, "sync")}
+                className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold mb-8" style={{ color: T.green }}>
+                  <Lock size={12} /> 100% SÉCURISÉ
+                </span>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <div className="font-semibold mb-1" style={{ color: T.text }}>Synchronisation automatique</div>
+                    <div className="text-xs" style={{ color: T.muted }}>Connexion sécurisée et mise à jour automatique de vos positions et transactions</div>
+                  </div>
+                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
+                    <ChevronRight size={18} style={{ color: T.text }} />
+                  </span>
+                </div>
+              </button>
+              <button onClick={() => onPick(pick, "manual")}
+                className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-8" style={{ background: `${T.blue}1a` }}>
+                  <Plus size={18} style={{ color: T.blue }} />
+                </span>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <div className="font-semibold mb-1" style={{ color: T.text }}>Ajout manuel</div>
+                    <div className="text-xs" style={{ color: T.muted }}>Ajoutez vos actifs à la main et suivez vos performances</div>
+                  </div>
+                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
+                    <ChevronRight size={18} style={{ color: T.text }} />
+                  </span>
+                </div>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  ÉCRAN : PATRIMOINE                                                 */
 /* ------------------------------------------------------------------ */
 function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
@@ -5741,6 +5899,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const chartTip = makeChartTip(T);
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
+  const [showComplete, setShowComplete] = useState(false);
   const [histRange, setHistRange] = useState(12);
   const [compactComp, setCompactComp] = useState(true); // comparaison : vue réduite (mobile)
   const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, outline: "none" };
@@ -5824,6 +5983,18 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     }));
 
   const toggle = (id) => setOpenCats((s) => ({ ...s, [id]: !s[id] }));
+
+  // "Compléter mon patrimoine" → ajout manuel : crée une ligne vide dans la
+  // bonne catégorie, ouvre l'édition et déroule la catégorie. Crypto/Crédits
+  // possèdent leur propre page dédiée → on y redirige.
+  const handleComplete = (item, method) => {
+    setShowComplete(false);
+    if (method === "sync") { onConnectBank(); return; }
+    if (item.nav) { setView(item.nav); return; }
+    addItem(item.side || "actifs", item.target);
+    setEditMode(true);
+    setOpenCats((s) => ({ ...s, [item.target]: true }));
+  };
 
   const renderCategory = (cat, side) => {
     const isPassif = side === "passifs";
@@ -5929,6 +6100,13 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>Patrimoine</h1>
           <p style={{ color: T.muted }}>Suivi de votre richesse nette</p>
         </div>
+        <button
+          onClick={() => setShowComplete(true)}
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-sm transition"
+          style={{ background: T.blue, color: "#fff", border: "none", cursor: "pointer" }}
+        >
+          <Plus size={16} /> Compléter mon patrimoine
+        </button>
       </div>
 
       {/* Accès rapides aux composantes du patrimoine */}
@@ -6197,6 +6375,10 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </table>
         </div>
       </Card>
+      )}
+
+      {showComplete && (
+        <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} />
       )}
     </div>
   );

@@ -5909,11 +5909,10 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
 
       {/* Accès rapides aux composantes du patrimoine */}
       {setView && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
           {[
             { id: "credits", label: "Mes crédits", desc: "Prêts & passifs", icon: CreditCard, color: T.red },
             { id: "crypto",  label: "Portefeuille Crypto", desc: "Portefeuille & cours live", icon: Bitcoin, color: T.amber },
-            { id: "importer", label: "Importer / Banque", desc: "Relevés & connexion", icon: Landmark, color: T.blue },
           ].map((s) => {
             const Icon = s.icon;
             return (

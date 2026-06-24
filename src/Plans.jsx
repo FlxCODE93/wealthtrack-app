@@ -90,7 +90,7 @@ function buildPlan2(totals, horizon, hasPEA) {
     Icon: Shield,
     title: hasPEA ? "Optimiser votre PEA existant" : "Ouverture et investissement via le PEA",
     subtitle: hasPEA ? "Maximiser l'avantage fiscal de votre PEA actuel" : "0 % d'impôt sur les plus-values après 5 ans de détention",
-    verdict: "FACILE",
+    verdict: "ACCESSIBLE",
     verdictColor: C.cyan,
     impact: {
       label: "Économie fiscale estimée",
@@ -141,7 +141,7 @@ function buildPlan3(totals, patrimoine, age, hasRealEstate) {
 
   let verdict, verdictColor, verdictNote;
   if (canBorrow && hasApport) {
-    verdict = "GO"; verdictColor = C.green;
+    verdict = "ÉLIGIBLE"; verdictColor = C.green;
     verdictNote = "Votre profil est éligible à un emprunt. Comparez les offres avant de signer.";
   } else if (canBorrow && !hasApport) {
     verdict = "POSSIBLE"; verdictColor = C.amber;

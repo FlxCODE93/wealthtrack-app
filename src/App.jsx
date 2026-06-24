@@ -619,12 +619,17 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   return (
     <aside
       className="hidden md:flex flex-col gap-0.5 shrink-0 wt-no-scrollbar"
-      style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 10px" : 16,
+      style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 8px" : 16,
                borderRight: "1px solid rgba(255,255,255,0.02)", borderRadius: 0, transition: "width 0.18s ease",
                position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}
     >
-      <div className="flex items-center gap-3 px-1 py-5 mb-1" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
-        {!collapsed && (
+      <div className="flex items-center py-5 mb-1" style={{ gap: collapsed ? 4 : 12, paddingLeft: collapsed ? 0 : 4, paddingRight: collapsed ? 0 : 4, justifyContent: collapsed ? "center" : "space-between" }}>
+        {collapsed ? (
+          /* Logo compact toujours visible à gauche du bouton */
+          <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 28, height: 28, background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
+            <BarChart3 size={16} style={{ color: T.blue }} />
+          </div>
+        ) : (
           <div className="flex items-center gap-3 min-w-0">
             <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
               <BarChart3 size={26} style={{ color: T.blue }} />
@@ -637,8 +642,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         )}
         <button onClick={() => setCollapsed((c) => !c)} title={collapsed ? "Déployer" : "Réduire"} aria-label={collapsed ? "Déployer la barre" : "Réduire la barre"}
           className="flex items-center justify-center rounded-lg shrink-0"
-          style={{ width: 36, height: 36, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
-          <PanelLeft size={20} />
+          style={{ width: collapsed ? 28 : 36, height: collapsed ? 28 : 36, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
+          <PanelLeft size={collapsed ? 16 : 20} />
         </button>
       </div>
 

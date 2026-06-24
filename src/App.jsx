@@ -3411,8 +3411,8 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
           <ComposedChart data={logData}>
             <defs>
               <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.45} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
+                <stop offset="0%" stopColor={T.green} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={T.green} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -3422,23 +3422,23 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
             {hasBand && (
               <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
-                stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+                stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
             )}
             <Area type="monotone" dataKey="logCapital" name="Capital total"
-              stroke={lineColor} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
+              stroke={T.green} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
             <Line type="monotone" dataKey="logApports" name="Apports cumulés"
-              stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+              stroke={T.blue} strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
           </ComposedChart>
         ) : (
           <ComposedChart data={augmentedData}>
             <defs>
               <linearGradient id={`gA${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.12} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0.04} />
+                <stop offset="0%" stopColor={T.blue} stopOpacity={0.12} />
+                <stop offset="100%" stopColor={T.blue} stopOpacity={0.04} />
               </linearGradient>
               <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.52} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0.12} />
+                <stop offset="0%" stopColor={T.green} stopOpacity={0.52} />
+                <stop offset="100%" stopColor={T.green} stopOpacity={0.12} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -3448,13 +3448,13 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
             {hasBand && (
               <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
-                stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+                stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
             )}
             <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
-              stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3"
+              stroke={T.blue} strokeWidth={1.5} strokeDasharray="5 3"
               fill={`url(#gA${chartKey})`} />
             <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
-              stroke={lineColor} strokeWidth={2.5}
+              stroke={T.green} strokeWidth={2.5}
               fill={`url(#gG${chartKey})`} />
           </ComposedChart>
         )}

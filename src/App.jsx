@@ -4429,9 +4429,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
         {!editing && (
           <button onClick={() => setEditing(emptyCredit())}
             className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold"
-            style={{ background: T.gradientPrimary, color: "#fff", border: "none", cursor: "pointer", boxShadow: glow(T.violet, 40, "33"), transition: "transform 0.15s, box-shadow 0.15s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 56, "55"); }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 40, "33"); }}>
+            style={{ background: T.blue, color: "#fff", border: "none", cursor: "pointer" }}>
             <Plus size={16} /> Ajouter un crédit
           </button>
         )}
@@ -4526,9 +4524,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
             <p style={{ color: T.muted }}>Aucun crédit enregistré. Ajoutez vos prêts (immo, auto, conso, étudiant, revolving…) pour suivre vos mensualités et votre endettement.</p>
             <button onClick={() => setEditing(emptyCredit())}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
-              style={{ background: T.gradientPrimary, color: "#fff", border: "none", cursor: "pointer", boxShadow: glow(T.violet, 32, "33"), transition: "transform 0.15s, box-shadow 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px) scale(1.015)"; e.currentTarget.style.boxShadow = glow(T.violet, 48, "55"); }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = glow(T.violet, 32, "33"); }}>
+              style={{ background: T.blue, color: "#fff", border: "none", cursor: "pointer" }}>
               <Plus size={16} /> Ajouter un crédit
             </button>
           </div>

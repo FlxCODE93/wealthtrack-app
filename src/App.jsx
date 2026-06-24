@@ -256,7 +256,7 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
   const needed = ["simulations","fi","immobilier","crypto","fiscalite","plans"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
-  const price = needed === "pro" ? "5,99 €" : "8,99 €";
+  const price = needed === "pro" ? "7,99 €" : "9,99 €";
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 420, gap: 28, padding: "52px 32px", maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
       <div style={{ width: 56, height: 56, borderRadius: 16, background: `${P.color}18`, border: `1.5px solid ${P.color}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -346,9 +346,9 @@ function PricingPage({ plan, setPlan }) {
     {
       id: "pro",
       label: "Pro",
-      priceMonthly: "5,99 €",
-      priceAnnual: "59,90 €",
-      annualEquiv: "4,99 €/mois",
+      priceMonthly: "7,99 €",
+      priceAnnual: "79,90 €",
+      annualEquiv: "6,66 €/mois",
       color: "#f59e0b",
       badge: "⭐ Populaire",
       trial: "Essai gratuit 7 jours",
@@ -369,9 +369,9 @@ function PricingPage({ plan, setPlan }) {
     {
       id: "couple",
       label: "Couple",
-      priceMonthly: "8,99 €",
-      priceAnnual: "89,90 €",
-      annualEquiv: "7,49 €/mois",
+      priceMonthly: "9,99 €",
+      priceAnnual: "99,90 €",
+      annualEquiv: "8,32 €/mois",
       color: "#a855f7",
       badge: "👫 Pour deux",
       trial: "Essai gratuit 7 jours",
@@ -1695,7 +1695,7 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
           onClick={() => setView("pricing")}
           style={{ width: "100%", marginTop: 16, padding: "13px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          <Crown size={16} /> Passer à Pro — Essai gratuit 7 jours puis 5,99€/mois sans engagement
+          <Crown size={16} /> Passer à Pro — Essai gratuit 7 jours puis 7,99€/mois sans engagement
         </button>
       </div>
     </div>

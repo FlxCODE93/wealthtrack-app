@@ -1445,8 +1445,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         />
       </Card>
 
-      {/* Répartition + catégories */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Répartition des dépenses */}
+      <div>
         <Card className="flex flex-col">
           <h2 className="text-xl font-bold mb-2 text-center" style={{ color: T.text }}>Répartition dépenses</h2>
           {(() => {
@@ -1490,29 +1490,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               </div>
             );
           })()}
-        </Card>
-
-        <Card>
-          <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
-          {breakdown.map((b) => {
-            const total = breakdown.reduce((s, x) => s + x.amount, 0);
-            const p = (b.amount / total) * 100;
-            return (
-              <div key={b.cat} className="mb-3">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="flex items-center gap-2" style={{ color: T.text }}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: CAT_COLORS[b.cat] }} />
-                    {b.cat}
-                  </span>
-                  <span><b style={{ color: T.text }}>{eur(b.amount)}</b>
-                    <span style={{ color: T.muted }}> &nbsp;{Math.round(p)}%</span></span>
-                </div>
-                <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-1.5 rounded-full" style={{ width: `${p}%`, background: CAT_COLORS[b.cat] }} />
-                </div>
-              </div>
-            );
-          })}
           <button
             onClick={() => setObjectiveOpen(true)}
             className="w-full mt-4 rounded-xl py-3 font-semibold flex items-center justify-center gap-2"

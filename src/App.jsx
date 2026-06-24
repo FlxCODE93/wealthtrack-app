@@ -618,7 +618,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
   return (
     <aside
-      className="hidden md:flex flex-col gap-0.5 shrink-0 wt-glass"
+      className="hidden md:flex flex-col gap-0.5 shrink-0"
       style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 10px" : 16,
                borderRight: "1px solid rgba(255,255,255,0.02)", borderRadius: 0, transition: "width 0.18s ease",
                position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}

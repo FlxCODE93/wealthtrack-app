@@ -5761,10 +5761,18 @@ function BankLogo({ name, domain, color }) {
 /* ------------------------------------------------------------------ */
 /*  MODALE : COMPLÉTER MON PATRIMOINE (catalogue → méthode)           */
 /* ------------------------------------------------------------------ */
-function CompleterPatrimoineModal({ onClose, onPick }) {
+function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   const T = useT();
   const [query, setQuery] = useState("");
-  const [pick, setPick] = useState(null); // catégorie sélectionnée → écran "méthode"
+  const [pick, setPick] = useState(null);   // catégorie sélectionnée → écran "méthode"
+  const [manual, setManual] = useState(false); // ajout manuel : étape liste/formulaire
+  const [inst, setInst] = useState(null);   // instrument sélectionné → formulaire d'achat
+  const [iq, setIq] = useState("");         // recherche dans la liste d'instruments
+  const [qty, setQty] = useState("");
+  const [price, setPrice] = useState("");
+  const [account, setAccount] = useState("");
+  const [simpleName, setSimpleName] = useState("");
+  const [simpleVal, setSimpleVal] = useState("");
 
   // Établissements populaires (synchronisation automatique).
   const BANKS = [
@@ -5778,22 +5786,266 @@ function CompleterPatrimoineModal({ onClose, onPick }) {
     { name: "Binance",          domain: "binance.com",        color: "#f0b90b" },
   ];
 
-  // Catégories d'actifs/passifs. `target` = id de la catégorie patrimoine pour
-  // l'ajout manuel ; `nav` = redirection vers une page dédiée.
+  // Actions & ETF populaires (ajout manuel via formulaire d'achat).
+  const INSTRUMENTS = [
+    { name: "BNP Paribas Easy S&P 500 UCITS ETF EUR C", ticker: "ESE",   cur: "EUR", type: "ETF",    domain: "bnpparibas.com" },
+    { name: "TotalEnergies SE",                          ticker: "TTE",   cur: "EUR", type: "ACTION", domain: "totalenergies.com" },
+    { name: "Air Liquide SA",                            ticker: "AI",    cur: "EUR", type: "ACTION", domain: "airliquide.com" },
+    { name: "iShares MSCI World Swap PEA UCITS ETF",     ticker: "WPEA",  cur: "EUR", type: "ETF",    domain: "ishares.com" },
+    { name: "LVMH Moët Hennessy Louis Vuitton SE",       ticker: "MC",    cur: "EUR", type: "ACTION", domain: "lvmh.com" },
+    { name: "Amundi PEA MSCI Emerging Markets UCITS ETF", ticker: "PAEEM", cur: "EUR", type: "ETF",   domain: "amundi.com" },
+    { name: "Amundi MSCI World UCITS ETF",               ticker: "CW8",   cur: "EUR", type: "ETF",    domain: "amundi.com" },
+    { name: "Apple Inc.",                                ticker: "AAPL",  cur: "USD", type: "ACTION", domain: "apple.com" },
+    { name: "Microsoft Corporation",                     ticker: "MSFT",  cur: "USD", type: "ACTION", domain: "microsoft.com" },
+    { name: "NVIDIA Corporation",                        ticker: "NVDA",  cur: "USD", type: "ACTION", domain: "nvidia.com" },
+    { name: "Tesla, Inc.",                               ticker: "TSLA",  cur: "USD", type: "ACTION", domain: "tesla.com" },
+    { name: "Vanguard S&P 500 UCITS ETF (Dist)",         ticker: "VUSA",  cur: "EUR", type: "ETF",    domain: "vanguard.com" },
+  ];
+
+  // Catégories. `target` = id catégorie patrimoine (ajout manuel) ; `kind` =
+  // "instrument" (sélecteur titres) ou "simple" (nom + valeur) ; `nav` = page dédiée.
   const CATALOG = [
-    { id: "immobilier", label: "Immobilier",        desc: "Résidence, locatif & SCPI françaises",          icon: Home,       color: T.blue,   side: "actifs", target: "immobilier" },
-    { id: "actions",    label: "Actions & Fonds",   desc: "PEA, Assurance Vie, Compte-Titres et plus",     icon: TrendingUp, color: T.cyan,   side: "actifs", target: "investissements" },
-    { id: "pea",        label: "PEA",               desc: "Plan d'épargne en actions & PEA-PME",           icon: Briefcase,  color: T.violet, side: "actifs", target: "investissements" },
-    { id: "av",         label: "Assurance Vie",     desc: "Contrats multisupports en France & UE",         icon: Shield,     color: T.green,  side: "actifs", target: "investissements" },
+    { id: "immobilier", label: "Immobilier",        desc: "Résidence, locatif & SCPI françaises",          icon: Home,       color: T.blue,   target: "immobilier",      kind: "simple" },
+    { id: "actions",    label: "Actions & Fonds",   desc: "PEA, Assurance Vie, Compte-Titres et plus",     icon: TrendingUp, color: T.cyan,   target: "investissements", kind: "instrument" },
+    { id: "pea",        label: "PEA",               desc: "Plan d'épargne en actions & PEA-PME",           icon: Briefcase,  color: T.violet, target: "investissements", kind: "instrument" },
+    { id: "av",         label: "Assurance Vie",     desc: "Contrats multisupports en France & UE",         icon: Shield,     color: T.green,  target: "investissements", kind: "instrument" },
     { id: "crypto",     label: "Crypto",            desc: "Bitcoin, Ethereum & altcoins",                  icon: Bitcoin,    color: T.amber,  nav: "crypto" },
-    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants",              icon: Wallet,     color: T.teal || "#14b8a6", side: "actifs", target: "liquidites" },
-    { id: "autres",     label: "Autres actifs",     desc: "Véhicules, objets de valeur, parts sociales",   icon: Coins,      color: "#f5a623", side: "actifs", target: "autres" },
+    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants",              icon: Wallet,     color: "#14b8a6", target: "liquidites",     kind: "simple" },
+    { id: "autres",     label: "Autres actifs",     desc: "Véhicules, objets de valeur, parts sociales",   icon: Coins,      color: "#f5a623", target: "autres",         kind: "simple" },
     { id: "credits",    label: "Crédits & dettes",  desc: "Prêts immo, conso, découverts",                 icon: CreditCard, color: T.red,    nav: "credits" },
   ];
 
   const q = query.trim().toLowerCase();
   const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
   const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
+  const iqq = iq.trim().toLowerCase();
+  const instF = iqq ? INSTRUMENTS.filter((i) => (i.name + " " + i.ticker).toLowerCase().includes(iqq)) : INSTRUMENTS;
+
+  const fieldWrap = { borderBottom: `1px solid ${T.border}`, paddingBottom: 8 };
+  const fieldInput = { width: "100%", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 };
+  const fieldLabel = { display: "block", color: T.muted, fontSize: 13, marginBottom: 8 };
+
+  const startManual = () => {
+    if (pick.nav) { onPick(pick, "manual"); return; }
+    setManual(true);
+  };
+
+  const submitInst = () => {
+    const v = (parseFloat(qty) || 0) * (parseFloat(price) || 0);
+    if (v <= 0) return;
+    onManualAdd(pick.target, inst.name, v);
+  };
+  const submitSimple = () => {
+    const v = parseFloat(simpleVal) || 0;
+    if (!simpleName.trim() || v <= 0) return;
+    onManualAdd(pick.target, simpleName.trim(), v);
+  };
+
+  const Back = ({ onClick }) => (
+    <button onClick={onClick}
+      className="flex items-center gap-2 mb-6 text-sm" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
+      <ChevronLeft size={18} /> Retour
+    </button>
+  );
+  const TypeTag = ({ t }) => (
+    <span className="text-xs font-semibold px-2.5 py-1 rounded-md shrink-0"
+      style={{ background: "rgba(255,255,255,0.06)", color: T.muted, letterSpacing: 0.5 }}>{t}</span>
+  );
+
+  // Décide quel écran afficher.
+  let body;
+  if (inst) {
+    // Écran : formulaire d'achat d'un titre
+    body = (
+      <>
+        <Back onClick={() => setInst(null)} />
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Nom</label>
+            <div className="flex items-center gap-2.5">
+              <BankLogo name={inst.name} domain={inst.domain} color={pick.color} />
+              <span style={{ color: T.text, fontSize: 16 }} className="truncate">{inst.name}</span>
+            </div>
+          </div>
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Compte</label>
+            <select value={account} onChange={(e) => setAccount(e.target.value)} style={{ ...fieldInput, cursor: "pointer" }}>
+              <option value="">Sélectionner…</option>
+              {BANKS.map((b) => <option key={b.name} value={b.name} style={{ background: T.card }}>{b.name}</option>)}
+            </select>
+          </div>
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Quantité</label>
+            <input type="number" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
+          </div>
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Prix d'achat</label>
+            <div className="flex items-center gap-2">
+              <input type="number" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
+              <span style={{ color: T.muted, fontSize: 14 }}>{inst.cur}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end mt-8">
+          <button onClick={submitInst}
+            className="font-semibold px-7 py-2.5 rounded-full transition"
+            style={{ background: T.amber, color: "#1c1c1e", border: "none", cursor: "pointer" }}>
+            Valider
+          </button>
+        </div>
+      </>
+    );
+  } else if (manual && pick.kind === "instrument") {
+    // Écran : sélecteur d'actions/ETF
+    body = (
+      <>
+        <Back onClick={() => setManual(false)} />
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+          <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
+          <input autoFocus value={iq} onChange={(e) => setIq(e.target.value)} placeholder="Chercher actions ou fonds"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }} />
+        </div>
+        <div className="text-sm font-semibold mb-2" style={{ color: T.muted }}>Les plus populaires</div>
+        <div className="flex flex-col">
+          {instF.map((i) => (
+            <button key={i.ticker + i.name} onClick={() => { setInst(i); setQty(""); setPrice(""); }}
+              className="flex items-center gap-3 py-3 px-2 rounded-xl text-left transition"
+              style={{ background: "transparent", border: "none", cursor: "pointer" }}>
+              <BankLogo name={i.name} domain={i.domain} color={pick.color} />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium truncate" style={{ color: T.text }}>{i.name}</span>
+                <span className="block text-xs" style={{ color: T.muted }}>{i.ticker} · {i.cur}</span>
+              </span>
+              <TypeTag t={i.type} />
+            </button>
+          ))}
+          {instF.length === 0 && <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat.</p>}
+        </div>
+      </>
+    );
+  } else if (manual && pick.kind === "simple") {
+    // Écran : formulaire générique nom + valeur
+    body = (
+      <>
+        <Back onClick={() => setManual(false)} />
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Libellé</label>
+            <input autoFocus value={simpleName} onChange={(e) => setSimpleName(e.target.value)} style={fieldInput} placeholder={pick.id === "immobilier" ? "Résidence principale" : "Nom de l'actif"} />
+          </div>
+          <div style={fieldWrap}>
+            <label style={fieldLabel}>Valeur</label>
+            <div className="flex items-center gap-2">
+              <input type="number" inputMode="decimal" value={simpleVal} onChange={(e) => setSimpleVal(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
+              <span style={{ color: T.muted, fontSize: 14 }}>EUR</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end mt-8">
+          <button onClick={submitSimple}
+            className="font-semibold px-7 py-2.5 rounded-full transition"
+            style={{ background: T.amber, color: "#1c1c1e", border: "none", cursor: "pointer" }}>
+            Valider
+          </button>
+        </div>
+      </>
+    );
+  } else if (pick) {
+    // Écran : choix de la méthode (sync vs manuel)
+    body = (
+      <>
+        <Back onClick={() => setPick(null)} />
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button onClick={() => onPick(pick, "sync")}
+            className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold mb-8" style={{ color: T.green }}>
+              <Lock size={12} /> 100% SÉCURISÉ
+            </span>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="font-semibold mb-1" style={{ color: T.text }}>Synchronisation automatique</div>
+                <div className="text-xs" style={{ color: T.muted }}>Connexion sécurisée et mise à jour automatique de vos positions et transactions</div>
+              </div>
+              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
+                <ChevronRight size={18} style={{ color: T.text }} />
+              </span>
+            </div>
+          </button>
+          <button onClick={startManual}
+            className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+            <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-8" style={{ background: `${T.blue}1a` }}>
+              <Plus size={18} style={{ color: T.blue }} />
+            </span>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="font-semibold mb-1" style={{ color: T.text }}>Ajout manuel</div>
+                <div className="text-xs" style={{ color: T.muted }}>Ajoutez vos actifs à la main et suivez vos performances</div>
+              </div>
+              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
+                <ChevronRight size={18} style={{ color: T.text }} />
+              </span>
+            </div>
+          </button>
+        </div>
+      </>
+    );
+  } else {
+    // Écran : catalogue
+    body = (
+      <>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-5" style={{ color: T.text }}>Compléter mon patrimoine</h1>
+        <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+          <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="BoursoBank, Immobilier, Bitcoin…"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }} />
+        </div>
+        {banksF.length > 0 && (
+          <>
+            <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Établissements les plus populaires</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4 mb-8">
+              {banksF.map((b) => (
+                <button key={b.name} onClick={() => onPick({ label: b.name }, "sync")}
+                  className="flex items-center gap-2.5 text-left" style={{ background: "transparent", border: "none", cursor: "pointer" }}>
+                  <BankLogo name={b.name} domain={b.domain} color={b.color} />
+                  <span className="text-sm truncate" style={{ color: T.text }}>{b.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {catsF.length > 0 && (
+          <>
+            <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Toutes les catégories</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {catsF.map((c) => {
+                const Icon = c.icon;
+                return (
+                  <button key={c.id} onClick={() => setPick(c)}
+                    className="flex items-center gap-4 text-left rounded-2xl p-4 transition"
+                    style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
+                    <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${c.color}1a` }}>
+                      <Icon size={20} style={{ color: c.color }} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold" style={{ color: T.text }}>{c.label}</span>
+                      <span className="block text-xs" style={{ color: T.muted }}>{c.desc}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {banksF.length === 0 && catsF.length === 0 && (
+          <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat pour « {query} ».</p>
+        )}
+      </>
+    );
+  }
 
   return (
     <div
@@ -5810,104 +6062,7 @@ function CompleterPatrimoineModal({ onClose, onPick }) {
           style={{ position: "absolute", top: 18, right: 18, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
           <X size={22} />
         </button>
-
-        {!pick ? (
-          <>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-5" style={{ color: T.text }}>Compléter mon patrimoine</h1>
-
-            <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
-              <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
-              <input
-                autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder="BoursoBank, Immobilier, Bitcoin…"
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }}
-              />
-            </div>
-
-            {banksF.length > 0 && (
-              <>
-                <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Établissements les plus populaires</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4 mb-8">
-                  {banksF.map((b) => (
-                    <button key={b.name} onClick={() => onPick({ label: b.name }, "sync")}
-                      className="flex items-center gap-2.5 text-left" style={{ background: "transparent", border: "none", cursor: "pointer" }}>
-                      <BankLogo name={b.name} domain={b.domain} color={b.color} />
-                      <span className="text-sm truncate" style={{ color: T.text }}>{b.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {catsF.length > 0 && (
-              <>
-                <div className="text-sm font-semibold mb-4" style={{ color: T.muted }}>Toutes les catégories</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {catsF.map((c) => {
-                    const Icon = c.icon;
-                    return (
-                      <button key={c.id} onClick={() => setPick(c)}
-                        className="flex items-center gap-4 text-left rounded-2xl p-4 transition"
-                        style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
-                        <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${c.color}1a` }}>
-                          <Icon size={20} style={{ color: c.color }} />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block font-semibold" style={{ color: T.text }}>{c.label}</span>
-                          <span className="block text-xs" style={{ color: T.muted }}>{c.desc}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {banksF.length === 0 && catsF.length === 0 && (
-              <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat pour « {query} ».</p>
-            )}
-          </>
-        ) : (
-          <>
-            <button onClick={() => setPick(null)}
-              className="flex items-center gap-2 mb-6 text-sm" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
-              <ChevronLeft size={18} /> Retour
-            </button>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button onClick={() => onPick(pick, "sync")}
-                className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold mb-8" style={{ color: T.green }}>
-                  <Lock size={12} /> 100% SÉCURISÉ
-                </span>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="font-semibold mb-1" style={{ color: T.text }}>Synchronisation automatique</div>
-                    <div className="text-xs" style={{ color: T.muted }}>Connexion sécurisée et mise à jour automatique de vos positions et transactions</div>
-                  </div>
-                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
-                    <ChevronRight size={18} style={{ color: T.text }} />
-                  </span>
-                </div>
-              </button>
-              <button onClick={() => onPick(pick, "manual")}
-                className="text-left rounded-2xl p-5 transition" style={{ background: T.card, border: `1px solid ${T.border}`, cursor: "pointer" }}>
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-8" style={{ background: `${T.blue}1a` }}>
-                  <Plus size={18} style={{ color: T.blue }} />
-                </span>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="font-semibold mb-1" style={{ color: T.text }}>Ajout manuel</div>
-                    <div className="text-xs" style={{ color: T.muted }}>Ajoutez vos actifs à la main et suivez vos performances</div>
-                  </div>
-                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ border: `1px solid ${T.border}` }}>
-                    <ChevronRight size={18} style={{ color: T.text }} />
-                  </span>
-                </div>
-              </button>
-            </div>
-          </>
-        )}
+        {body}
       </div>
     </div>
   );
@@ -6012,10 +6167,24 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const handleComplete = (item, method) => {
     setShowComplete(false);
     if (method === "sync") { onConnectBank(); return; }
-    if (item.nav) { setView(item.nav); return; }
-    addItem(item.side || "actifs", item.target);
+    if (item.nav) { setView(item.nav); return; } // crypto / crédits → page dédiée
+  };
+
+  // Ajout manuel finalisé depuis la modale : insère la ligne avec sa valeur
+  // réelle dans la bonne catégorie d'actifs, ouvre l'édition et déroule la catégorie.
+  const addManual = (target, label, value) => {
+    setShowComplete(false);
+    const v = Math.round(value);
+    setPatrimoine((p) => ({
+      ...p,
+      actifs: p.actifs.map((cat) =>
+        cat.id === target
+          ? { ...cat, items: [...cat.items, { label, value: v, currency: "EUR", valueNative: v }] }
+          : cat
+      ),
+    }));
     setEditMode(true);
-    setOpenCats((s) => ({ ...s, [item.target]: true }));
+    setOpenCats((s) => ({ ...s, [target]: true }));
   };
 
   const renderCategory = (cat, side) => {
@@ -6400,7 +6569,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       )}
 
       {showComplete && (
-        <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} />
+        <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} onManualAdd={addManual} />
       )}
     </div>
   );

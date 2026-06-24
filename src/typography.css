@@ -3,6 +3,17 @@
 /* Font: IBM Plex Sans (professional, trustworthy, fintech-native) */
 /* ─────────────────────────────────────────────────────────────── */
 
+/* Masque les flèches up/down des inputs numériques (peu utiles) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 :root {
   /* Font family stack */
   --font-primary: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;

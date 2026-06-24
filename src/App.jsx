@@ -1002,6 +1002,134 @@ function ObjectiveModal({ onClose, onPick }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Calendrier mensuel des transactions (revenus + dépenses) façon     */
+/*  Finary — pastilles colorées par catégorie + liste latérale.        */
+/* ------------------------------------------------------------------ */
+function MonthlyCalendar({ transactions = [] }) {
+  const T = useT();
+  const eurc = (n) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " €";
+  const isRevenu = (t) => t.amount > 0 || t.type === "revenu";
+  const txColor = (t) => (isRevenu(t) ? T.green : (CAT_COLORS[t.cat] || T.muted));
+  const initials = (label = "") => label.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "?";
+
+  // Mois affiché : par défaut celui de la dernière transaction, sinon aujourd'hui.
+  const initMonth = useMemo(() => {
+    const dates = transactions.map((t) => t.date).filter(Boolean).sort();
+    const base = dates.length ? new Date(dates[dates.length - 1]) : new Date();
+    return { y: base.getFullYear(), m: base.getMonth() };
+  }, [transactions]);
+  const [cur, setCur] = useState(initMonth);
+  const [selDay, setSelDay] = useState(null);
+
+  const byDay = useMemo(() => {
+    const map = {};
+    transactions.forEach((t) => {
+      if (!t.date) return;
+      const d = new Date(t.date);
+      if (d.getFullYear() === cur.y && d.getMonth() === cur.m) {
+        const key = t.date.slice(0, 10);
+        (map[key] = map[key] || []).push(t);
+      }
+    });
+    return map;
+  }, [transactions, cur]);
+
+  const todayKey = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD local
+  const monthLabel = new Date(cur.y, cur.m, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const daysInMonth = new Date(cur.y, cur.m + 1, 0).getDate();
+  const firstDow = (new Date(cur.y, cur.m, 1).getDay() + 6) % 7; // Lundi = 0
+  const fmtKey = (d) => `${cur.y}-${String(cur.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  const shift = (delta) => {
+    setSelDay(null);
+    setCur((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  };
+
+  const listTx = useMemo(() => {
+    const arr = selDay ? (byDay[selDay] || []) : Object.values(byDay).flat();
+    return [...arr].sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [byDay, selDay]);
+
+  const navBtn = { width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };
+  const Pastille = ({ t, size = 22 }) => (
+    <span title={`${t.label} · ${eurc(t.amount)}`}
+      className="rounded-full flex items-center justify-center shrink-0 font-bold"
+      style={{ width: size, height: size, background: txColor(t), color: "#fff", fontSize: Math.round(size * 0.4) }}>
+      {initials(t.label)}
+    </span>
+  );
+  const WD = ["LUN.", "MAR.", "MER.", "JEU.", "VEN.", "SAM.", "DIM."];
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h2 className="text-xl font-bold" style={{ color: T.text }}>Calendrier des transactions</h2>
+        <div className="flex items-center gap-2">
+          <button onClick={() => shift(-1)} aria-label="Mois précédent" style={navBtn}><ChevronLeft size={16} /></button>
+          <span className="text-sm font-semibold capitalize" style={{ color: T.text, minWidth: 140, textAlign: "center" }}>{monthLabel}</span>
+          <button onClick={() => shift(1)} aria-label="Mois suivant" style={navBtn}><ChevronRight size={16} /></button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Grille calendaire */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {WD.map((w) => <div key={w} className="text-center text-[10px] font-semibold py-1" style={{ color: T.muted }}>{w}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((d, i) => {
+              if (d == null) return <div key={i} />;
+              const key = fmtKey(d);
+              const dayTx = byDay[key] || [];
+              const isToday = key === todayKey;
+              const isSel = key === selDay;
+              return (
+                <button key={i} onClick={() => setSelDay(isSel ? null : key)}
+                  className="rounded-xl p-1.5 flex flex-col"
+                  style={{ minHeight: 62, background: isSel ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${isSel ? T.blue : T.border}`, cursor: "pointer" }}>
+                  <span className="text-xs font-semibold inline-flex items-center justify-center mb-1"
+                    style={{ width: 20, height: 20, borderRadius: 999, alignSelf: "flex-start", background: isToday ? T.amber : "transparent", color: isToday ? "#1c1c1e" : T.muted }}>{d}</span>
+                  <span className="flex flex-wrap gap-0.5">
+                    {dayTx.slice(0, 4).map((t, j) => <Pastille key={j} t={t} size={18} />)}
+                    {dayTx.length > 4 && <span className="text-[10px] self-center" style={{ color: T.muted }}>+{dayTx.length - 4}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {/* Liste latérale (scanner) */}
+        <div className="lg:border-l lg:pl-6" style={{ borderColor: T.border }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold capitalize" style={{ color: T.text }}>
+              {selDay ? new Date(selDay).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "Tout le mois"}
+            </h3>
+            {selDay && <button onClick={() => setSelDay(null)} className="text-xs" style={{ color: T.blue, background: "none", border: "none", cursor: "pointer" }}>Tout voir</button>}
+          </div>
+          <div className="flex flex-col overflow-y-auto wt-no-scrollbar" style={{ maxHeight: 380 }}>
+            {listTx.length === 0
+              ? <p className="text-sm" style={{ color: T.muted }}>Aucune transaction ce mois-ci.</p>
+              : listTx.map((t, i) => (
+                <div key={i} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <Pastille t={t} size={30} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate" style={{ color: T.text }}>{t.label}</div>
+                    <div className="text-xs truncate" style={{ color: T.muted }}>{t.cat}</div>
+                  </div>
+                  <span className="text-sm font-bold shrink-0" style={{ color: isRevenu(t) ? T.green : T.text }}>
+                    {t.amount > 0 ? "+" : ""}{eurc(t.amount)}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, credits = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
@@ -1188,6 +1316,9 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           </Card>
         );
       })()}
+
+      {/* Calendrier des transactions (sous le flux de trésorerie) */}
+      <MonthlyCalendar transactions={transactions} />
 
       {/* Ligne 2 — synthèse du mois (gauche) + répartition des dépenses (droite) */}
       <Card>

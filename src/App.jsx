@@ -7500,8 +7500,8 @@ function CompoundCalc({ setView }) {
             <div className="text-xs mt-1" style={{ color: T.muted }}>après {Y} ans</div>
           </div>
           <div className="flex flex-wrap justify-center gap-2 mb-4">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${T.amber}1a`, color: T.amber }}>
-              <span className="w-2 h-2 rounded-full" style={{ background: T.amber }} /> Intérêts {eur(interets)}
+            <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${T.green}1a`, color: T.green }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: T.green }} /> Intérêts {eur(interets)}
             </span>
             <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${T.blue}1a`, color: T.blue }}>
               <span className="w-2 h-2 rounded-full" style={{ background: T.blue }} /> Versements {eur(totalVersements)}
@@ -7511,8 +7511,8 @@ function CompoundCalc({ setView }) {
             <AreaChart data={series} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="ciTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={T.amber} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={T.amber} stopOpacity={0} />
+                  <stop offset="0%" stopColor={T.green} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={T.green} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="ciVers" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={T.blue} stopOpacity={0.3} />
@@ -7537,13 +7537,13 @@ function CompoundCalc({ setView }) {
                     <div style={{ fontSize: 12, color: T.muted }}>{label === 0 ? "Aujourd'hui" : `Dans ${label} an${label > 1 ? "s" : ""}`}</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(tot)}</div>
                     <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-                      {row(T.amber, "Intérêts", int)}
+                      {row(T.green, "Intérêts", int)}
                       {row(T.blue, "Versements", vers)}
                     </div>
                   </div>
                 );
               }} />
-              <Area type="monotone" dataKey="total" stroke={T.amber} strokeWidth={2.5} fill="url(#ciTotal)" />
+              <Area type="monotone" dataKey="total" stroke={T.green} strokeWidth={2.5} fill="url(#ciTotal)" />
               <Area type="monotone" dataKey="versements" stroke={T.blue} strokeWidth={2} fill="url(#ciVers)" />
             </AreaChart>
           </ResponsiveContainer>

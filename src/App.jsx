@@ -833,6 +833,22 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           </div>
         </button>
 
+        {/* Déconnexion — sous le profil */}
+        {supabase && (
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil
+              window.location.reload();
+            }}
+            className="flex items-center gap-3 py-2.5 rounded-xl text-left text-sm transition"
+            style={{ paddingLeft: 16, paddingRight: 16, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}
+          >
+            <LogOut size={18} />
+            <span>Déconnexion</span>
+          </button>
+        )}
+
         <div className="border-t" style={{ borderColor: T.border }}>
           {/* Upgrade CTA — uniquement plan Gratuit (levier de conversion).
               Les abonnés payants ne sont pas relancés : ils gardent le signal de confiance. */}
@@ -7826,8 +7842,8 @@ export default function App() {
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
       <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-x-hidden" style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* Barre haut : logo mobile uniquement (sidebar absente) + déconnexion (droite) */}
-        <div style={{ marginBottom: 24 }}>
+        {/* Barre haut mobile : logo + déconnexion (sidebar absente sur mobile) */}
+        <div className="md:hidden" style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
             {/* Logo masqué sur desktop : déjà présent dans la sidebar */}
             <div className="flex md:hidden items-center gap-2.5" style={{ marginRight: "auto" }}>
@@ -7841,6 +7857,7 @@ export default function App() {
             </div>
             {supabase && (
               <button
+                className="md:hidden"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil

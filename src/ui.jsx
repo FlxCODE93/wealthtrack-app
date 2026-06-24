@@ -2,9 +2,12 @@
    Atomes UI partagés (extraits d'App.jsx).
    Présentation pure : dépendent uniquement de useT() + props.
    ──────────────────────────────────────────────────────────────────── */
-import React from "react";
+import React, { useContext } from "react";
 import { useT } from "./ThemeProvider.jsx";
 import { glow } from "./theme.js";
+
+export const DiscreetCtx = React.createContext(false);
+export const useDiscreet = () => useContext(DiscreetCtx);
 
 /* Bouton unifié — DA WealthTrack. Centralise radius, padding, hover, focus et
    cibles tactiles (≥40px). variant: primary | secondary | danger ; size: sm | md | icon. */
@@ -76,6 +79,7 @@ export function Badge({ tone = "neutral", icon: Icon, label }) {
 
 export function KpiCard({ label, value, valueColor, sub, flashRef }) {
   const T = useT();
+  const discreet = useDiscreet();
   return (
     <Card style={{ position: "relative", overflow: "hidden" }}>
       {flashRef && (
@@ -83,7 +87,7 @@ export function KpiCard({ label, value, valueColor, sub, flashRef }) {
       )}
       <div style={{ position: "relative", zIndex: 1 }}>
         <div className="text-sm mb-3" style={{ color: T.muted }}>{label}</div>
-        <div className="text-3xl font-bold mb-2 truncate" style={{ color: valueColor || T.text }}>{value}</div>
+        <div className="text-3xl font-bold mb-2 truncate" style={{ color: valueColor || T.text, filter: discreet ? "blur(10px)" : "none", userSelect: discreet ? "none" : "auto" }}>{value}</div>
         <div className="flex items-center gap-1.5 text-xs flex-wrap">{sub}</div>
       </div>
     </Card>

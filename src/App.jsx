@@ -23,7 +23,7 @@ import {
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap, Coins, Percent,
-  Copy, Mail, Wrench, PanelLeft,
+  Copy, Mail, Wrench, PanelLeft, Eye, EyeOff,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -52,7 +52,7 @@ import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
 import AIChatWidget from "./AIChatWidget.jsx";
-import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle } from "./ui.jsx";
+import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle, DiscreetCtx } from "./ui.jsx";
 
 /* ------------------------------------------------------------------ */
 /*  Icône d'alerte par niveau (remplace les emojis 🔴🟡💡)            */
@@ -7538,6 +7538,7 @@ export default function App() {
   const T = useT();
   const [view,       setView]       = useState("dashboard"); // cockpit principal (Budget fusionné dedans)
   const [plan,       setPlan]       = useLocalStorage("wt_plan", "free");
+  const [discreet,   setDiscreet]   = useLocalStorage("wt_discreet", false);
   const [showBankConnect, setShowBankConnect] = useState(false);
 
   // ── Plan : SOURCE DE VÉRITÉ = table `subscriptions` (écrite par le seul
@@ -7810,7 +7811,25 @@ export default function App() {
   const handleDismissAlert = (alertId) => setDismissed(prev => [...prev, alertId]);
 
   return (
+    <DiscreetCtx.Provider value={discreet}>
     <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+      {/* Bouton mode discret — fixe haut droite */}
+      <button
+        onClick={() => setDiscreet(!discreet)}
+        title={discreet ? "Afficher les montants" : "Masquer les montants"}
+        style={{
+          position: "fixed", top: 16, right: 16, zIndex: 9999,
+          background: discreet ? "rgba(0,200,150,0.15)" : "rgba(255,255,255,0.06)",
+          border: `1px solid ${discreet ? "rgba(0,200,150,0.4)" : "rgba(255,255,255,0.1)"}`,
+          borderRadius: 12, padding: "8px 10px", cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 6,
+          color: discreet ? "#00c896" : "rgba(255,255,255,0.5)",
+          fontSize: 12, fontWeight: 600, backdropFilter: "blur(8px)",
+          transition: "all 0.2s",
+        }}
+      >
+        {discreet ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
       <ScrollProgressBar />
       {showFIREModal && (
         <FIREInfoModal onClose={() => setShowFIREModal(false)} />
@@ -7919,6 +7938,7 @@ export default function App() {
       {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}
       <AIChatWidget ctx={{ totals, patrimoine: patrimoineDerived, credits, profile, simParams, profileType: detectProfileType(transactions || []) }} />
     </div>
+    </DiscreetCtx.Provider>
   );
 }
 

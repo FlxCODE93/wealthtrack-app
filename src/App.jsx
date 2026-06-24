@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart,
+  Legend, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ComposedChart, Sector,
 } from "recharts";
 import {
   RATE_A, RATE_C, RATE_DISCLAIMER, RATE_GOLD,
@@ -6311,6 +6311,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [showComplete, setShowComplete] = useState(false);
   const [histRange, setHistRange] = useState(12);
   const [compactComp, setCompactComp] = useState(true); // comparaison : vue réduite (mobile)
+  const [activeSlice, setActiveSlice] = useState(null); // segment survolé du donut
   const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, outline: "none" };
   const netWorthFlashRef = useRef(null);
 
@@ -6355,6 +6356,16 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
   ].filter((s) => s.value > 0);
   const totalSlices = allSlices.reduce((s, x) => s + x.value, 0);
+
+  // Segment actif (survol) : agrandi + fin halo extérieur — rend le donut vivant.
+  const renderActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill }) => (
+    <g>
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 7}
+        startAngle={startAngle} endAngle={endAngle} fill={fill} cornerRadius={7} />
+      <Sector cx={cx} cy={cy} innerRadius={outerRadius + 10} outerRadius={outerRadius + 12}
+        startAngle={startAngle} endAngle={endAngle} fill={fill} opacity={0.35} cornerRadius={4} />
+    </g>
+  );
 
   const tableRows = chartHist.map((row, idx) => {
     const prev = idx > 0 ? chartHist[idx - 1].v : row.v;
@@ -6665,62 +6676,16 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       )}
 
-      {/* KPI row */}
-      {hasData && (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
-          label="Patrimoine net"
-          value={<GrowthValue value={netWorth} formatter={eur} flashRef={netWorthFlashRef} />}
-          valueColor={netWorth >= 0 ? T.green : T.red}
-          flashRef={netWorthFlashRef}
-          sub={<>
-            {monthlyChange >= 0
-              ? <ArrowUpRight size={14} style={{ color: T.green }} />
-              : <ArrowDownRight size={14} style={{ color: T.red }} />}
-            <span className="font-semibold" style={{ color: monthlyChange >= 0 ? T.green : T.red }}>
-              {monthlyChange >= 0 ? "+" : ""}{eur(monthlyChange)}
-            </span>
-            <span style={{ color: T.muted }}>vs mois précédent</span>
-          </>}
-        />
-        <KpiCard
-          label="Total actifs"
-          value={eur(totalActifs)}
-          valueColor={T.green}
-          sub={topActifCat ? <>
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: topActifCat.color }} />
-            <span style={{ color: T.text }}>{topActifCat.label}</span>
-            <span style={{ color: T.muted }}>· {pct(topActifShare)} du total</span>
-          </> : <span style={{ color: T.muted }}>Aucun actif</span>}
-        />
-        <KpiCard
-          label="Total passifs"
-          value={"−" + eur(totalPassifs)}
-          valueColor={T.red}
-          sub={<>
-            <span className="font-semibold" style={{ color: debtColor }}>{pct(debtRatio)}</span>
-            <span style={{ color: T.muted }}>des actifs (endettement)</span>
-          </>}
-        />
-      </div>
-      )}
-
-      {/* Détail par catégorie (gauche) + Répartition (droite) — façon Finary */}
+      {/* Actifs (gauche) + Répartition (droite) — façon Finary */}
       {hasData && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Détail par catégorie */}
+        {/* Détail des actifs */}
         <Card>
-          <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-8">
-            <div>
-              <div className="text-xs font-semibold mb-2" style={{ color: T.green, letterSpacing: 1 }}>ACTIFS</div>
-              {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
-            </div>
-            <div>
-              <div className="text-xs font-semibold mb-2" style={{ color: T.red, letterSpacing: 1 }}>PASSIFS</div>
-              {patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))}
-            </div>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
+            <Badge tone="green" label={eur(totalActifs)} />
           </div>
+          {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
         </Card>
 
         {/* Répartition */}
@@ -6733,12 +6698,12 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
           </div>
           <div className="relative">
-            <ExpandableChart height={240} title="Répartition du patrimoine"
+            <ExpandableChart height={260} title="Répartition du patrimoine"
               legend={
                 <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
                   {allSlices.map((s, i) => (
                     <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
                       {s.name}
                       <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
                     </span>
@@ -6748,29 +6713,50 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             >
               <PieChart>
                 <Pie data={allSlices} dataKey="value" nameKey="name"
-                  innerRadius="52%" outerRadius="77%" paddingAngle={2}
-                  label={renderDonutPctLabel} labelLine={false}>
-                  {allSlices.map((s, i) => <Cell key={i} fill={s.color} />)}
+                  innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                  stroke="none" startAngle={90} endAngle={-270}
+                  activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                  onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                  {allSlices.map((s, i) => (
+                    <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                      style={{ transition: "opacity 0.2s" }} />
+                  ))}
                 </Pie>
-                <Tooltip {...chartTip} itemStyle={{ color: T.text }} formatter={(v) => eur(v)} />
               </PieChart>
             </ExpandableChart>
+            {/* Centre — total, ou détail du segment survolé */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
-              <span className="text-xs" style={{ color: T.muted }}>Patrimoine</span>
-              <span className="text-lg font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
+              {activeSlice != null && allSlices[activeSlice] ? (
+                <>
+                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
+                  <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{eur(allSlices[activeSlice].value)}</span>
+                  <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                    {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
+                  <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
+                </>
+              )}
             </div>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-2 mt-3 justify-center">
-            {allSlices.map((s, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
-                {s.name}
-                <span style={{ color: T.text, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-              </span>
-            ))}
           </div>
         </Card>
       </div>
+      )}
+
+      {/* Détail des passifs */}
+      {hasData && (
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>
+          <Badge tone="red" label={"−" + eur(totalPassifs)} />
+        </div>
+        {patrimoine.passifs.length > 0
+          ? patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))
+          : <p className="text-sm" style={{ color: T.muted }}>Aucun passif enregistré.</p>}
+      </Card>
       )}
 
       {/* Comparison table */}

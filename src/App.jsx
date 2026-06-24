@@ -6435,11 +6435,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: T.text }}>Patrimoine</h1>
-          <p style={{ color: T.muted }}>Suivi de votre richesse nette</p>
-        </div>
+      <div className="flex items-start justify-end flex-wrap gap-4">
         <button
           onClick={() => setShowComplete(true)}
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-sm transition"
@@ -6460,7 +6456,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
                   label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
               </div>
-              <p className="text-sm" style={{ color: T.muted }}>Net worth sur la période sélectionnée</p>
             </div>
             <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
               style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>

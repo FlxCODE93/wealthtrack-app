@@ -616,8 +616,12 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           <stop offset="100%" stopColor={T.blue} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d="M3 16 C6 15 8 11 11 10.5 C15 9.5 17.5 6 21 4 L21 21 L3 21 Z" fill="url(#wtLogoFill)" />
-      <path d="M3 16 C6 15 8 11 11 10.5 C15 9.5 17.5 6 21 4" stroke={T.blue} strokeWidth="2.2"
+      {/* Axes (ordonnée + abscisse) */}
+      <path d="M5 3 L5 19 L21 19" stroke={T.muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Aire sous la courbe, depuis l'origine (coin inférieur gauche) */}
+      <path d="M5 19 C8 17 10 12 13 10 C16 8 18 6 21 4 L21 19 Z" fill="url(#wtLogoFill)" />
+      {/* Courbe de progression */}
+      <path d="M5 19 C8 17 10 12 13 10 C16 8 18 6 21 4" stroke={T.blue} strokeWidth="2.2"
         strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );

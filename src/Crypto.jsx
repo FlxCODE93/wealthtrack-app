@@ -550,6 +550,18 @@ export default function Crypto({ setView, marketsOnly = false }) {
 
   const totalValue = enriched.reduce((s, h) => s + (h.value ?? 0), 0);
   const totalCost  = enriched.reduce((s, h) => s + h.cost, 0);
+
+  // Sync vers Patrimoine : écrit wt_crypto_sync à chaque recalcul
+  useEffect(() => {
+    if (!enriched.length) return;
+    const items = enriched.map((h) => ({
+      label: h.type === "staking" ? `${h.symbol} (Staking)` : h.name,
+      value: Math.round(h.value ?? h.amount * h.buyPrice),
+    }));
+    try {
+      localStorage.setItem("wt_crypto_sync", JSON.stringify({ items, updatedAt: Date.now() }));
+    } catch {}
+  }, [enriched]);
   const totalGain  = totalValue - totalCost;
   const totalGainP = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
   const best  = enriched.reduce((b, h) => (h.gainPct ?? -Infinity) > (b?.gainPct ?? -Infinity) ? h : b, null);

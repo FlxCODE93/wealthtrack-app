@@ -6300,10 +6300,21 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [histRange, setHistRange] = useState(12);
   const [compactComp, setCompactComp] = useState(true); // comparaison : vue réduite (mobile)
   const [activeSlice, setActiveSlice] = useState(null); // segment survolé du donut
+  const [cryptoSync] = useLocalStorage("wt_crypto_sync", null);
   const inp = { background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, outline: "none" };
   const netWorthFlashRef = useRef(null);
 
-  const totalActifs = patrimoine.actifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
+  // Catégorie crypto virtuelle injectée depuis Portefeuille Crypto (read-only)
+  const effectiveActifs = useMemo(() => {
+    const hasCryptoCat = patrimoine.actifs.some((c) => c.id === "crypto");
+    if (!cryptoSync?.items?.length || hasCryptoCat) return patrimoine.actifs;
+    return [
+      ...patrimoine.actifs,
+      { id: "crypto", label: "Cryptomonnaies", color: "#f7931a", items: cryptoSync.items, isSync: true },
+    ];
+  }, [patrimoine.actifs, cryptoSync]);
+
+  const totalActifs = effectiveActifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
   const totalPassifs = patrimoine.passifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
   const netWorth = totalActifs - totalPassifs;
   const hasData = totalActifs > 0 || totalPassifs > 0; // sinon → état vide (pas de fausses données)
@@ -6317,7 +6328,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const debtColor = debtRatio > 50 ? T.red : debtRatio > 30 ? T.amber : T.green;
 
   // Catégorie d'actif dominante
-  const actifCatTotals = patrimoine.actifs.map((c) => ({ ...c, total: c.items.reduce((s, i) => s + i.value, 0) }));
+  const actifCatTotals = effectiveActifs.map((c) => ({ ...c, total: c.items.reduce((s, i) => s + i.value, 0) }));
   const topActifCat = actifCatTotals.reduce((a, b) => (b.total > (a?.total || 0) ? b : a), null);
   const topActifShare = topActifCat && totalActifs > 0 ? (topActifCat.total / totalActifs) * 100 : 0;
 
@@ -6333,6 +6344,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     investissements:   "#22d3ee", // cyan
     immobilier:        "#3b82f6", // bleu
     autres:            "#f59e0b", // ambre
+    crypto:            "#f7931a", // orange bitcoin
     creditImmo:        "#ef4444", // rouge
     autresDettes:      "#f97316", // orange
     "credits-derived": "#ec4899", // rose
@@ -6340,7 +6352,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
 
   const allSlices = [
-    ...patrimoine.actifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
+    ...effectiveActifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
     ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
   ].filter((s) => s.value > 0);
   const totalSlices = allSlices.reduce((s, x) => s + x.value, 0);
@@ -6421,6 +6433,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const renderCategory = (cat, side) => {
     const isPassif = side === "passifs";
     const isDerived = cat.id === "credits-derived"; // alimentée par "Mes crédits" — lecture seule
+    const isSync    = !!cat.isSync;                 // alimentée par "Portefeuille Crypto" — lecture seule
     const total = cat.items.reduce((s, i) => s + (i.value || 0), 0);
     const isOpen = !!openCats[cat.id];
     return (
@@ -6448,9 +6461,14 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 Alimenté automatiquement par <b style={{ color: T.text }}>Mes crédits</b> — modifiez-les là-bas.
               </p>
             )}
+            {isSync && (
+              <p className="text-xs py-1" style={{ color: T.muted }}>
+                Synchronisé depuis <b style={{ color: T.text }}>Portefeuille Crypto</b> — modifiez-y vos positions.
+              </p>
+            )}
             {cat.items.map((item, idx) => (
               <div key={idx} className="py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
-                {editMode && !isDerived ? (
+                {editMode && !isDerived && !isSync ? (
                   <div className="flex flex-wrap gap-2 items-center">
                     <input
                       value={item.label}
@@ -6510,7 +6528,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 )}
               </div>
             ))}
-            {editMode && !isDerived && (
+            {editMode && !isDerived && !isSync && (
               <button onClick={() => addItem(side, cat.id)}
                 className="flex items-center gap-2 mt-2 text-sm"
                 style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: "4px 0" }}>
@@ -6674,7 +6692,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
               <Badge tone="green" label={eur(totalActifs)} />
             </div>
-            {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
+            {effectiveActifs.map((cat) => renderCategory(cat, "actifs"))}
 
             <div className="flex items-center gap-2 mt-8 mb-3">
               <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>

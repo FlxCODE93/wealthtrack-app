@@ -6698,16 +6698,16 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </div>
 
           {/* Colonne droite : donut Répartition */}
-          <div className="lg:pl-8 lg:border-l" style={{ borderColor: T.border }}>
-            <div className="mb-2">
-              <div className="flex items-center gap-2 mb-1">
+          <div className="lg:pl-8 lg:border-l lg:self-center" style={{ borderColor: T.border }}>
+            <div className="mb-2 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
                 <h2 className="text-xl font-bold" style={{ color: T.text }}>Répartition</h2>
                 <Badge tone="neutral" label={`${allSlices.length} catégories`} />
               </div>
               <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
             </div>
             <div className="relative">
-              <ExpandableChart height={260} title="Répartition du patrimoine"
+              <ExpandableChart height={330} title="Répartition du patrimoine"
                 legend={
                   <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
                     {allSlices.map((s, i) => (

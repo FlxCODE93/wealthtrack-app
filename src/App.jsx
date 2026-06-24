@@ -3284,9 +3284,34 @@ function ImmoCard({ price, setPrice, horizon }) {
 
 function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, note, chartKey, warning = null, riskBadges = null, logScale = false, showBand = true }) {
   const T = useT();
-  const chartTip = makeChartTip(T);
   const [showTable, setShowTable] = useState(true);
   const augmentedData = detailedData;
+
+  const ScenarioTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload ?? {};
+    const capital = d.capital ?? 0;
+    const apports = d.apports ?? 0;
+    const gains   = Math.max(0, capital - apports);
+    const row = (c, l, v) => (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 7, color: T.muted }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: c, flexShrink: 0 }} />{l}
+        </span>
+        <span style={{ color: T.text, fontWeight: 700 }}>{eur(v)}</span>
+      </div>
+    );
+    return (
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", minWidth: 210, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+        <div style={{ fontSize: 12, color: T.muted }}>{label === 0 ? "Aujourd'hui" : `Dans ${label} an${label > 1 ? "s" : ""}`}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(capital)}</div>
+        <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+          {row(lineColor, "Gains composés", gains)}
+          {row("#3b82f6", "Apports cumulés", apports)}
+        </div>
+      </div>
+    );
+  };
 
   // Échelle logarithmique : sur 20-30 ans, un rendement à 25-30 %/an multiplie le
   // capital par ×100 ou plus — en linéaire, les 20 premières années sont écrasées
@@ -3398,15 +3423,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={logFmt} width={64} />
-            <Tooltip {...chartTip}
-              formatter={(v, name, props) => {
-                const key = props.dataKey;
-                const raw = key === "logCapital" ? props.payload.capital
-                  : key === "logApports" ? props.payload.apports
-                  : props.payload.capital;
-                return [eur(raw), name];
-              }}
-              labelFormatter={(y) => `Année ${y}`} />
+            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
             {hasBand && (
               <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
                 stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
@@ -3432,7 +3449,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
-            <Tooltip {...chartTip} formatter={(v) => eur(v)} labelFormatter={(y) => `Année ${y}`} />
+            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
             {hasBand && (
               <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
                 stroke="none" fill={lineColor} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />

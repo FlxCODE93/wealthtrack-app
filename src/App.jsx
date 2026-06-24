@@ -3367,44 +3367,11 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         ))}
       </div>
 
-      <div className="flex items-center gap-5 mb-3 flex-wrap">
-        {logScale ? (
-          <>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-              <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
-              Scénario médian
-            </span>
-            {hasBand && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-                <span className="inline-block w-7 h-3 rounded-sm" style={{ background: lineColor, opacity: 0.18 }} />
-                Fourchette pessimiste → optimiste
-              </span>
-            )}
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: "#3b82f6" }} />
-              Apports cumulés
-            </span>
-            <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
-          </>
-        ) : (
-          <>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-              <span className="inline-block w-7 border-t border-dashed" style={{ borderColor: "#3b82f6" }} />
-              Apports cumulés
-            </span>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-              <span className="inline-block w-7 border-t-2" style={{ borderColor: lineColor }} />
-              Gains composés
-            </span>
-            {hasBand && (
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-                <span className="inline-block w-7 h-3 rounded-sm" style={{ background: lineColor, opacity: 0.18 }} />
-                Fourchette pess. → opt.
-              </span>
-            )}
-          </>
-        )}
-      </div>
+      {logScale && (
+        <div className="mb-3">
+          <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
+        </div>
+      )}
 
       <ExpandableChart height={280} title={title}>
         {logScale ? (

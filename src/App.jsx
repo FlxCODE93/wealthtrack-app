@@ -24,7 +24,7 @@ import {
   Trash2, Pencil, Target, Bell, Globe, Repeat, GripVertical,
   Fingerprint, ShieldCheck, Gift, Flame, Trophy, Key,
   Plane, Palmtree, Car, GraduationCap, Coins, Percent,
-  Copy, Mail, Wrench,
+  Copy, Mail, Wrench, PanelLeft,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -604,24 +604,54 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   ];
   const simActive = view === "interets" || SIMS.some((s) => s.id === view);
   const [simOpen, setSimOpen] = useState(simActive);
+
+  // Mode réduit : la sidebar n'affiche que les icônes (style Finary). Persisté.
+  const [collapsed, setCollapsed] = useLocalStorage("wt_sidebar_collapsed", false);
+  // Bouton icône seule (mode réduit) — info-bulle native via title.
+  const IconOnly = ({ Icon, onClick, active, label }) => (
+    <button onClick={onClick} title={label} aria-label={label}
+      className="flex items-center justify-center py-3 rounded-xl transition"
+      style={{ background: active ? "rgba(255,255,255,0.06)" : "transparent", border: "none", cursor: "pointer", color: active ? T.text : T.muted }}>
+      <Icon size={20} />
+    </button>
+  );
+
   return (
     <aside
-      className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
-      style={{ width: 270, borderRight: `1px solid ${T.border}`, borderRadius: 0,
+      className="hidden md:flex flex-col gap-1 shrink-0 wt-glass"
+      style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 10px" : 16,
+               borderRight: `1px solid ${T.border}`, borderRadius: 0, transition: "width 0.18s ease",
                position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}
     >
-      <div className="flex items-center gap-3 px-3 py-5 mb-1">
-        <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-          <BarChart3 size={26} style={{ color: T.blue }} />
-        </div>
-        <div>
-          <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
-          <div className="text-xs" style={{ color: T.muted }}>Gestion financière</div>
-        </div>
+      <div className="flex items-center gap-3 px-1 py-5 mb-1" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
+        {!collapsed && (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
+              <BarChart3 size={26} style={{ color: T.blue }} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+              <div className="text-xs" style={{ color: T.muted }}>Gestion financière</div>
+            </div>
+          </div>
+        )}
+        <button onClick={() => setCollapsed((c) => !c)} title={collapsed ? "Déployer" : "Réduire"} aria-label={collapsed ? "Déployer la barre" : "Réduire la barre"}
+          className="flex items-center justify-center rounded-lg shrink-0"
+          style={{ width: 36, height: 36, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}>
+          <PanelLeft size={20} />
+        </button>
       </div>
 
       {items.map((it) => {
         const Icon = it.icon;
+
+        // Mode réduit : icône seule. Les groupes naviguent vers leur page principale.
+        if (collapsed) {
+          if (it.id === "patrimoine")  return <IconOnly key="patrimoine"  Icon={Icon} active={patriActive} label="Patrimoine"  onClick={() => setView("patrimoine")} />;
+          if (it.id === "simulations") return <IconOnly key="simulations" Icon={Icon} active={simActive}   label="Simulations" onClick={() => setView("interets")} />;
+          if (it.id === "outils")      return <IconOnly key="outils"      Icon={Icon} active={toolActive}  label="Outils"      onClick={() => setView("outils")} />;
+          return <IconOnly key={it.id} Icon={Icon} active={view === it.id} label={it.label} onClick={() => setView(it.id)} />;
+        }
 
         // Groupe dépliant "Simulations" (header → calculatrice d'intérêts composés)
         if (it.id === "simulations") {
@@ -806,12 +836,13 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         {/* Accès profil — avatar cliquable */}
         <button
           onClick={() => setView("profil")}
-          aria-label="Profil"
+          aria-label="Profil" title={collapsed ? "Profil" : undefined}
           className="flex items-center gap-3 py-3 rounded-xl text-left transition"
           style={{
-            paddingLeft: view === "profil" ? 13 : 16, paddingRight: 16,
+            paddingLeft: collapsed ? 0 : (view === "profil" ? 13 : 16), paddingRight: collapsed ? 0 : 16,
+            justifyContent: collapsed ? "center" : "flex-start",
             background: view === "profil" ? "rgba(255,255,255,0.06)" : "transparent",
-            borderLeft: view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent",
+            borderLeft: collapsed ? "none" : (view === "profil" ? `3px solid ${T.blue}` : "3px solid transparent"),
             boxShadow: "none", border: "none", cursor: "pointer",
           }}
         >
@@ -823,14 +854,16 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             }}>
             {((profile.firstName?.[0] || "") + (profile.lastName?.[0] || "")).toUpperCase() || <User size={16} />}
           </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate" style={{ color: T.text }}>
-              {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Profil"}
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="text-sm font-medium truncate" style={{ color: T.text }}>
+                {profile.firstName ? `${profile.firstName} ${profile.lastName}`.trim() : "Profil"}
+              </div>
+              <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
+                {planInfo.label}
+              </div>
             </div>
-            <div className="text-xs truncate" style={{ color: planInfo.color, fontWeight: 600 }}>
-              {planInfo.label}
-            </div>
-          </div>
+          )}
         </button>
 
         {/* Déconnexion — sous le profil */}
@@ -841,11 +874,12 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
               clearLocalAppData(); // ne laisse aucune donnée au prochain utilisateur de l'appareil
               window.location.reload();
             }}
+            title={collapsed ? "Déconnexion" : undefined} aria-label="Déconnexion"
             className="flex items-center gap-3 py-2.5 rounded-xl text-left text-sm transition"
-            style={{ paddingLeft: 16, paddingRight: 16, background: "transparent", border: "none", cursor: "pointer", color: T.muted }}
+            style={{ paddingLeft: collapsed ? 0 : 16, paddingRight: collapsed ? 0 : 16, justifyContent: collapsed ? "center" : "flex-start", background: "transparent", border: "none", cursor: "pointer", color: T.muted }}
           >
             <LogOut size={18} />
-            <span>Déconnexion</span>
+            {!collapsed && <span>Déconnexion</span>}
           </button>
         )}
 
@@ -853,20 +887,30 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           {/* Upgrade CTA — uniquement plan Gratuit (levier de conversion).
               Les abonnés payants ne sont pas relancés : ils gardent le signal de confiance. */}
           {plan === "free" && (
-            <button
-              onClick={() => setView("pricing")}
-              style={{ margin: "12px 12px 0", width: "calc(100% - 24px)", padding: "10px 14px", borderRadius: 12, border: `1px solid ${PLANS.pro.color}44`, background: `${PLANS.pro.color}10`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
-            >
-              <Crown size={14} style={{ color: PLANS.pro.color, flexShrink: 0 }} />
-              <span style={{ color: PLANS.pro.color, fontSize: 12, fontWeight: 700 }}>Passer à Pro →</span>
-            </button>
+            collapsed ? (
+              <button onClick={() => setView("pricing")} title="Passer à Pro" aria-label="Passer à Pro"
+                className="flex items-center justify-center rounded-xl"
+                style={{ margin: "12px auto 0", width: 40, height: 40, border: `1px solid ${PLANS.pro.color}44`, background: `${PLANS.pro.color}10`, cursor: "pointer" }}>
+                <Crown size={16} style={{ color: PLANS.pro.color }} />
+              </button>
+            ) : (
+              <button
+                onClick={() => setView("pricing")}
+                style={{ margin: "12px 12px 0", width: "calc(100% - 24px)", padding: "10px 14px", borderRadius: 12, border: `1px solid ${PLANS.pro.color}44`, background: `${PLANS.pro.color}10`, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <Crown size={14} style={{ color: PLANS.pro.color, flexShrink: 0 }} />
+                <span style={{ color: PLANS.pro.color, fontSize: 12, fontWeight: 700 }}>Passer à Pro →</span>
+              </button>
+            )
           )}
-          <div className="px-3 py-4">
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
-              <Shield size={11} />
-              <span>Données locales par défaut</span>
+          {!collapsed && (
+            <div className="px-3 py-4">
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: T.muted }}>
+                <Shield size={11} />
+                <span>Données locales par défaut</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>

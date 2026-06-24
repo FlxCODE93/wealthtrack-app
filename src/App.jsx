@@ -659,7 +659,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="simulations" className="flex flex-col">
               <button
                 onClick={() => { setView("interets"); setSimOpen(true); }}
-                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: view === "interets" ? "rgba(255,255,255,0.06)" : "transparent",
@@ -686,7 +686,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                       <button
                         key={s.id}
                         onClick={() => setView(s.id)}
-                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
                           background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
@@ -712,7 +712,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="patrimoine" className="flex flex-col">
               <button
                 onClick={() => { setView("patrimoine"); setPatriOpen(true); }}
-                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: view === "patrimoine" ? "rgba(255,255,255,0.06)" : "transparent",
@@ -739,7 +739,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                       <button
                         key={p.id}
                         onClick={() => setView(p.id)}
-                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
                           background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
@@ -765,7 +765,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="outils" className="flex flex-col">
               <button
                 onClick={() => setOutilsOpen((o) => !o)}
-                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: "transparent", border: "none", cursor: "pointer",
@@ -787,7 +787,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                       <button
                         key={t.id}
                         onClick={() => setView(t.id)}
-                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
                           background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
@@ -813,7 +813,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           <button
             key={it.id}
             onClick={() => setView(it.id)}
-            className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
+            className="flex items-center gap-3 py-2 rounded-xl text-left transition"
             style={{
               paddingLeft: active ? 13 : 16, paddingRight: 16,
               background: active ? "rgba(255,255,255,0.06)" : "transparent",
@@ -837,7 +837,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         <button
           onClick={() => setView("profil")}
           aria-label="Profil" title={collapsed ? "Profil" : undefined}
-          className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
+          className="flex items-center gap-3 py-2 rounded-xl text-left transition"
           style={{
             paddingLeft: collapsed ? 0 : (view === "profil" ? 13 : 16), paddingRight: collapsed ? 0 : 16,
             justifyContent: collapsed ? "center" : "flex-start",
@@ -875,7 +875,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
               window.location.reload();
             }}
             title={collapsed ? "Déconnexion" : undefined} aria-label="Déconnexion"
-            className="flex items-center gap-3 py-2.5 rounded-xl text-left text-sm transition"
+            className="flex items-center gap-3 py-2 rounded-xl text-left text-sm transition"
             style={{ paddingLeft: collapsed ? 0 : 16, paddingRight: collapsed ? 0 : 16, justifyContent: collapsed ? "center" : "flex-start", background: "transparent", border: "none", cursor: "pointer", color: T.muted }}
           >
             <LogOut size={18} />

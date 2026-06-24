@@ -1138,43 +1138,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         </span>
       </button>
 
-      {/* Évolution réelle du patrimoine net (snapshots mensuels auto) */}
-      <Card>
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} style={{ color: T.green }} />
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution de votre patrimoine net</h2>
-          </div>
-          {snapshots.length > 0 && (
-            <span className="text-sm" style={{ color: T.muted }}>{eur(snapshots[snapshots.length - 1].v)} aujourd'hui</span>
-          )}
-        </div>
-        {snapshots.length >= 2 ? (
-          <div style={{ width: "100%", height: 220 }}>
-            <ResponsiveContainer>
-              <AreaChart data={snapshots} margin={{ top: 6, right: 12, left: 4, bottom: 4 }}>
-                <defs>
-                  <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.green} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={T.green} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: T.muted }} />
-                <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
-                <Tooltip {...makeChartTip(T)} formatter={v => [eur(v), "Patrimoine net"]} />
-                <Area type="monotone" dataKey="v" stroke={T.green} strokeWidth={2.5} fill="url(#nwGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0", color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
-            <Calendar size={18} style={{ color: T.blue, flexShrink: 0 }} />
-            <span>Votre patrimoine net est enregistré chaque mois automatiquement. Revenez le mois prochain pour voir votre courbe réelle se construire — pas une projection, vos vraies valeurs.</span>
-          </div>
-        )}
-      </Card>
-
       {/* Score de santé gamifié */}
       <Card style={{ border: `2px solid ${badge.color}55` }}>
         <div className="flex flex-col sm:flex-row gap-6">

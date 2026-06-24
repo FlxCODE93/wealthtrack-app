@@ -1008,6 +1008,16 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
   const [active, setActive] = useState({});
+  const [activeExpSlice, setActiveExpSlice] = useState(null); // segment survolé du donut dépenses
+  // Segment actif (survol) : agrandi + fin halo extérieur — même D.A. que le donut Patrimoine.
+  const renderActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill }) => (
+    <g>
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 7}
+        startAngle={startAngle} endAngle={endAngle} fill={fill} cornerRadius={7} />
+      <Sector cx={cx} cy={cy} innerRadius={outerRadius + 10} outerRadius={outerRadius + 12}
+        startAngle={startAngle} endAngle={endAngle} fill={fill} opacity={0.35} cornerRadius={4} />
+    </g>
+  );
   // Édition manuelle des 4 piliers (surcharge mensuelle)
   const curMonthLabel = (() => {
     const s = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -1437,22 +1447,49 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
 
       {/* Répartition + catégories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Répartition dépenses</h2>
-          <div className="relative">
-            <FinTechPieChart
-              data={breakdown.map((b) => ({ name: b.cat, value: b.amount }))}
-              colors={breakdown.map((b) => CAT_COLORS[b.cat] || T.muted)}
-              innerRadius={60}
-              ariaLabel="Expense breakdown by category"
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-sm" style={{ color: T.muted }}>Total</span>
-              <span className="text-2xl font-bold" style={{ color: T.text }}>
-                {eur(breakdown.reduce((s, b) => s + b.amount, 0))}
-              </span>
-            </div>
-          </div>
+        <Card className="flex flex-col">
+          <h2 className="text-xl font-bold mb-2 text-center" style={{ color: T.text }}>Répartition dépenses</h2>
+          {(() => {
+            const expSlices = breakdown.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted }));
+            const expTotal = expSlices.reduce((s, b) => s + b.value, 0);
+            return (
+              <div className="relative flex-1 flex items-center justify-center">
+                <div className="w-full">
+                  <ExpandableChart height={330} title="Répartition des dépenses">
+                    <PieChart>
+                      <Pie data={expSlices} dataKey="value" nameKey="name"
+                        innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                        stroke="none" startAngle={90} endAngle={-270}
+                        activeIndex={activeExpSlice ?? -1} activeShape={renderActiveSlice}
+                        onMouseEnter={(_, i) => setActiveExpSlice(i)} onMouseLeave={() => setActiveExpSlice(null)}>
+                        {expSlices.map((s, i) => (
+                          <Cell key={i} fill={s.color} opacity={activeExpSlice == null || activeExpSlice === i ? 1 : 0.42}
+                            style={{ transition: "opacity 0.2s" }} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ExpandableChart>
+                  {/* Centre — total, ou détail du segment survolé */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    {activeExpSlice != null && expSlices[activeExpSlice] ? (
+                      <>
+                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
+                        <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{eur(expSlices[activeExpSlice].value)}</span>
+                        <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                          {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
+                        <span className="text-2xl font-bold" style={{ color: T.text }}>{eur(expTotal)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </Card>
 
         <Card>

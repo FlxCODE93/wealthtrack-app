@@ -910,7 +910,7 @@ function ObjectiveModal({ onClose, onPick }) {
   );
 }
 
-function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, credits = [], snapshots = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
+function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, credits = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
@@ -7346,7 +7346,7 @@ export default function App() {
         {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
         {view === "interets"     && <CompoundCalc setView={setView} />}
         {view === "marches"      && <Crypto setView={setView} marketsOnly />}
-        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} snapshots={snapshots} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
+        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}

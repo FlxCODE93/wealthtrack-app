@@ -5734,6 +5734,31 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
 }
 
 /* ------------------------------------------------------------------ */
+/*  Logo d'établissement : Clearbit → favicon Google → initiales      */
+/* ------------------------------------------------------------------ */
+function BankLogo({ name, domain, color }) {
+  const [stage, setStage] = useState(0); // 0 = Clearbit, 1 = favicon Google, 2 = initiales
+  const initials = name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  if (stage >= 2 || !domain) {
+    return (
+      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+        style={{ background: color, color: "#fff" }}>{initials}</span>
+    );
+  }
+  const src = stage === 0
+    ? `https://logo.clearbit.com/${domain}`
+    : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  return (
+    <img
+      src={src} alt={name} width={36} height={36} loading="lazy"
+      onError={() => setStage((s) => s + 1)}
+      className="w-9 h-9 rounded-full shrink-0 object-contain"
+      style={{ background: "#fff", padding: 3 }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  MODALE : COMPLÉTER MON PATRIMOINE (catalogue → méthode)           */
 /* ------------------------------------------------------------------ */
 function CompleterPatrimoineModal({ onClose, onPick }) {
@@ -5743,14 +5768,14 @@ function CompleterPatrimoineModal({ onClose, onPick }) {
 
   // Établissements populaires (synchronisation automatique).
   const BANKS = [
-    { name: "Crédit Agricole",  color: "#0a7d3c" },
-    { name: "BoursoBank",       color: "#e6007e" },
-    { name: "Crédit Mutuel",    color: "#e2001a" },
-    { name: "Trade Republic",   color: "#1c1c1e" },
-    { name: "Fortuneo",         color: "#7ab800" },
-    { name: "Société Générale", color: "#e2001a" },
-    { name: "Boursorama",       color: "#ff5a00" },
-    { name: "Binance",          color: "#f0b90b" },
+    { name: "Crédit Agricole",  domain: "credit-agricole.fr", color: "#0a7d3c" },
+    { name: "BoursoBank",       domain: "boursobank.com",     color: "#e6007e" },
+    { name: "Crédit Mutuel",    domain: "creditmutuel.fr",    color: "#e2001a" },
+    { name: "Trade Republic",   domain: "traderepublic.com",  color: "#1c1c1e" },
+    { name: "Fortuneo",         domain: "fortuneo.fr",        color: "#7ab800" },
+    { name: "Société Générale", domain: "societegenerale.fr", color: "#e2001a" },
+    { name: "Boursorama",       domain: "boursorama.com",     color: "#ff5a00" },
+    { name: "Binance",          domain: "binance.com",        color: "#f0b90b" },
   ];
 
   // Catégories d'actifs/passifs. `target` = id de la catégorie patrimoine pour
@@ -5769,8 +5794,6 @@ function CompleterPatrimoineModal({ onClose, onPick }) {
   const q = query.trim().toLowerCase();
   const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
   const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
-
-  const initials = (name) => name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
   return (
     <div
@@ -5808,8 +5831,7 @@ function CompleterPatrimoineModal({ onClose, onPick }) {
                   {banksF.map((b) => (
                     <button key={b.name} onClick={() => onPick({ label: b.name }, "sync")}
                       className="flex items-center gap-2.5 text-left" style={{ background: "transparent", border: "none", cursor: "pointer" }}>
-                      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                        style={{ background: b.color, color: "#fff" }}>{initials(b.name)}</span>
+                      <BankLogo name={b.name} domain={b.domain} color={b.color} />
                       <span className="text-sm truncate" style={{ color: T.text }}>{b.name}</span>
                     </button>
                   ))}

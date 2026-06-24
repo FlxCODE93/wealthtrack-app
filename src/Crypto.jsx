@@ -704,7 +704,6 @@ export default function Crypto({ setView, marketsOnly = false }) {
       {!marketsOnly && (
       <div className="flex gap-1" style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 4 }}>
         {[
-          { id: "marches",      label: "Marchés",                      Icon: Coins },
           { id: "holdings",     label: "Holdings",                     Icon: Wallet },
           { id: "staking",      label: `Staking (${staking.length})`,  Icon: Lock },
         ].map((t) => (

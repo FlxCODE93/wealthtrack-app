@@ -6676,130 +6676,82 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       )}
 
-      {/* Actifs (gauche) + Répartition (droite) — façon Finary */}
-      {hasData && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Détail des actifs */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
-            <Badge tone="green" label={eur(totalActifs)} />
-          </div>
-          {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
-        </Card>
-
-        {/* Répartition */}
-        <Card>
-          <div className="mb-2">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-xl font-bold" style={{ color: T.text }}>Répartition</h2>
-              <Badge tone="neutral" label={`${allSlices.length} catégories`} />
-            </div>
-            <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
-          </div>
-          <div className="relative">
-            <ExpandableChart height={260} title="Répartition du patrimoine"
-              legend={
-                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
-                  {allSlices.map((s, i) => (
-                    <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                      {s.name}
-                      <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                    </span>
-                  ))}
-                </div>
-              }
-            >
-              <PieChart>
-                <Pie data={allSlices} dataKey="value" nameKey="name"
-                  innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-                  stroke="none" startAngle={90} endAngle={-270}
-                  activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                  onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                  {allSlices.map((s, i) => (
-                    <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
-                      style={{ transition: "opacity 0.2s" }} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ExpandableChart>
-            {/* Centre — total, ou détail du segment survolé */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
-              {activeSlice != null && allSlices[activeSlice] ? (
-                <>
-                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
-                  <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{eur(allSlices[activeSlice].value)}</span>
-                  <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                    {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
-                  <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-      )}
-
-      {/* Détail des passifs */}
+      {/* Bloc unique — Actifs + Passifs (gauche) & Répartition (droite) */}
       {hasData && (
       <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>
-          <Badge tone="red" label={"−" + eur(totalPassifs)} />
-        </div>
-        {patrimoine.passifs.length > 0
-          ? patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))
-          : <p className="text-sm" style={{ color: T.muted }}>Aucun passif enregistré.</p>}
-      </Card>
-      )}
-
-      {/* Comparison table */}
-      {hasData && (
-      <Card>
-        <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-8 items-start">
+          {/* Colonne gauche : détail Actifs puis Passifs */}
           <div>
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparaison mois par mois</h2>
-            <p className="text-sm" style={{ color: T.muted }}>Sur la période sélectionnée ci-dessus</p>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
+              <Badge tone="green" label={eur(totalActifs)} />
+            </div>
+            {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
+
+            <div className="flex items-center gap-2 mt-8 mb-3">
+              <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>
+              <Badge tone="red" label={"−" + eur(totalPassifs)} />
+            </div>
+            {patrimoine.passifs.length > 0
+              ? patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))
+              : <p className="text-sm" style={{ color: T.muted }}>Aucun passif enregistré.</p>}
           </div>
-          {/* Sélecteur de durée affichée — évite un défilement infini sur mobile */}
-          <select value={compactComp ? "compact" : "all"} onChange={(e) => setCompactComp(e.target.value === "compact")}
-            style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
-            <option value="compact">6 derniers mois</option>
-            <option value="all">Tout afficher</option>
-          </select>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                {["Mois", "Patrimoine", "Variation", "% Croissance"].map((h) => (
-                  <th key={h} className="py-3 px-3 text-left font-semibold" style={{ color: T.muted }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(compactComp ? tableRows.slice(-6) : tableRows).map((row, idx) => (
-                <tr key={row.m} style={{ borderBottom: `1px solid ${T.border}` }}>
-                  <td className="py-3 px-3" style={{ color: T.text }}>{row.m}</td>
-                  <td className="py-3 px-3 font-bold" style={{ color: T.text }}>{eur(row.v)}</td>
-                  <td className="py-3 px-3 font-semibold"
-                    style={{ color: row.first ? T.muted : row.variation >= 0 ? T.green : T.red }}>
-                    {row.first ? "—" : (row.variation > 0 ? "+" : "") + eur(row.variation)}
-                  </td>
-                  <td className="py-3 px-3 font-semibold"
-                    style={{ color: row.first ? T.muted : row.pct >= 0 ? T.green : T.red }}>
-                    {row.first ? "—" : (row.pct > 0 ? "+" : "") + pct(row.pct)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {/* Colonne droite : donut Répartition */}
+          <div className="lg:pl-8 lg:border-l" style={{ borderColor: T.border }}>
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold" style={{ color: T.text }}>Répartition</h2>
+                <Badge tone="neutral" label={`${allSlices.length} catégories`} />
+              </div>
+              <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+            </div>
+            <div className="relative">
+              <ExpandableChart height={260} title="Répartition du patrimoine"
+                legend={
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+                    {allSlices.map((s, i) => (
+                      <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                        {s.name}
+                        <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                      </span>
+                    ))}
+                  </div>
+                }
+              >
+                <PieChart>
+                  <Pie data={allSlices} dataKey="value" nameKey="name"
+                    innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                    stroke="none" startAngle={90} endAngle={-270}
+                    activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                    onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                    {allSlices.map((s, i) => (
+                      <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                        style={{ transition: "opacity 0.2s" }} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ExpandableChart>
+              {/* Centre — total, ou détail du segment survolé */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
+                {activeSlice != null && allSlices[activeSlice] ? (
+                  <>
+                    <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
+                    <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{eur(allSlices[activeSlice].value)}</span>
+                    <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                      {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
+                    <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
       )}

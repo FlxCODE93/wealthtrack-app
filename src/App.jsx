@@ -5766,13 +5766,10 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
   const [query, setQuery] = useState("");
   const [pick, setPick] = useState(null);   // catégorie sélectionnée → écran "méthode"
   const [manual, setManual] = useState(false); // ajout manuel : étape liste/formulaire
-  const [inst, setInst] = useState(null);   // instrument sélectionné → formulaire d'achat
-  const [iq, setIq] = useState("");         // recherche dans la liste d'instruments
-  const [qty, setQty] = useState("");
-  const [price, setPrice] = useState("");
-  const [account, setAccount] = useState("");
-  const [simpleName, setSimpleName] = useState("");
-  const [simpleVal, setSimpleVal] = useState("");
+  const [picked, setPicked] = useState(null);  // titre/crypto sélectionné → formulaire
+  const [iq, setIq] = useState("");            // recherche dans la liste de titres
+  const [form, setForm] = useState({});        // valeurs du formulaire (clé → valeur)
+  const num = (x) => { const n = parseFloat(String(x ?? "").replace(",", ".")); return isNaN(n) ? 0 : n; };
 
   // Établissements populaires (synchronisation automatique).
   const BANKS = [
@@ -5786,7 +5783,9 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     { name: "Binance",          domain: "binance.com",        color: "#f0b90b" },
   ];
 
-  // Actions & ETF populaires (ajout manuel via formulaire d'achat).
+  const ACCOUNT_OPTS = BANKS.map((b) => b.name);
+
+  // Actions & ETF populaires (sélecteur pour Actions & Fonds, PEA, Assurance Vie).
   const INSTRUMENTS = [
     { name: "BNP Paribas Easy S&P 500 UCITS ETF EUR C", ticker: "ESE",   cur: "EUR", type: "ETF",    domain: "bnpparibas.com" },
     { name: "TotalEnergies SE",                          ticker: "TTE",   cur: "EUR", type: "ACTION", domain: "totalenergies.com" },
@@ -5802,43 +5801,107 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     { name: "Vanguard S&P 500 UCITS ETF (Dist)",         ticker: "VUSA",  cur: "EUR", type: "ETF",    domain: "vanguard.com" },
   ];
 
-  // Catégories. `target` = id catégorie patrimoine (ajout manuel) ; `kind` =
-  // "instrument" (sélecteur titres) ou "simple" (nom + valeur) ; `nav` = page dédiée.
+  // Cryptos populaires (sélecteur pour la catégorie Crypto).
+  const CRYPTOS = [
+    { name: "Bitcoin",   ticker: "BTC",  cur: "EUR", type: "CRYPTO", domain: "bitcoin.org" },
+    { name: "Ethereum",  ticker: "ETH",  cur: "EUR", type: "CRYPTO", domain: "ethereum.org" },
+    { name: "Solana",    ticker: "SOL",  cur: "EUR", type: "CRYPTO", domain: "solana.com" },
+    { name: "BNB",       ticker: "BNB",  cur: "EUR", type: "CRYPTO", domain: "binance.com" },
+    { name: "XRP",       ticker: "XRP",  cur: "EUR", type: "CRYPTO", domain: "ripple.com" },
+    { name: "Cardano",   ticker: "ADA",  cur: "EUR", type: "CRYPTO", domain: "cardano.org" },
+    { name: "Dogecoin",  ticker: "DOGE", cur: "EUR", type: "CRYPTO", domain: "dogecoin.com" },
+    { name: "Polkadot",  ticker: "DOT",  cur: "EUR", type: "CRYPTO", domain: "polkadot.network" },
+  ];
+
+  // Catégories. `target` = id catégorie patrimoine ; `picker` = source du
+  // sélecteur ("securities"/"crypto") ; `form` = champs du formulaire ;
+  // `compute(f)` = {label, value} pour les catégories sans sélecteur.
   const CATALOG = [
-    { id: "immobilier", label: "Immobilier",        desc: "Résidence, locatif & SCPI françaises",          icon: Home,       color: T.blue,   target: "immobilier",      kind: "simple" },
-    { id: "actions",    label: "Actions & Fonds",   desc: "PEA, Assurance Vie, Compte-Titres et plus",     icon: TrendingUp, color: T.cyan,   target: "investissements", kind: "instrument" },
-    { id: "pea",        label: "PEA",               desc: "Plan d'épargne en actions & PEA-PME",           icon: Briefcase,  color: T.violet, target: "investissements", kind: "instrument" },
-    { id: "av",         label: "Assurance Vie",     desc: "Contrats multisupports en France & UE",         icon: Shield,     color: T.green,  target: "investissements", kind: "instrument" },
-    { id: "crypto",     label: "Crypto",            desc: "Bitcoin, Ethereum & altcoins",                  icon: Bitcoin,    color: T.amber,  nav: "crypto" },
-    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants",              icon: Wallet,     color: "#14b8a6", target: "liquidites",     kind: "simple" },
-    { id: "autres",     label: "Autres actifs",     desc: "Véhicules, objets de valeur, parts sociales",   icon: Coins,      color: "#f5a623", target: "autres",         kind: "simple" },
-    { id: "credits",    label: "Crédits & dettes",  desc: "Prêts immo, conso, découverts",                 icon: CreditCard, color: T.red,    nav: "credits" },
+    { id: "immobilier", label: "Immobilier", desc: "Résidence, locatif & SCPI françaises", icon: Home, color: T.blue, target: "immobilier",
+      form: [
+        { key: "name",  label: "Nom du bien",    type: "text",   placeholder: "Résidence principale" },
+        { key: "type",  label: "Type",           type: "select", options: ["Résidence principale", "Investissement locatif", "SCPI", "Terrain", "Autre"] },
+        { key: "value", label: "Valeur estimée", type: "number", suffix: "EUR" },
+      ],
+      compute: (f) => ({ label: (f.name || "").trim() || f.type, value: num(f.value) }) },
+    { id: "actions", label: "Actions & Fonds", desc: "PEA, Assurance Vie, Compte-Titres et plus", icon: TrendingUp, color: T.cyan, target: "investissements", picker: "securities",
+      form: [
+        { key: "account", label: "Compte",        type: "select", options: ACCOUNT_OPTS, placeholderOpt: true },
+        { key: "qty",     label: "Quantité",      type: "number" },
+        { key: "price",   label: "Prix d'achat",  type: "number", suffix: "cur" },
+      ] },
+    { id: "pea", label: "PEA", desc: "Plan d'épargne en actions & PEA-PME", icon: Briefcase, color: T.violet, target: "investissements", picker: "securities",
+      form: [
+        { key: "account", label: "Compte",       type: "select", options: ACCOUNT_OPTS, placeholderOpt: true },
+        { key: "qty",     label: "Quantité",     type: "number" },
+        { key: "price",   label: "Prix d'achat", type: "number", suffix: "cur" },
+      ] },
+    { id: "av", label: "Assurance Vie", desc: "Contrats multisupports en France & UE", icon: Shield, color: T.green, target: "investissements", picker: "securities",
+      form: [
+        { key: "account", label: "Assureur / courtier", type: "select", options: ACCOUNT_OPTS, placeholderOpt: true },
+        { key: "qty",     label: "Quantité (parts)",    type: "number" },
+        { key: "price",   label: "Valeur de la part",   type: "number", suffix: "cur" },
+      ] },
+    { id: "crypto", label: "Crypto", desc: "Bitcoin, Ethereum & altcoins", icon: Bitcoin, color: T.amber, target: "investissements", picker: "crypto",
+      form: [
+        { key: "qty",   label: "Quantité",     type: "number" },
+        { key: "price", label: "Prix d'achat", type: "number", suffix: "cur" },
+      ] },
+    { id: "liquidites", label: "Comptes & livrets", desc: "Livret A, LDDS, comptes courants", icon: Wallet, color: "#14b8a6", target: "liquidites",
+      form: [
+        { key: "type",  label: "Type de compte", type: "select", options: ["Livret A", "LDDS", "LEP", "PEL / CEL", "Compte courant", "Autre"] },
+        { key: "bank",  label: "Banque",         type: "select", options: ACCOUNT_OPTS, placeholderOpt: true },
+        { key: "value", label: "Solde",          type: "number", suffix: "EUR" },
+      ],
+      compute: (f) => ({ label: f.bank ? `${f.type} · ${f.bank}` : f.type, value: num(f.value) }) },
+    { id: "autres", label: "Autres actifs", desc: "Véhicules, objets de valeur, parts sociales", icon: Coins, color: "#f5a623", target: "autres",
+      form: [
+        { key: "name",  label: "Libellé",   type: "text",   placeholder: "Nom de l'actif" },
+        { key: "type",  label: "Catégorie", type: "select", options: ["Véhicule", "Objet de valeur", "Métaux précieux", "Parts sociales", "Autre"] },
+        { key: "value", label: "Valeur",    type: "number", suffix: "EUR" },
+      ],
+      compute: (f) => ({ label: (f.name || "").trim() || f.type, value: num(f.value) }) },
+    { id: "credits", label: "Crédits & dettes", desc: "Prêts immo, conso, découverts", icon: CreditCard, color: T.red, nav: "credits" },
   ];
 
   const q = query.trim().toLowerCase();
   const banksF = q ? BANKS.filter((b) => b.name.toLowerCase().includes(q)) : BANKS;
   const catsF  = q ? CATALOG.filter((c) => (c.label + " " + c.desc).toLowerCase().includes(q)) : CATALOG;
+  const pickerSrc = pick?.picker === "crypto" ? CRYPTOS : INSTRUMENTS;
   const iqq = iq.trim().toLowerCase();
-  const instF = iqq ? INSTRUMENTS.filter((i) => (i.name + " " + i.ticker).toLowerCase().includes(iqq)) : INSTRUMENTS;
+  const pickerF = iqq ? pickerSrc.filter((i) => (i.name + " " + i.ticker).toLowerCase().includes(iqq)) : pickerSrc;
 
   const fieldWrap = { borderBottom: `1px solid ${T.border}`, paddingBottom: 8 };
   const fieldInput = { width: "100%", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 };
   const fieldLabel = { display: "block", color: T.muted, fontSize: 13, marginBottom: 8 };
 
+  // Initialise le formulaire : valeur par défaut = 1re option des selects
+  // (sauf comptes/banques laissés vides).
+  const initForm = (cat) => {
+    const f = {};
+    (cat.form || []).forEach((fl) => {
+      if (fl.type === "select" && !fl.placeholderOpt) f[fl.key] = fl.options[0];
+    });
+    setForm(f);
+  };
   const startManual = () => {
     if (pick.nav) { onPick(pick, "manual"); return; }
-    setManual(true);
+    setPicked(null); setIq(""); initForm(pick); setManual(true);
   };
+  const toCatalog = () => { setPick(null); setManual(false); setPicked(null); setForm({}); };
 
-  const submitInst = () => {
-    const v = (parseFloat(qty) || 0) * (parseFloat(price) || 0);
-    if (v <= 0) return;
-    onManualAdd(pick.target, inst.name, v);
-  };
-  const submitSimple = () => {
-    const v = parseFloat(simpleVal) || 0;
-    if (!simpleName.trim() || v <= 0) return;
-    onManualAdd(pick.target, simpleName.trim(), v);
+  const submit = () => {
+    let label, value;
+    if (pick.picker) {
+      if (!picked) return;
+      value = num(form.qty) * num(form.price);
+      label = picked.name;
+    } else {
+      const r = pick.compute(form);
+      label = r.label; value = r.value;
+    }
+    if (!label || value <= 0) return;
+    onManualAdd(pick.target, label, value);
   };
 
   const Back = ({ onClick }) => (
@@ -5851,44 +5914,53 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     <span className="text-xs font-semibold px-2.5 py-1 rounded-md shrink-0"
       style={{ background: "rgba(255,255,255,0.06)", color: T.muted, letterSpacing: 0.5 }}>{t}</span>
   );
+  const renderField = (f) => {
+    const suffix = f.suffix === "cur" ? (picked?.cur || "EUR") : f.suffix;
+    return (
+      <div key={f.key} style={fieldWrap}>
+        <label style={fieldLabel}>{f.label}</label>
+        {f.type === "select" ? (
+          <select value={form[f.key] || ""} onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))} style={{ ...fieldInput, cursor: "pointer" }}>
+            {f.placeholderOpt && <option value="">Sélectionner…</option>}
+            {f.options.map((o) => <option key={o} value={o} style={{ background: T.card }}>{o}</option>)}
+          </select>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type={f.type === "number" ? "number" : "text"} inputMode={f.type === "number" ? "decimal" : undefined}
+              value={form[f.key] || ""} onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+              onFocus={f.type === "number" ? (e) => e.target.select() : undefined}
+              placeholder={f.placeholder || (f.type === "number" ? "0" : "")} style={fieldInput}
+            />
+            {suffix && <span style={{ color: T.muted, fontSize: 14 }}>{suffix}</span>}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Décide quel écran afficher.
   let body;
-  if (inst) {
-    // Écran : formulaire d'achat d'un titre
+  if (manual && pick && (!pick.picker || picked)) {
+    // Écran : formulaire d'ajout (adapté à la catégorie)
     body = (
       <>
-        <Back onClick={() => setInst(null)} />
+        <Back onClick={() => (pick.picker ? setPicked(null) : setManual(false))} />
         <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Nom</label>
-            <div className="flex items-center gap-2.5">
-              <BankLogo name={inst.name} domain={inst.domain} color={pick.color} />
-              <span style={{ color: T.text, fontSize: 16 }} className="truncate">{inst.name}</span>
+          {pick.picker && (
+            <div style={fieldWrap}>
+              <label style={fieldLabel}>Nom</label>
+              <div className="flex items-center gap-2.5">
+                <BankLogo name={picked.name} domain={picked.domain} color={pick.color} />
+                <span style={{ color: T.text, fontSize: 16 }} className="truncate">{picked.name}</span>
+              </div>
             </div>
-          </div>
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Compte</label>
-            <select value={account} onChange={(e) => setAccount(e.target.value)} style={{ ...fieldInput, cursor: "pointer" }}>
-              <option value="">Sélectionner…</option>
-              {BANKS.map((b) => <option key={b.name} value={b.name} style={{ background: T.card }}>{b.name}</option>)}
-            </select>
-          </div>
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Quantité</label>
-            <input type="number" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
-          </div>
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Prix d'achat</label>
-            <div className="flex items-center gap-2">
-              <input type="number" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
-              <span style={{ color: T.muted, fontSize: 14 }}>{inst.cur}</span>
-            </div>
-          </div>
+          )}
+          {pick.form.map(renderField)}
         </div>
         <div className="flex justify-end mt-8">
-          <button onClick={submitInst}
+          <button onClick={submit}
             className="font-semibold px-7 py-2.5 rounded-full transition"
             style={{ background: T.amber, color: "#1c1c1e", border: "none", cursor: "pointer" }}>
             Valider
@@ -5896,21 +5968,22 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
         </div>
       </>
     );
-  } else if (manual && pick.kind === "instrument") {
-    // Écran : sélecteur d'actions/ETF
+  } else if (manual && pick && pick.picker) {
+    // Écran : sélecteur d'actions/ETF ou de cryptos
     body = (
       <>
         <Back onClick={() => setManual(false)} />
         <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
         <div className="flex items-center gap-2 mb-7" style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
           <Search size={18} style={{ color: T.muted, flexShrink: 0 }} />
-          <input autoFocus value={iq} onChange={(e) => setIq(e.target.value)} placeholder="Chercher actions ou fonds"
+          <input autoFocus value={iq} onChange={(e) => setIq(e.target.value)}
+            placeholder={pick.picker === "crypto" ? "Chercher une crypto" : "Chercher actions ou fonds"}
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 16 }} />
         </div>
         <div className="text-sm font-semibold mb-2" style={{ color: T.muted }}>Les plus populaires</div>
         <div className="flex flex-col">
-          {instF.map((i) => (
-            <button key={i.ticker + i.name} onClick={() => { setInst(i); setQty(""); setPrice(""); }}
+          {pickerF.map((i) => (
+            <button key={i.ticker + i.name} onClick={() => setPicked(i)}
               className="flex items-center gap-3 py-3 px-2 rounded-xl text-left transition"
               style={{ background: "transparent", border: "none", cursor: "pointer" }}>
               <BankLogo name={i.name} domain={i.domain} color={pick.color} />
@@ -5921,35 +5994,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
               <TypeTag t={i.type} />
             </button>
           ))}
-          {instF.length === 0 && <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat.</p>}
-        </div>
-      </>
-    );
-  } else if (manual && pick.kind === "simple") {
-    // Écran : formulaire générique nom + valeur
-    body = (
-      <>
-        <Back onClick={() => setManual(false)} />
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Libellé</label>
-            <input autoFocus value={simpleName} onChange={(e) => setSimpleName(e.target.value)} style={fieldInput} placeholder={pick.id === "immobilier" ? "Résidence principale" : "Nom de l'actif"} />
-          </div>
-          <div style={fieldWrap}>
-            <label style={fieldLabel}>Valeur</label>
-            <div className="flex items-center gap-2">
-              <input type="number" inputMode="decimal" value={simpleVal} onChange={(e) => setSimpleVal(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="0" />
-              <span style={{ color: T.muted, fontSize: 14 }}>EUR</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end mt-8">
-          <button onClick={submitSimple}
-            className="font-semibold px-7 py-2.5 rounded-full transition"
-            style={{ background: T.amber, color: "#1c1c1e", border: "none", cursor: "pointer" }}>
-            Valider
-          </button>
+          {pickerF.length === 0 && <p className="text-sm py-6 text-center" style={{ color: T.muted }}>Aucun résultat.</p>}
         </div>
       </>
     );
@@ -5957,7 +6002,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
     // Écran : choix de la méthode (sync vs manuel)
     body = (
       <>
-        <Back onClick={() => setPick(null)} />
+        <Back onClick={toCatalog} />
         <h1 className="text-2xl sm:text-3xl font-bold mb-6" style={{ color: T.text }}>Ajouter {pick.label.toLowerCase()}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button onClick={() => onPick(pick, "sync")}

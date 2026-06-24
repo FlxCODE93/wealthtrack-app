@@ -7950,8 +7950,6 @@ export default function App() {
 
         {/* Vues Pro */}
         {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
-
-        <LegalDisclaimer />
       </main>
 
       {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}
@@ -7960,62 +7958,3 @@ export default function App() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  DISCLAIMER LÉGAL                                                   */
-/* ------------------------------------------------------------------ */
-function LegalDisclaimer() {
-  const T = useT();
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <footer
-      className="mt-16 rounded-2xl p-5"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        border: `1px solid ${T.border}`,
-      }}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 flex-1">
-          <Info size={15} style={{ color: T.muted, flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
-              Informations légales — non contractuel
-            </span>
-            <p className={`text-xs mt-1 leading-relaxed ${expanded ? "" : "hidden sm:block"}`} style={{ color: T.muted }}>
-              WealthTrack est un outil de simulation et de suivi patrimonial personnel à titre purement informatif. Les informations, calculs, projections et simulations présentés sur cette plateforme <strong style={{ color: T.text }}>ne constituent en aucun cas un conseil en investissement, un conseil financier, fiscal ou juridique</strong> au sens des articles L. 321-1 et suivants du Code monétaire et financier.
-            </p>
-            {expanded && (
-              <div className="mt-3 space-y-2 text-xs leading-relaxed" style={{ color: T.muted }}>
-                <p>
-                  <strong style={{ color: T.text }}>Rendements passés :</strong> Les performances passées, les taux de rendement historiques (ETF, crypto-actifs, immobilier, livrets réglementés, etc.) affichés sur WealthTrack ne préjugent pas des performances futures et ne sont pas garantis. Tout investissement comporte un risque de perte partielle ou totale du capital investi.
-                </p>
-                <p>
-                  <strong style={{ color: T.text }}>Données et hypothèses :</strong> Les projections de simulation reposent sur des hypothèses de rendement et de taux d'intérêt établies à des fins illustratives. Ces hypothèses sont susceptibles de ne pas se réaliser. WealthTrack ne garantit pas l'exactitude, l'exhaustivité ni l'actualité des données affichées.
-                </p>
-                <p>
-                  <strong style={{ color: T.text }}>Crypto-actifs :</strong> Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI).
-                </p>
-                <p>
-                  <strong style={{ color: T.text }}>Responsabilité :</strong> WealthTrack et ses auteurs déclinent toute responsabilité pour les décisions d'investissement ou patrimoniales prises sur la base des informations contenues dans cette application. L'utilisateur est seul responsable de l'utilisation des données et des décisions financières qui en découlent.
-                </p>
-                <p>
-                  <strong style={{ color: T.text }}>Conseil professionnel :</strong> Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation.
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
-                  WealthTrack n'est pas un prestataire de services d'investissement (PSI) au sens de la directive MIF II. Cette application ne fait pas l'objet d'un enregistrement auprès de l'AMF ou de l'ACPR en tant que conseiller en investissements financiers (CIF). © WealthTrack — Tous droits réservés.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="text-xs flex-shrink-0 px-3 py-1.5 rounded-lg"
-          style={{ color: T.muted, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.02)", whiteSpace: "nowrap" }}
-        >
-          {expanded ? "Réduire ▲" : "Lire tout ▼"}
-        </button>
-      </div>
-    </footer>
-  );
-}

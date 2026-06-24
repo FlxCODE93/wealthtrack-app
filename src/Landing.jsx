@@ -232,7 +232,10 @@ const LEGAL_CONTENT = {
       },
       {
         heading: "Statut réglementaire",
-        body: ["WealthTrack n'est pas un prestataire de services d'investissement (PSI) et n'est pas immatriculé à l'ORIAS. Le site propose un outil de simulation à caractère pédagogique, qui ne constitue ni un conseil en investissement, ni une recommandation personnalisée au sens des articles L. 321-1 et suivants du Code monétaire et financier."],
+        body: [
+          "WealthTrack n'est pas un prestataire de services d'investissement (PSI) et n'est pas immatriculé à l'ORIAS. Le site propose un outil de simulation à caractère pédagogique, qui ne constitue ni un conseil en investissement, ni une recommandation personnalisée au sens des articles L. 321-1 et suivants du Code monétaire et financier.",
+          "WealthTrack n'est pas un prestataire de services d'investissement (PSI) au sens de la directive MIF II et ne fait l'objet d'aucun enregistrement auprès de l'AMF ou de l'ACPR en tant que conseiller en investissements financiers (CIF).",
+        ],
       },
     ],
   },
@@ -305,6 +308,14 @@ const LEGAL_CONTENT = {
       {
         heading: "Avertissement sur les risques",
         body: ["Investir comporte des risques notamment de perte en capital, et de volatilité. Les performances passées n'indiquent pas des performances futures. Simulations à des fins d'illustration seulement."],
+      },
+      {
+        heading: "Crypto-actifs",
+        body: ["Les crypto-actifs sont des instruments hautement spéculatifs et volatils. Leur valeur peut fluctuer très fortement à la hausse comme à la baisse. Ils ne sont pas couverts par les dispositifs de garantie des dépôts bancaires (FGDR) ni par les mécanismes d'indemnisation des investisseurs (FNGI)."],
+      },
+      {
+        heading: "Conseil professionnel",
+        body: ["Pour toute décision d'investissement, il est fortement recommandé de consulter un conseiller en gestion de patrimoine (CGP) agréé par l'ORIAS, un conseiller fiscal ou un expert-comptable agréé, selon la nature de votre situation."],
       },
       {
         heading: "Accès au service et comptes",

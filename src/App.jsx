@@ -583,7 +583,6 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // Sous-outils du groupe dépliant "Outils" (style Finary).
   const TOOLS = [
     { id: "frais",     label: "Mes frais" },
-    { id: "interets",  label: "Intérêts composés" },
     { id: "fiscalite", label: "Fiscalité" },
     { id: "marches",   label: "Marché crypto" },
   ];
@@ -596,6 +595,15 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   ];
   const patriActive = view === "patrimoine" || PATRIMOINE.some((p) => p.id === view);
   const [patriOpen, setPatriOpen] = useState(patriActive);
+  // Sous-pages du groupe dépliant "Simulations" (style Finary).
+  // Le header navigue vers la calculatrice d'intérêts composés ("interets").
+  const SIMS = [
+    { id: "fi",          label: "FIRE — Indépendance financière" },
+    { id: "immobilier",  label: "Immobilier : achat vs location" },
+    { id: "simulations", label: "Projections ETF / Or / Crypto" },
+  ];
+  const simActive = view === "interets" || SIMS.some((s) => s.id === view);
+  const [simOpen, setSimOpen] = useState(simActive);
   return (
     <aside
       className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
@@ -614,6 +622,59 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
       {items.map((it) => {
         const Icon = it.icon;
+
+        // Groupe dépliant "Simulations" (header → calculatrice d'intérêts composés)
+        if (it.id === "simulations") {
+          return (
+            <div key="simulations" className="flex flex-col">
+              <button
+                onClick={() => { setView("interets"); setSimOpen(true); }}
+                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                style={{
+                  paddingLeft: 16, paddingRight: 16,
+                  background: view === "interets" ? "rgba(255,255,255,0.06)" : "transparent",
+                  border: "none", cursor: "pointer",
+                  borderLeft: view === "interets" ? `3px solid ${T.blue}` : "3px solid transparent",
+                  color: simActive ? T.text : T.muted,
+                  fontWeight: simActive ? 600 : 500,
+                }}
+              >
+                <Icon size={20} />
+                <span style={{ flex: 1 }}>Simulations</span>
+                <ChevronDown
+                  size={16}
+                  onClick={(e) => { e.stopPropagation(); setSimOpen((o) => !o); }}
+                  style={{ transition: "transform 0.2s", transform: simOpen ? "rotate(180deg)" : "none" }}
+                />
+              </button>
+              {simOpen && (
+                <div className="flex flex-col">
+                  {SIMS.map((s) => {
+                    const sActive = view === s.id;
+                    const sLocked = !canAccess(plan, s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setView(s.id)}
+                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        style={{
+                          paddingLeft: 30, paddingRight: 16,
+                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
+                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
+                          fontWeight: sActive ? 600 : 500,
+                        }}
+                      >
+                        <span style={{ flex: 1 }}>{s.label}</span>
+                        {sLocked && <Lock size={11} style={{ color: T.muted, opacity: 0.5 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
 
         // Groupe dépliant "Patrimoine"
         if (it.id === "patrimoine") {

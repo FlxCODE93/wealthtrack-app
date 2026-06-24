@@ -618,7 +618,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
           )}
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>{marketsOnly ? "Marché des cryptoactifs" : "Crypto Portfolio"}</h1>
           <p style={{ color: T.muted }}>
-            {marketsOnly ? "Cours live · Top 100 · Capitalisation" : "Prix live · Staking · Fiscalité"}
+            {marketsOnly ? "Cours live · Top 100 · Capitalisation" : "Prix live · Staking"}
             {lastUpdate && (
               <span style={{ fontSize: 11, marginLeft: 8 }}>
                 Mis à jour {lastUpdate.toLocaleTimeString("fr-FR")}
@@ -648,14 +648,6 @@ export default function Crypto({ setView, marketsOnly = false }) {
         </div>
       </div>
 
-      {!marketsOnly && (
-      <div className="flex items-start gap-2" style={{ color: T.muted, fontSize: 11, lineHeight: 1.5 }}>
-        <AlertTriangle size={13} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} />
-        <p style={{ margin: 0 }}>
-          La colonne <strong>« Impôt PFU estimé »</strong> de l'export CSV calcule le gain ligne par ligne — ce n'est pas la méthode légale française (PMCA, art. 150 VH bis CGI). Elle suppose aussi une vente immédiate de toute la position : si vous ne vendez rien, ou si le total de vos cessions de l'année reste sous {SEUIL_EXONERATION_CESSION} €, votre plus-value est exonérée d'impôt. Contrairement aux actions (PEA/CTO), <strong>la durée de détention n'a aucune incidence</strong> sur la fiscalité des cryptomonnaies en France — le PFU de 30 % s'applique de la même façon après 1 jour ou après 10 ans. Pour votre déclaration, utilisez l'onglet <strong>Fiscalité</strong>, un outil dédié (Waltio, Koinly…) ou un expert-comptable.
-        </p>
-      </div>
-      )}
 
       {/* API error */}
       {error && (

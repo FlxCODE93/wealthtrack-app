@@ -4904,10 +4904,10 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
       <Card>
         <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>STRUCTURE DU FINANCEMENT</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <MiniStat label="Votre apport" value={eur(totalApport)} color={T.cyan} />
+          <MiniStat label="Montant emprunté" value={eur(credit)} color={T.amber} />
+          <MiniStat label="Avec apport" value={eur(totalApport)} color={T.cyan} />
           <MiniStat label="Dont frais de notaire" value={eur(notaire)} color={T.muted} />
           <MiniStat label="Dont sur le bien" value={eur(apportSurBien)} color={T.blue} />
-          <MiniStat label="Montant emprunté" value={eur(credit)} color={T.amber} />
         </div>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>

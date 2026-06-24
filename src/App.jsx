@@ -620,7 +620,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     <aside
       className="hidden md:flex flex-col gap-0.5 shrink-0 wt-glass"
       style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 10px" : 16,
-               borderRight: `1px solid ${T.border}`, borderRadius: 0, transition: "width 0.18s ease",
+               borderRight: "1px solid rgba(255,255,255,0.02)", borderRadius: 0, transition: "width 0.18s ease",
                position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}
     >
       <div className="flex items-center gap-3 px-1 py-5 mb-1" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
@@ -883,7 +883,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           </button>
         )}
 
-        <div className="border-t" style={{ borderColor: T.border }}>
+        <div className="border-t" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
           {/* Upgrade CTA — uniquement plan Gratuit (levier de conversion).
               Les abonnés payants ne sont pas relancés : ils gardent le signal de confiance. */}
           {plan === "free" && (

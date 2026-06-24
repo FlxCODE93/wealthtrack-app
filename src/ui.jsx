@@ -9,6 +9,13 @@ import { glow } from "./theme.js";
 export const DiscreetCtx = React.createContext(false);
 export const useDiscreet = () => useContext(DiscreetCtx);
 
+// Retourne eur() ou une fonction qui masque les montants selon le mode discret.
+import { eur } from "./theme.js";
+export function useEur() {
+  const d = useContext(DiscreetCtx);
+  return d ? () => "•••• €" : eur;
+}
+
 /* Bouton unifié — DA WealthTrack. Centralise radius, padding, hover, focus et
    cibles tactiles (≥40px). variant: primary | secondary | danger ; size: sm | md | icon. */
 export function Button({ variant = "primary", size = "md", children, style, ...props }) {

@@ -52,7 +52,7 @@ import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
 import AIChatWidget from "./AIChatWidget.jsx";
-import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle, DiscreetCtx } from "./ui.jsx";
+import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle, DiscreetCtx, useEur } from "./ui.jsx";
 
 /* ------------------------------------------------------------------ */
 /*  Icône d'alerte par niveau (remplace les emojis 🔴🟡💡)            */
@@ -1753,6 +1753,7 @@ function TrialPopup({ onDiscover, onClose }) {
 /* ------------------------------------------------------------------ */
 function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, setBudgets, plan }) {
   const T = useT();
+  const fmt = useEur();
   const inputStyle = makeInputStyle(T);
   const TYPE_META = {
     revenu: { label: "Revenu", color: T.green },
@@ -1962,7 +1963,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
               <span style={{ color: T.muted, fontSize: 13, fontWeight: 600 }}>Rapprochement</span>
               <span style={{ color: T.muted, fontSize: 12 }}>Solde calculé :</span>
               <span style={{ color: soldeCalc >= 0 ? T.green : T.red, fontWeight: 700, fontSize: 13 }}>
-                {soldeCalc >= 0 ? "+" : ""}{eur(soldeCalc)}
+                {soldeCalc >= 0 ? "+" : ""}{fmt(soldeCalc)}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2038,7 +2039,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                           </div>
                           <span className="font-bold text-sm shrink-0"
                             style={{ color: t.amount >= 0 ? T.green : T.text }}>
-                            {t.amount >= 0 ? "+" : ""}{eur(t.amount)}
+                            {t.amount >= 0 ? "+" : ""}{fmt(t.amount)}
                           </span>
                         </div>
                         {/* Ligne 2 : date + cat + badge type + boutons */}
@@ -2100,7 +2101,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: catCol }} />
                     <span className="text-sm font-semibold flex-1" style={{ color: T.text }}>{cat}</span>
-                    <span className="text-sm font-bold" style={{ color: spent > 0 ? T.text : T.muted }}>{eur(spent)}</span>
+                    <span className="text-sm font-bold" style={{ color: spent > 0 ? T.text : T.muted }}>{fmt(spent)}</span>
                     <span style={{ color: T.muted, fontSize: 12 }}>/</span>
                     <input
                       type="number"
@@ -2119,8 +2120,8 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                       <div className="flex justify-between mt-1">
                         <span style={{ fontSize: 12, color: T.muted }}>{pctUsed.toFixed(0)}% utilisé</span>
                         {pctUsed >= 100
-                          ? <span style={{ fontSize: 12, color: T.red, fontWeight: 700 }}>Plafond dépassé de {eur(spent - limit)}</span>
-                          : <span style={{ fontSize: 12, color: T.muted }}>Reste {eur(limit - spent)}</span>}
+                          ? <span style={{ fontSize: 12, color: T.red, fontWeight: 700 }}>Plafond dépassé de {fmt(spent - limit)}</span>
+                          : <span style={{ fontSize: 12, color: T.muted }}>Reste {fmt(limit - spent)}</span>}
                       </div>
                     </div>
                   )}
@@ -6251,6 +6252,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
 /* ------------------------------------------------------------------ */
 function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const T = useT();
+  const fmt = useEur();
   const chartTip = makeChartTip(T);
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
@@ -6404,7 +6406,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </span>
           <span className="flex items-center gap-3">
             <span className="font-bold text-sm" style={{ color: isPassif ? T.red : catColor(cat) }}>
-              {isPassif ? "−" : ""}{eur(total)}
+              {isPassif ? "−" : ""}{fmt(total)}
             </span>
             <span style={{ color: T.muted, fontSize: 12 }}>{isOpen ? "▲" : "▼"}</span>
           </span>
@@ -6455,7 +6457,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                       style={{ ...inp, width: "100%", maxWidth: 120, padding: "8px 10px", fontSize: 13 }}
                     />
                     {(item.currency && item.currency !== "EUR") && (
-                      <span style={{ fontSize: 12, color: T.muted }}>= {eur(item.value)}</span>
+                      <span style={{ fontSize: 12, color: T.muted }}>= {fmt(item.value)}</span>
                     )}
                     <button onClick={() => deleteItem(side, cat.id, idx)} aria-label="Supprimer la ligne"
                       style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 10, minWidth: 40, minHeight: 40, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.red, marginLeft: "auto" }}>
@@ -6476,7 +6478,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-sm" style={{ color: T.text }}>
-                        {isPassif ? "−" : ""}{eur(item.value)}
+                        {isPassif ? "−" : ""}{fmt(item.value)}
                       </span>
                       {item.currency && item.currency !== "EUR" && (
                         <div style={{ fontSize: 12, color: T.muted }}>{(item.valueNative ?? item.value).toLocaleString("fr-FR")} {item.currency}</div>
@@ -6648,13 +6650,13 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
-              <Badge tone="green" label={eur(totalActifs)} />
+              <Badge tone="green" label={fmt(totalActifs)} />
             </div>
             {effectiveActifs.map((cat) => renderCategory(cat, "actifs"))}
 
             <div className="flex items-center gap-2 mt-8 mb-3">
               <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>
-              <Badge tone="red" label={"−" + eur(totalPassifs)} />
+              <Badge tone="red" label={fmt(totalPassifs)} />
             </div>
             {patrimoine.passifs.length > 0
               ? patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))
@@ -6702,7 +6704,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 {activeSlice != null && allSlices[activeSlice] ? (
                   <>
                     <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
-                    <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{eur(allSlices[activeSlice].value)}</span>
+                    <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
                     <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
                       {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
                     </span>
@@ -6710,7 +6712,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 ) : (
                   <>
                     <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
-                    <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{eur(netWorth)}</span>
+                    <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
                   </>
                 )}
               </div>

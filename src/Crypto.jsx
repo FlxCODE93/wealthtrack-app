@@ -12,6 +12,7 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { ExpandableChart } from "./ChartComponents.jsx";
 import { useT } from "./ThemeProvider.jsx";
+import { useEur as useEurCtx } from "./ui.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
 import { API_URL } from "./config.js";
 import { useLocalStorage } from "./storage.js";
@@ -414,6 +415,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
 export default function Crypto({ setView, marketsOnly = false }) {
   const T = useT();
+  const fmtCtx = useEurCtx(); // masquage mode discret
   const [holdings, setHoldings]     = useLocalStorage("wt_crypto_holdings", DEFAULT_HOLDINGS);
   const [prices, setPrices]         = useState({});
   const [loading, setLoading]       = useState(false);
@@ -664,8 +666,8 @@ export default function Crypto({ setView, marketsOnly = false }) {
       {!marketsOnly && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Valeur totale", value: eur(totalValue), color: T.text, Icon: Wallet },
-          { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${eur(totalGain)}`, color: totalGain >= 0 ? T.green : T.red, Icon: totalGain >= 0 ? TrendingUp : TrendingDown },
+          { label: "Valeur totale", value: fmtCtx(totalValue), color: T.text, Icon: Wallet },
+          { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${fmtCtx(totalGain)}`, color: totalGain >= 0 ? T.green : T.red, Icon: totalGain >= 0 ? TrendingUp : TrendingDown },
           { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? T.green : T.red, Icon: Percent },
           { label: "Positions", value: `${holdings.length}`, color: T.blue, Icon: Layers },
         ].map((kpi) => (
@@ -783,7 +785,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
                 )}
               </div>
               <div style={{ textAlign: "right", color: T.text, fontWeight: 600 }}>
-                {h.value != null ? eur(h.value) : "—"}
+                {h.value != null ? fmtCtx(h.value) : "—"}
               </div>
               <div style={{ textAlign: "right" }}>
                 <GainBadge abs={h.gain} pct={h.gainPct} />
@@ -1048,10 +1050,10 @@ export default function Crypto({ setView, marketsOnly = false }) {
                         <div style={{ textAlign: "right", color: T.amber, fontWeight: 700 }}>
                           {h.apy != null ? `${h.apy} %` : "—"}
                         </div>
-                        <div style={{ textAlign: "right", color: T.text }}>{eur(h.value)}</div>
+                        <div style={{ textAlign: "right", color: T.text }}>{fmtCtx(h.value)}</div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ color: T.green, fontWeight: 700 }}>{h.annualYield != null ? eur(h.annualYield) : "—"}</div>
-                          <div style={{ fontSize: 11, color: T.muted }}>{h.monthlyYield != null ? `${eur(h.monthlyYield)}/mois` : ""}</div>
+                          <div style={{ color: T.green, fontWeight: 700 }}>{h.annualYield != null ? fmtCtx(h.annualYield) : "—"}</div>
+                          <div style={{ fontSize: 11, color: T.muted }}>{h.monthlyYield != null ? `${fmtCtx(h.monthlyYield)}/mois` : ""}</div>
                         </div>
                       </div>
                     ))}

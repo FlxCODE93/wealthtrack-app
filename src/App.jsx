@@ -6505,9 +6505,10 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </button>
       </div>
 
-      {/* Évolution du patrimoine net — en tête de page */}
+      {/* Évolution + Performance côte à côte (façon Finary) */}
       {hasData && (
-        <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -6555,6 +6556,29 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             </AreaChart>
           </ExpandableChart>
         </Card>
+
+        {/* Performance — déplacée à côté du graphe (façon Finary) */}
+        <Card className="flex flex-col">
+          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Performance</h2>
+          <p className="text-sm mb-5" style={{ color: T.muted }}>
+            Performance depuis le {chartHist[0]?.m || "—"} : {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+          </p>
+          <div className="flex flex-col justify-center flex-1 gap-2">
+            <div className="text-4xl font-bold" style={{ color: growthTotalPct >= 0 ? T.green : T.red }}>
+              {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+            </div>
+            <div className="flex items-center gap-1.5 text-sm flex-wrap">
+              {growthTotalAbs >= 0
+                ? <ArrowUpRight size={15} style={{ color: T.green }} />
+                : <ArrowDownRight size={15} style={{ color: T.red }} />}
+              <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
+                {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
+              </span>
+              <span style={{ color: T.muted }}>sur la période</span>
+            </div>
+          </div>
+        </Card>
+        </div>
       )}
 
       {/* Accès rapides aux composantes du patrimoine */}
@@ -6611,7 +6635,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
 
       {/* KPI row */}
       {hasData && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard
           label="Patrimoine net"
           value={<GrowthValue value={netWorth} formatter={eur} flashRef={netWorthFlashRef} />}
@@ -6646,26 +6670,28 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             <span style={{ color: T.muted }}>des actifs (endettement)</span>
           </>}
         />
-        <KpiCard
-          label={`Croissance depuis ${chartHist[0]?.m || ""}`}
-          value={(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-          valueColor={growthTotalPct >= 0 ? T.green : T.red}
-          sub={<>
-            {growthTotalAbs >= 0
-              ? <ArrowUpRight size={14} style={{ color: T.green }} />
-              : <ArrowDownRight size={14} style={{ color: T.red }} />}
-            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
-              {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
-            </span>
-            <span style={{ color: T.muted }}>net worth</span>
-          </>}
-        />
       </div>
       )}
 
-      {/* Répartition */}
+      {/* Détail par catégorie (gauche) + Répartition (droite) — façon Finary */}
       {hasData && (
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Détail par catégorie */}
+        <Card>
+          <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-8">
+            <div>
+              <div className="text-xs font-semibold mb-2" style={{ color: T.green, letterSpacing: 1 }}>ACTIFS</div>
+              {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
+            </div>
+            <div>
+              <div className="text-xs font-semibold mb-2" style={{ color: T.red, letterSpacing: 1 }}>PASSIFS</div>
+              {patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Répartition */}
         <Card>
           <div className="mb-2">
             <div className="flex items-center gap-2 mb-1">
@@ -6714,21 +6740,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       </div>
       )}
-
-      {/* Détail par catégorie */}
-      <Card>
-        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Détail par catégorie</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: T.green, letterSpacing: 1 }}>ACTIFS</div>
-            {patrimoine.actifs.map((cat) => renderCategory(cat, "actifs"))}
-          </div>
-          <div>
-            <div className="text-xs font-semibold mb-2" style={{ color: T.red, letterSpacing: 1 }}>PASSIFS</div>
-            {patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))}
-          </div>
-        </div>
-      </Card>
 
       {/* Comparison table */}
       {hasData && (

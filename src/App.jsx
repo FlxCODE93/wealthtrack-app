@@ -975,7 +975,7 @@ function ObjectiveModal({ onClose, onPick }) {
         style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "30px 32px", width: "100%", maxWidth: 460, position: "relative" }}>
         <button onClick={onClose} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none", color: "#6b7280", cursor: "pointer", minWidth: 40, minHeight: 40 }}><X size={20} /></button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <Sparkles size={20} style={{ color: T.violet }} />
+          <Sparkles size={20} style={{ color: T.blue }} />
           <h2 style={{ color: T.text, fontWeight: 800, fontSize: 19, margin: 0 }}>Quel est votre objectif ?</h2>
         </div>
         <p style={{ color: T.muted, fontSize: 13.5, marginBottom: 20 }}>Choisissez une priorité — votre plan d'action sera adapté en conséquence.</p>
@@ -985,10 +985,10 @@ function ObjectiveModal({ onClose, onPick }) {
             return (
               <button key={o.id} onClick={() => onPick(o)}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderRadius: 14, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.03)", color: T.text, cursor: "pointer", textAlign: "left", fontWeight: 600, fontSize: 14.5 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${T.violet}66`; e.currentTarget.style.background = `${T.violet}10`; }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${T.blue}66`; e.currentTarget.style.background = `${T.blue}10`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}>
-                <span style={{ width: 38, height: 38, borderRadius: 10, background: `${T.violet}18`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon size={18} style={{ color: T.violet }} />
+                <span style={{ width: 38, height: 38, borderRadius: 10, background: `${T.blue}18`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon size={18} style={{ color: T.blue }} />
                 </span>
                 <span style={{ flex: 1 }}>{o.label}</span>
                 <ChevronRight size={16} style={{ color: T.muted, flexShrink: 0 }} />

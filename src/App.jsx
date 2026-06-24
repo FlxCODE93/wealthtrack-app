@@ -35,7 +35,7 @@ import {
   SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET, RATE_SCENARIOS,
   IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
-  loanFromPayment, longTermGain,
+  loanFromPayment,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
   perSimulation, perSeries,
   smoothedMonthlyIncome, isIncomeVariable,
@@ -47,9 +47,9 @@ import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, use
 import { useLocalStorage, clearLocalAppData } from "./storage.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
-import { TX, HISTO, WHATIF, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
+import { TX, HISTO, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
-import { calculateHealthScore, getScoreBadge, calculateWhatIfScenarios } from "./healthScore.js";
+import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
 import AIChatWidget from "./AIChatWidget.jsx";
 import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle } from "./ui.jsx";
@@ -1007,7 +1007,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
-  const [active, setActive] = useState({});
   const [activeExpSlice, setActiveExpSlice] = useState(null); // segment survolé du donut dépenses
   // Segment actif (survol) : agrandi + fin halo extérieur — même D.A. que le donut Patrimoine.
   const renderActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill }) => (
@@ -1094,16 +1093,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
     }
   }, { dependencies: [savingsStreak] });
 
-  const profileType = useMemo(() => detectProfileType(transactions || []), [transactions]);
-  const isSalarie = profileType === "salarie_stable" || profileType === "interimaire";
-  const visibleWhatIf = useMemo(
-    () => WHATIF.filter((w) => w.id !== "salaire" || isSalarie),
-    [isSalarie]
-  );
-
   const healthScore = useMemo(() => calculateHealthScore(totals, patrimoine, simParams), [totals, patrimoine, simParams]);
   const badge = getScoreBadge(healthScore.overall);
-  const scenarios = useMemo(() => calculateWhatIfScenarios(totals, simParams), [totals, simParams]);
 
   const progressTips = useMemo(() => {
     const tips = [];
@@ -1138,9 +1129,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
     }
     return tips;
   }, [tauxEpargne, revenus, invest, credits, healthScore]);
-
-  const gainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + w.gain : s), 0);
-  const ltGainTotal = visibleWhatIf.reduce((s, w) => (active[w.id] ? s + longTermGain(w.gain) : s), 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -1359,64 +1347,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <div className="text-sm mt-1" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
         </Card>
       </div>
-
-      {/* Et si ? */}
-      <Card>
-        <div className="flex items-center gap-2 mb-1">
-          <Zap size={18} style={{ color: T.amber }} />
-          <h2 className="text-xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Scénarios d'optimisation</h2>
-        </div>
-        <p className="text-sm mb-4" style={{ color: T.muted }}>
-          Activez un scénario pour mesurer son impact sur votre capacité d'épargne mensuelle.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {visibleWhatIf.map((w) => {
-            const on = !!active[w.id];
-            return (
-              <button key={w.id}
-                onClick={() => setActive((a) => ({ ...a, [w.id]: !a[w.id] }))}
-                className="text-left rounded-xl p-4 flex items-start gap-3 transition"
-                style={{
-                  background: on ? "rgba(39,163,122,0.06)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${on ? T.green : T.border}`,
-                }}>
-                <div className="flex-1">
-                  <div className="text-sm font-medium" style={{ color: T.text }}>{w.label}</div>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-sm font-semibold" style={{ color: T.green }}>+{w.gain} €/mois</span>
-                    <span style={{ color: T.muted, fontSize: 12 }}>·</span>
-                    <span className="text-xs flex items-center gap-1" style={{ color: T.muted }}>
-                      <TrendingUp size={10} /> 20 ans : +{eur(longTermGain(w.gain))}
-                    </span>
-                  </div>
-                </div>
-                <div className="w-4 h-4 rounded-full mt-0.5 shrink-0"
-                  style={{ border: `1.5px solid ${on ? T.green : T.muted}`, background: on ? T.green : "transparent" }} />
-              </button>
-            );
-          })}
-        </div>
-        {gainTotal > 0 && (
-          <div className="mt-4 rounded-xl p-4"
-            style={{ background: "rgba(34,199,154,0.08)", border: `1px solid ${T.green}` }}>
-            <div className="flex flex-wrap gap-6 justify-between items-center">
-              <div>
-                <div className="text-xs font-semibold mb-1" style={{ color: T.muted, letterSpacing: 0.5 }}>IMPACT MENSUEL COMBINÉ</div>
-                <div className="text-2xl font-bold" style={{ color: T.green }}>+{gainTotal} €/mois</div>
-                <div className="text-sm mt-1" style={{ color: T.muted }}>soit +{eur(gainTotal * 12)} par an</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-semibold mb-1" style={{ color: T.muted, letterSpacing: 0.5 }}>SI INVESTI 20 ANS · MSCI WORLD 10,5%</div>
-                <div className="text-2xl font-bold" style={{ color: T.cyan }}>+{eur(ltGainTotal)}</div>
-                <div className="text-sm mt-1" style={{ color: T.muted }}>de gain généré par intérêts composés</div>
-              </div>
-            </div>
-            <div className="text-xs mt-3 pt-3 flex items-start gap-1.5" style={{ color: T.muted, borderTop: `1px solid ${T.border}` }}>
-              <AlertTriangle size={12} style={{ color: T.amber, flexShrink: 0, marginTop: 2 }} aria-hidden="true" /> <span>{RATE_DISCLAIMER}</span>
-            </div>
-          </div>
-        )}
-      </Card>
 
       {/* Historique mensuel */}
       <Card>

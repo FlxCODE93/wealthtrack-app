@@ -611,7 +611,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   const IconOnly = ({ Icon, onClick, active, label }) => (
     <button onClick={onClick} title={label} aria-label={label}
       className="flex items-center justify-center py-3 rounded-xl transition"
-      style={{ background: active ? "rgba(255,255,255,0.06)" : "transparent", border: "none", cursor: "pointer", color: active ? T.text : T.muted }}>
+      style={{ background: "transparent", border: "none", cursor: "pointer", color: active ? T.text : T.muted }}>
       <Icon size={20} />
     </button>
   );
@@ -667,9 +667,9 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                 className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
-                  background: view === "interets" ? "rgba(255,255,255,0.06)" : "transparent",
+                  background: "transparent",
                   border: "none", cursor: "pointer",
-                  borderLeft: view === "interets" ? `3px solid ${T.blue}` : "3px solid transparent",
+                  borderLeft: "3px solid transparent",
                   color: simActive ? T.text : T.muted,
                   fontWeight: simActive ? 600 : 500,
                 }}
@@ -694,8 +694,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                         className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
-                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
-                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          background: "transparent",
+                          borderLeft: "3px solid transparent",
                           color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
                           fontWeight: sActive ? 600 : 500,
                         }}
@@ -720,9 +720,9 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                 className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
-                  background: view === "patrimoine" ? "rgba(255,255,255,0.06)" : "transparent",
+                  background: "transparent",
                   border: "none", cursor: "pointer",
-                  borderLeft: view === "patrimoine" ? `3px solid ${T.blue}` : "3px solid transparent",
+                  borderLeft: "3px solid transparent",
                   color: patriActive ? T.text : T.muted,
                   fontWeight: patriActive ? 600 : 500,
                 }}
@@ -747,8 +747,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                         className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
-                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
-                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          background: "transparent",
+                          borderLeft: "3px solid transparent",
                           color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
                           fontWeight: sActive ? 600 : 500,
                         }}
@@ -795,8 +795,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
                         className="flex items-center gap-2 py-2 rounded-lg text-left text-sm transition"
                         style={{
                           paddingLeft: 30, paddingRight: 16,
-                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
-                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          background: "transparent",
+                          borderLeft: "3px solid transparent",
                           color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
                           fontWeight: sActive ? 600 : 500,
                         }}
@@ -820,9 +820,9 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             onClick={() => setView(it.id)}
             className="flex items-center gap-3 py-2 rounded-xl text-left transition"
             style={{
-              paddingLeft: active ? 13 : 16, paddingRight: 16,
-              background: active ? "rgba(255,255,255,0.06)" : "transparent",
-              borderLeft: active ? `3px solid ${T.blue}` : "3px solid transparent",
+              paddingLeft: 16, paddingRight: 16,
+              background: "transparent",
+              borderLeft: "3px solid transparent",
               boxShadow: "none",
               color: active ? T.text : locked ? T.muted + "88" : T.muted,
               fontWeight: active ? 600 : 500,

@@ -7419,6 +7419,22 @@ function OutilsHub({ setView, plan }) {
 /* ------------------------------------------------------------------ */
 /*  ÉCRAN : CALCULATRICE D'INTÉRÊTS COMPOSÉS                          */
 /* ------------------------------------------------------------------ */
+// Champ défini au niveau module (et non dans le render) — sinon React remonte
+// l'input à chaque frappe et le focus saute.
+function Champ({ T, label, value, set, unit, step }) {
+  return (
+    <div className="mb-5">
+      <label style={{ fontSize: 13, color: T.muted, marginBottom: 8, display: "block" }}>{label}</label>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${T.border}`, paddingBottom: 8 }}>
+        <input type="number" inputMode="numeric" min={0} step={step} value={value}
+          onChange={(e) => set(e.target.value)}
+          style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 26, fontWeight: 700 }} />
+        <span style={{ color: T.muted, fontSize: 18, fontWeight: 600 }}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
 function CompoundCalc({ setView }) {
   const T = useT();
   const [initial, setInitial] = useState("10000");
@@ -7450,20 +7466,7 @@ function CompoundCalc({ setView }) {
   const totalVersements = last.versements;
   const interets = Math.max(0, capitalFinal - totalVersements);
 
-  const inputBox = { display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${T.border}`, paddingBottom: 8 };
-  const inputEl = { flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 26, fontWeight: 700 };
   const lbl = { fontSize: 13, color: T.muted, marginBottom: 8, display: "block" };
-
-  const Champ = ({ label, value, set, unit, step }) => (
-    <div className="mb-5">
-      <label style={lbl}>{label}</label>
-      <div style={inputBox}>
-        <input type="number" inputMode="numeric" min={0} step={step} value={value}
-          onChange={(e) => set(e.target.value)} style={inputEl} />
-        <span style={{ color: T.muted, fontSize: 18, fontWeight: 600 }}>{unit}</span>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -7481,10 +7484,10 @@ function CompoundCalc({ setView }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Paramètres */}
         <div className="rounded-2xl p-6" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-          <Champ label="Capital initial" value={initial} set={setInitial} unit="€" step={500} />
-          <Champ label="Épargne mensuelle" value={monthly} set={setMonthly} unit="€" step={50} />
-          <Champ label="Horizon de placement" value={years} set={setYears} unit="ans" step={1} />
-          <Champ label="Taux d'intérêt" value={rate} set={setRate} unit="%" step={0.5} />
+          <Champ T={T} label="Capital initial" value={initial} set={setInitial} unit="€" step={500} />
+          <Champ T={T} label="Épargne mensuelle" value={monthly} set={setMonthly} unit="€" step={50} />
+          <Champ T={T} label="Horizon de placement" value={years} set={setYears} unit="ans" step={1} />
+          <Champ T={T} label="Taux d'intérêt" value={rate} set={setRate} unit="%" step={0.5} />
           <div>
             <label style={lbl}>Capitalisation</label>
             <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>

@@ -23,18 +23,18 @@ import { ScrollProgressBar } from "./lib/motion.jsx";
 /* ── Constantes de contenu ─────────────────────────────────────── */
 
 const HERO_SERIES = [
-  { m: "J", value: 238000 },
-  { m: "F", value: 241000 },
-  { m: "M", value: 245000 },
-  { m: "A", value: 249000 },
-  { m: "M", value: 253000 },
-  { m: "J", value: 258000 },
-  { m: "J", value: 261000 },
-  { m: "A", value: 266000 },
-  { m: "S", value: 271000 },
-  { m: "O", value: 275000 },
-  { m: "N", value: 279000 },
-  { m: "D", value: 284500 },
+  { m: "Aoû", value: 113000 },
+  { m: "Sep", value: 115200 },
+  { m: "Oct", value: 117800 },
+  { m: "Nov", value: 119500 },
+  { m: "Déc", value: 121400 },
+  { m: "Jan", value: 123100 },
+  { m: "Fév", value: 125600 },
+  { m: "Mar", value: 129000 },
+  { m: "Avr", value: 133800 },
+  { m: "Mai", value: 140200 },
+  { m: "Juin", value: 150500 },
+  { m: "Jun", value: 156400 },
 ];
 
 // Répartition affichée dans le mockup "Patrimoine" de la landing.
@@ -876,9 +876,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 return (
                   <div key={it.label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium"
                     style={{
-                      background: it.active ? T.gradientPrimary : "transparent",
+                      background: it.active ? T.blue : "transparent",
                       color: it.active ? "#fff" : T.muted,
-                      boxShadow: it.active ? glow(T.violet, 18, "33") : "none",
+                      boxShadow: "none",
                     }}>
                     <Icon size={14} />
                     {it.label}
@@ -914,51 +914,83 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 })}
               </div>
 
-              {/* Stats clés */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                {[
-                  { label: "Patrimoine net",  value: "142 500 €",  color: T.green,   hint: "↗ +15 250 € vs mois préc." },
-                  { label: "Total actifs",    value: "277 500 €",  color: T.green,   hint: "Immobilier · 72,1 % du total" },
-                  { label: "Total passifs",   value: "−135 000 €", color: "#ef4444", hint: "48,6 % des actifs" },
-                  { label: "Croissance",      value: "+109,6 %",   color: T.green,   hint: "↗ +74 500 € net worth" },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                    <div className="text-[11px] mb-1" style={{ color: T.muted }}>{s.label}</div>
-                    <div className="text-lg md:text-xl font-black mb-1" style={{ color: s.color }}>{s.value}</div>
-                    <div className="text-[10px]" style={{ color: T.muted }}>{s.hint}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Évolution + Répartition */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Évolution + Performance — layout fidèle au screenshot */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                {/* Évolution du patrimoine net (2/3) */}
                 <div className="md:col-span-2 rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
                   <div className="flex items-center justify-between mb-1">
-                    <div className="text-sm font-bold" style={{ color: T.text }}>Évolution du patrimoine</div>
-                    <div className="text-[11px] px-2 py-0.5 rounded-md" style={{ background: T.green + "1a", color: T.green }}>3 ans</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-bold" style={{ color: T.text }}>Évolution du patrimoine net</div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ background: "rgba(0,200,150,0.12)", color: C.green }}>
+                        ↗ +38,5 %
+                      </span>
+                    </div>
+                    <div className="text-[10px] px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.05)", color: T.muted, border: `1px solid ${T.border}` }}>12 derniers mois</div>
                   </div>
-                  <div className="text-[10px] mb-2" style={{ color: T.muted }}>Net worth sur la période sélectionnée</div>
-                  <ResponsiveContainer width="100%" height={130}>
+                  <ResponsiveContainer width="100%" height={140}>
                     <AreaChart data={HERO_SERIES} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="patrGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={T.violet} stopOpacity={0.4} />
-                          <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
+                          <stop offset="0%" stopColor={C.blue} stopOpacity={0.35} />
+                          <stop offset="100%" stopColor={C.blue} stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <Area type="monotone" dataKey="value" stroke={T.violet} strokeWidth={2} fill="url(#patrGrad)" />
+                      <Area type="monotone" dataKey="value" stroke={C.blue} strokeWidth={2} fill="url(#patrGrad)" dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                {/* Performance (1/3) */}
+                <div className="rounded-2xl p-5 flex flex-col justify-between" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                  <div>
+                    <div className="text-sm font-bold mb-1" style={{ color: T.text }}>Performance</div>
+                    <div className="text-[10px] mb-4" style={{ color: T.muted }}>Depuis Juil 2025 : +38,5 %</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-black mb-2" style={{ color: C.green }}>+38,5 %</div>
+                    <div className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}>
+                      ↗ <span>+42 729 €</span>
+                      <span style={{ color: T.muted, fontWeight: 400 }}>sur la période</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actifs + Répartition */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Liste actifs (2/3) */}
+                <div className="md:col-span-2 rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-sm font-bold" style={{ color: T.text }}>Actifs</div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${C.blue}18`, color: C.blue }}>288 729 €</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: "Épargne liquide",   value: "22 500 €", color: C.green },
+                      { label: "Investissements",    value: "45 000 €", color: C.blue },
+                      { label: "Immobilier",         value: "200 000 €", color: "#3b82f6" },
+                      { label: "Autres actifs",      value: "10 000 €", color: C.muted },
+                    ].map((a) => (
+                      <div key={a.label} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
+                          <span className="text-xs" style={{ color: T.text }}>{a.label}</span>
+                        </div>
+                        <span className="text-xs font-bold" style={{ color: a.color }}>{a.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Répartition donut (1/3) */}
+                <div className="rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-bold" style={{ color: T.text }}>Répartition</div>
-                    <div className="text-[10px]" style={{ color: T.muted }}>6 catégories</div>
+                    <div className="text-[10px]" style={{ color: T.muted }}>7 catégories</div>
                   </div>
-                  <ResponsiveContainer width="100%" height={120}>
+                  <ResponsiveContainer width="100%" height={110}>
                     <PieChart>
-                      <Pie data={PATR_ALLOC} dataKey="value" nameKey="name" innerRadius={34} outerRadius={52} paddingAngle={2} stroke="none">
+                      <Pie data={PATR_ALLOC} dataKey="value" nameKey="name" innerRadius={30} outerRadius={48} paddingAngle={2} stroke="none">
                         {PATR_ALLOC.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Pie>
                     </PieChart>

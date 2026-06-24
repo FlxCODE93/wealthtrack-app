@@ -3302,8 +3302,8 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         <div style={{ fontSize: 12, color: T.muted }}>{label === 0 ? "Aujourd'hui" : `Dans ${label} an${label > 1 ? "s" : ""}`}</div>
         <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(capital)}</div>
         <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-          {row(lineColor, "Gains composés", gains)}
-          {row("#3b82f6", "Apports cumulés", apports)}
+          {row(T.green, "Intérêts", gains)}
+          {row(T.blue, "Versements", apports)}
         </div>
       </div>
     );

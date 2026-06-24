@@ -1157,7 +1157,39 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
       </div>
 
-      {/* Ligne 1 — synthèse du mois (gauche) + répartition des dépenses (droite) */}
+      {/* Ligne 1 — flux de trésorerie (Sankey) : revenus → postes */}
+      {revenus > 0 && (() => {
+        const N = 7;
+        const top = breakdown.slice(0, N);
+        const autres = breakdown.slice(N).reduce((s, b) => s + b.amount, 0);
+        const dests = [
+          ...top.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted })),
+          ...(autres > 0 ? [{ name: "Autres", value: autres, color: T.muted }] : []),
+          ...(invest > 0 ? [{ name: "Investissements", value: invest, color: T.cyan }] : []),
+          ...(restant > 0 ? [{ name: "Restant à vivre", value: restant, color: T.green }] : []),
+        ].filter((d) => d.value > 0);
+        if (dests.length === 0) return null;
+        const data = {
+          nodes: [{ name: "Revenus", color: T.green }, ...dests.map((d) => ({ name: d.name, color: d.color }))],
+          links: dests.map((d, i) => ({ source: 0, target: i + 1, value: Math.max(1, Math.round(d.value)) })),
+        };
+        return (
+          <Card>
+            <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Flux de trésorerie</h2>
+            <p className="text-sm mb-4" style={{ color: T.muted }}>
+              De vos revenus vers vos postes de dépenses, investissements et épargne — largeur ∝ montant
+            </p>
+            <ExpandableChart height={Math.max(330, data.nodes.length * 38)} title="Flux de trésorerie">
+              <Sankey data={data} node={<SankeyNode />} link={<SankeyLink />}
+                nodeWidth={14} nodePadding={20} margin={{ top: 12, right: 168, bottom: 12, left: 96 }}>
+                <Tooltip formatter={(v) => eur(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10 }} itemStyle={{ color: T.text }} />
+              </Sankey>
+            </ExpandableChart>
+          </Card>
+        );
+      })()}
+
+      {/* Ligne 2 — synthèse du mois (gauche) + répartition des dépenses (droite) */}
       <Card>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
       <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -1267,38 +1299,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
       </div>
       </div>
       </Card>
-
-      {/* Ligne 2 — flux de trésorerie (Sankey) : revenus → postes */}
-      {revenus > 0 && (() => {
-        const N = 7;
-        const top = breakdown.slice(0, N);
-        const autres = breakdown.slice(N).reduce((s, b) => s + b.amount, 0);
-        const dests = [
-          ...top.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted })),
-          ...(autres > 0 ? [{ name: "Autres", value: autres, color: T.muted }] : []),
-          ...(invest > 0 ? [{ name: "Investissements", value: invest, color: T.cyan }] : []),
-          ...(restant > 0 ? [{ name: "Restant à vivre", value: restant, color: T.green }] : []),
-        ].filter((d) => d.value > 0);
-        if (dests.length === 0) return null;
-        const data = {
-          nodes: [{ name: "Revenus", color: T.green }, ...dests.map((d) => ({ name: d.name, color: d.color }))],
-          links: dests.map((d, i) => ({ source: 0, target: i + 1, value: Math.max(1, Math.round(d.value)) })),
-        };
-        return (
-          <Card>
-            <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Flux de trésorerie</h2>
-            <p className="text-sm mb-4" style={{ color: T.muted }}>
-              De vos revenus vers vos postes de dépenses, investissements et épargne — largeur ∝ montant
-            </p>
-            <ExpandableChart height={Math.max(330, data.nodes.length * 38)} title="Flux de trésorerie">
-              <Sankey data={data} node={<SankeyNode />} link={<SankeyLink />}
-                nodeWidth={14} nodePadding={20} margin={{ top: 12, right: 168, bottom: 12, left: 96 }}>
-                <Tooltip formatter={(v) => eur(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10 }} itemStyle={{ color: T.text }} />
-              </Sankey>
-            </ExpandableChart>
-          </Card>
-        );
-      })()}
 
       {/* Modale d'édition rapide d'un pilier */}
       {editPillar && createPortal(

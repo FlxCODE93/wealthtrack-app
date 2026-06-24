@@ -618,7 +618,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
   return (
     <aside
-      className="hidden md:flex flex-col gap-1 shrink-0 wt-glass"
+      className="hidden md:flex flex-col gap-0.5 shrink-0 wt-glass"
       style={{ width: collapsed ? 76 : 270, padding: collapsed ? "16px 10px" : 16,
                borderRight: `1px solid ${T.border}`, borderRadius: 0, transition: "width 0.18s ease",
                position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" }}
@@ -659,7 +659,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="simulations" className="flex flex-col">
               <button
                 onClick={() => { setView("interets"); setSimOpen(true); }}
-                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: view === "interets" ? "rgba(255,255,255,0.06)" : "transparent",
@@ -712,7 +712,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="patrimoine" className="flex flex-col">
               <button
                 onClick={() => { setView("patrimoine"); setPatriOpen(true); }}
-                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: view === "patrimoine" ? "rgba(255,255,255,0.06)" : "transparent",
@@ -765,7 +765,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
             <div key="outils" className="flex flex-col">
               <button
                 onClick={() => setOutilsOpen((o) => !o)}
-                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,
                   background: "transparent", border: "none", cursor: "pointer",
@@ -813,7 +813,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           <button
             key={it.id}
             onClick={() => setView(it.id)}
-            className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+            className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
             style={{
               paddingLeft: active ? 13 : 16, paddingRight: 16,
               background: active ? "rgba(255,255,255,0.06)" : "transparent",
@@ -837,7 +837,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         <button
           onClick={() => setView("profil")}
           aria-label="Profil" title={collapsed ? "Profil" : undefined}
-          className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+          className="flex items-center gap-3 py-2.5 rounded-xl text-left transition"
           style={{
             paddingLeft: collapsed ? 0 : (view === "profil" ? 13 : 16), paddingRight: collapsed ? 0 : 16,
             justifyContent: collapsed ? "center" : "flex-start",

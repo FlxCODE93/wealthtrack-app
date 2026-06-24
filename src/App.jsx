@@ -2384,8 +2384,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
       mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Modéré",      capAt(0.10),                        apports),
       mk("Or",         "or",       "5 %",        "#f59e0b",    "Modéré",      capAt(0.05),                        apports),
-      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Extrême",     capAt(0.10),                        apports),
-      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Extrême+",    capAt(0.065),                       apports),
+      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Spéculatif",  capAt(0.10),                        apports),
+      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Spéculatif",  capAt(0.065),                       apports),
     ];
   }, [initial, monthly, horizon, price, sim]);
 
@@ -2643,22 +2643,22 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       {activeTab === "btc" && (
         <ScenarioCard
           title="Bitcoin"
-          rate="médian 12 %/an · EXTRÊME" accent={ASSET.btc}
+          rate="rendement annualisé moyen · 10 ans" accent={ASSET.btc}
           lineColor={ASSET.btc} chartKey="BTC" logScale showBand={false}
           warning={{
-            title: "VOLATILITÉ EXTRÊME — LIRE AVANT D'INVESTIR",
+            title: "Actif hautement spéculatif — points de vigilance",
             points: [
-              "Chutes historiques : −80 % en 2018, −77 % en 2022 — récupération : 2 à 3 ans",
-              "Risque réglementaire : interdiction possible dans certains pays",
-              "Allocation max recommandée : 5 à 10 % du portefeuille UNIQUEMENT",
+              "Drawdowns historiques significatifs (−80 % en 2018, −77 % en 2022) avec une récupération de 2 à 3 ans",
+              "Cadre réglementaire en évolution — risque juridique selon les juridictions",
+              "Allocation recommandée : 5 à 10 % maximum du portefeuille global",
             ],
-            disclaimer: "Cette simulation montre un rendement théorique. En réalité, la majorité des investisseurs panic-sell avant le gain. Ne pas investir l'argent dont vous avez besoin avant 5 ans.",
+            disclaimer: "Projection indicative basée sur les rendements historiques. Les performances passées ne préjugent pas des performances futures. Horizon minimal conseillé : 5 ans.",
           }}
           riskBadges={[
-            { label: "Volatilité 65 %",      color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Drawdown −80 %",        color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Max 10 % portfolio",    color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Horizon 5 ans min",      color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Volatilité annualisée ~65 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Drawdown max −80 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Allocation max 10 %",         color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Horizon ≥ 5 ans",             color: "#eab308", bg: "rgba(234,179,8,0.08)" },
           ]}
           stats={[
             { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: ASSET.btc },
@@ -2675,22 +2675,22 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       {activeTab === "eth" && (
         <ScenarioCard
           title="Ethereum"
-          rate="médian 10 %/an · EXTRÊME+" accent={ASSET.eth}
+          rate="rendement annualisé moyen · 8 ans" accent={ASSET.eth}
           lineColor={ASSET.eth} chartKey="ETH" logScale showBand={false}
           warning={{
-            title: "RISQUE EXTRÊME — RÉSERVÉ AUX UTILISATEURS AVERTIS",
+            title: "Actif hautement spéculatif — points de vigilance",
             points: [
-              "Chutes historiques : −85 % en 2018, −81 % en 2022",
-              "Risque technologique : si le protocole Ethereum échoue ou est supplanté",
-              "Allocation max recommandée : 2 à 5 % du portefeuille UNIQUEMENT",
+              "Drawdowns historiques importants (−85 % en 2018, −81 % en 2022), recul historique limité à 8 ans",
+              "Risque technologique : protocole en développement actif, exposition à la concurrence",
+              "Allocation recommandée : 2 à 5 % maximum du portefeuille global",
             ],
-            disclaimer: "Ethereum est encore plus spéculatif que Bitcoin. Réservé aux investisseurs qui comprennent la blockchain et acceptent une perte totale de leur mise.",
+            disclaimer: "Projection indicative basée sur les rendements historiques. Les performances passées ne préjugent pas des performances futures. Horizon minimal conseillé : 5 ans.",
           }}
           riskBadges={[
-            { label: "Volatilité 75 %",     color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Drawdown −85 %",       color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Max 5 % portfolio",    color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Risque technologique", color: "#eab308", bg: "rgba(234,179,8,0.08)" },
+            { label: "Volatilité annualisée ~75 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+            { label: "Drawdown max −85 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Allocation max 5 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
+            { label: "Risque technologique",        color: "#eab308", bg: "rgba(234,179,8,0.08)" },
           ]}
           stats={[
             { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: ASSET.eth },

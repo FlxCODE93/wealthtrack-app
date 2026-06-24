@@ -2229,7 +2229,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
               <stop offset="100%" stopColor={T.violet} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+          <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
           <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
           <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
           <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n]} />
@@ -2962,7 +2962,7 @@ function ETFHistoryTooltip() {
 
       <ExpandableChart height={180} title="Historique de l'indice">
         <LineChart data={MSCI_HISTORY} margin={{ top: 5, right: 10, bottom: 5, left: 52 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
           <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
           <YAxis
             domain={[0, 4000]} stroke={T.muted} tick={{ fontSize: 12 }}
@@ -3081,7 +3081,7 @@ function CryptoHistoryTooltip({ coin }) {
       {/* Chart */}
       <ExpandableChart height={180} title="Historique (échelle log)">
         <LineChart data={logData} margin={{ top: 5, right: 10, bottom: 5, left: 48 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
           <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 12 }} />
           <YAxis
             domain={[yMin, yMax]} ticks={yTicks}
@@ -3247,7 +3247,7 @@ function ImmoCard({ price, setPrice, horizon }) {
 
         <ExpandableChart height={300} title="Achat immobilier — valeur, crédit & capital">
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<CustomTooltip />} />
@@ -3394,7 +3394,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={logFmt} width={64} />
@@ -3428,7 +3428,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <stop offset="100%" stopColor={lineColor} stopOpacity={0.12} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
@@ -3687,7 +3687,7 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
           </div>
           <ExpandableChart height={240} title="Simulation patrimoniale commune">
             <LineChart data={projSeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />
@@ -4052,7 +4052,7 @@ function CreditArbitrage({ initial } = {}) {
         <div style={{ width: "100%", height: 280 }}>
           <ResponsiveContainer>
             <LineChart data={series} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+              <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
               <XAxis dataKey="year" tick={{ fontSize: 12, fill: T.muted }} />
               <YAxis tickFormatter={v => `${Math.round(v / 1000)} k€`} tick={{ fontSize: 12, fill: T.muted }} width={48} />
               <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "keep" ? "Garder + investir" : "Rembourser"]} />
@@ -4476,7 +4476,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
             <p className="text-xs mb-3" style={{ color: T.muted }}>Capital restant total projeté, à mensualités constantes.</p>
             <ExpandableChart height={200} title="Trajectoire de désendettement">
               <AreaChart data={desendettement} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: T.muted, fontSize: 12 }} />
                 <YAxis tick={{ fill: T.muted, fontSize: 12 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={42} />
                 <Tooltip {...chartTip} formatter={(v) => eur(v)} />
@@ -5059,7 +5059,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
 
         <ExpandableChart height={260} title="Constitution de patrimoine immobilier">
           <LineChart data={ownershipSeries}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "k€" : v} />
             <Tooltip {...chartTip} formatter={(v) => eur(v)} />
@@ -6585,7 +6585,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histRange > 12 ? 55 : 38} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />

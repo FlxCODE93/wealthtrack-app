@@ -2654,12 +2654,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             ],
 
           }}
-          riskBadges={[
-            { label: "Volatilité annualisée ~65 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Drawdown max −80 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Allocation max 10 %",         color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Horizon ≥ 5 ans",             color: "#eab308", bg: "rgba(234,179,8,0.08)" },
-          ]}
           stats={[
             { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: ASSET.btc },
             { label: "Apports totaux",     value: eur(sim.apports),                       color: T.text },
@@ -2686,12 +2680,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             ],
 
           }}
-          riskBadges={[
-            { label: "Volatilité annualisée ~75 %", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
-            { label: "Drawdown max −85 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Allocation max 5 %",          color: "#f97316", bg: "rgba(249,115,22,0.08)" },
-            { label: "Risque technologique",        color: "#eab308", bg: "rgba(234,179,8,0.08)" },
-          ]}
           stats={[
             { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: ASSET.eth },
             { label: "Apports totaux",   value: eur(sim.apports),                       color: T.text },

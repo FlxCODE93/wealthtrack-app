@@ -589,6 +589,13 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   ];
   const toolActive = TOOLS.some((t) => t.id === view);
   const [outilsOpen, setOutilsOpen] = useState(toolActive);
+  // Sous-pages du groupe dépliant "Patrimoine" (style Finary).
+  const PATRIMOINE = [
+    { id: "credits", label: "Mes crédits" },
+    { id: "crypto",  label: "Portefeuille Crypto" },
+  ];
+  const patriActive = view === "patrimoine" || PATRIMOINE.some((p) => p.id === view);
+  const [patriOpen, setPatriOpen] = useState(patriActive);
   return (
     <aside
       className="hidden md:flex flex-col gap-1 p-4 shrink-0 wt-glass"
@@ -607,6 +614,59 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
       {items.map((it) => {
         const Icon = it.icon;
+
+        // Groupe dépliant "Patrimoine"
+        if (it.id === "patrimoine") {
+          return (
+            <div key="patrimoine" className="flex flex-col">
+              <button
+                onClick={() => { setView("patrimoine"); setPatriOpen(true); }}
+                className="flex items-center gap-3 py-3 rounded-xl text-left transition"
+                style={{
+                  paddingLeft: 16, paddingRight: 16,
+                  background: view === "patrimoine" ? "rgba(255,255,255,0.06)" : "transparent",
+                  border: "none", cursor: "pointer",
+                  borderLeft: view === "patrimoine" ? `3px solid ${T.blue}` : "3px solid transparent",
+                  color: patriActive ? T.text : T.muted,
+                  fontWeight: patriActive ? 600 : 500,
+                }}
+              >
+                <Icon size={20} />
+                <span style={{ flex: 1 }}>Patrimoine</span>
+                <ChevronDown
+                  size={16}
+                  onClick={(e) => { e.stopPropagation(); setPatriOpen((o) => !o); }}
+                  style={{ transition: "transform 0.2s", transform: patriOpen ? "rotate(180deg)" : "none" }}
+                />
+              </button>
+              {patriOpen && (
+                <div className="flex flex-col">
+                  {PATRIMOINE.map((p) => {
+                    const sActive = view === p.id;
+                    const sLocked = !canAccess(plan, p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setView(p.id)}
+                        className="flex items-center gap-2 py-2.5 rounded-lg text-left text-sm transition"
+                        style={{
+                          paddingLeft: 30, paddingRight: 16,
+                          background: sActive ? "rgba(255,255,255,0.06)" : "transparent",
+                          borderLeft: sActive ? `3px solid ${T.blue}` : "3px solid transparent",
+                          color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted,
+                          fontWeight: sActive ? 600 : 500,
+                        }}
+                      >
+                        <span style={{ flex: 1 }}>{p.label}</span>
+                        {sLocked && <Lock size={11} style={{ color: T.muted, opacity: 0.5 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
 
         // Groupe dépliant "Outils"
         if (it.id === "outils") {
@@ -5852,7 +5912,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { id: "credits", label: "Mes crédits", desc: "Prêts & passifs", icon: CreditCard, color: T.red },
-            { id: "crypto",  label: "Crypto",      desc: "Portefeuille & cours live", icon: Bitcoin, color: T.amber },
+            { id: "crypto",  label: "Portefeuille Crypto", desc: "Portefeuille & cours live", icon: Bitcoin, color: T.amber },
             { id: "importer", label: "Importer / Banque", desc: "Relevés & connexion", icon: Landmark, color: T.blue },
           ].map((s) => {
             const Icon = s.icon;
@@ -6906,7 +6966,7 @@ const VIEW_LABELS = {
   parrainage:  "Premium offert",
   profil:      "Profil",
   importer:    "Importer un relevé",
-  crypto:      "Crypto Portfolio",
+  crypto:      "Portefeuille Crypto",
   fi:          "Indépendance Financière",
   immobilier:  "Immobilier",
 };

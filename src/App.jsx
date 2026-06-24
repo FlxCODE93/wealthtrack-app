@@ -7899,7 +7899,7 @@ export default function App() {
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
+      <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
         {/* Barre haut mobile : logo + déconnexion (sidebar absente sur mobile) */}
         <div className="md:hidden" style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>

@@ -607,6 +607,21 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
   // Mode réduit : la sidebar n'affiche que les icônes (style Finary). Persisté.
   const [collapsed, setCollapsed] = useLocalStorage("wt_sidebar_collapsed", false);
+  // Logo — petite courbe de progression (croissance) façon graphe d'évolution.
+  const Logo = ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <defs>
+        <linearGradient id="wtLogoFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={T.blue} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={T.blue} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M3 16 C6 15 8 11 11 10.5 C15 9.5 17.5 6 21 4 L21 21 L3 21 Z" fill="url(#wtLogoFill)" />
+      <path d="M3 16 C6 15 8 11 11 10.5 C15 9.5 17.5 6 21 4" stroke={T.blue} strokeWidth="2.2"
+        strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+
   // Bouton icône seule (mode réduit) — info-bulle native via title.
   const IconOnly = ({ Icon, onClick, active, label }) => (
     <button onClick={onClick} title={label} aria-label={label}
@@ -627,12 +642,12 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
         {collapsed ? (
           /* Logo compact toujours visible à gauche du bouton */
           <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 28, height: 28, background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-            <BarChart3 size={16} style={{ color: T.blue }} />
+            <Logo size={17} />
           </div>
         ) : (
           <div className="flex items-center gap-3 min-w-0">
             <div className="rounded-xl p-2.5" style={{ background: "rgba(91,141,239,0.12)", border: "1px solid rgba(91,141,239,0.2)" }}>
-              <BarChart3 size={26} style={{ color: T.blue }} />
+              <Logo size={26} />
             </div>
             <div className="min-w-0">
               <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>

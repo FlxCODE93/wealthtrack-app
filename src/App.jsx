@@ -1195,7 +1195,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
     setEditKey(null);
   };
   const resetEdit = () => { onAdjust?.(editKey, null); setEditKey(null); };
-  const [shareOpen, setShareOpen] = useState(false);
   const [objectiveOpen, setObjectiveOpen] = useState(false); // flux IA : choix de l'objectif
 
   // Série d'épargne positive : nombre de mois consécutifs (les plus récents) où rev > dep
@@ -1322,8 +1321,9 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
 
       {/* Ligne 2 — synthèse du mois (gauche) + répartition des dépenses (droite) */}
       <Card>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-      <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="lg:col-span-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {PILLARS.map((p) => {
           const Icon = p.icon;
           const overridden = monthAdj[p.key] != null;
@@ -1376,6 +1376,82 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <div className="text-xl font-bold mt-2" style={{ color: savingsRateColor }}>{pct(tauxEpargne)}</div>
           <div className="text-xs mt-0.5" style={{ color: savingsRateColor }}>{savingsRateLabel}</div>
         </div>
+      </div>
+
+      {/* Santé financière — sous les indicateurs (même bloc) */}
+      <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.border}` }}>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: badge.color }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
+              <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ background: badge.color + "18", color: badge.color }}>{badge.level}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {savingsStreak > 0 && (
+              <div ref={streakRef} style={{ position: "relative", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "rgba(240,168,72,0.12)", border: `1px solid ${T.amber}44` }}>
+                <div ref={streakConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
+                <div ref={streakRingRef} style={{ position: "absolute", inset: -3, borderRadius: 999, border: `2px solid ${T.amber}`, opacity: 0, pointerEvents: "none" }} />
+                <Flame size={14} style={{ color: T.amber }} />
+                <span style={{ color: T.amber, fontWeight: 800, fontSize: 13 }}><AnimatedNumber value={savingsStreak} /></span>
+                <span style={{ color: T.muted, fontSize: 12 }}>mois{isNewStreakRecord && <b style={{ color: T.amber }}> · record !</b>}</span>
+              </div>
+            )}
+            {streakToast}
+            <div className="shrink-0">
+              <span style={{ fontSize: 34, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
+              <span style={{ fontSize: 15, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>DÉTAIL PAR CRITÈRE</div>
+            {Object.values(healthScore.breakdown).map((b) => (
+              <div key={b.label} className="mb-2">
+                <div className="flex justify-between text-xs mb-1">
+                  <span style={{ color: T.text }}>{b.label}</span>
+                  <span style={{ color: badge.color }}>{b.score}/{b.max} pts</span>
+                </div>
+                <div className="h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-1 rounded-full" style={{ width: `${(b.score / b.max) * 100}%`, background: badge.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>POUR PROGRESSER</div>
+            {progressTips.length === 0 ? (
+              <p className="text-xs" style={{ color: T.green, margin: 0 }}>Excellent — rien à optimiser pour l'instant.</p>
+            ) : (
+              <ul style={{ color: T.muted, margin: 0, padding: 0, listStyle: "none" }}>
+                {progressTips.map((tip, i) => {
+                  const locked = tip.pro && plan === "free";
+                  return (
+                    <li key={i} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, lineHeight: 1.5, fontSize: 12 }}>
+                      <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: locked ? T.amber : T.muted, flexShrink: 0, opacity: 0.6 }} />
+                      {locked ? (
+                        <>
+                          <span style={{ filter: "blur(4px)", userSelect: "none", flex: 1, pointerEvents: "none" }}>{tip.text}</span>
+                          <button onClick={() => setView("pricing")} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${T.amber}1a`, border: `1px solid ${T.amber}55`, borderRadius: 4, padding: "1px 6px", fontWeight: 700, color: T.amber, cursor: "pointer", fontSize: 10, flexShrink: 0 }}>
+                            <Lock size={8} /> Pro
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ flex: 1 }}>{tip.text}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
       </div>
 
       {/* Droite : répartition des dépenses (donut) */}
@@ -1483,107 +1559,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           Budget & catégories <ChevronRight size={16} />
         </span>
       </button>
-
-      {/* Score de santé gamifié */}
-      <Card style={{ border: `2px solid ${badge.color}55` }}>
-        <div className="flex flex-col sm:flex-row gap-6">
-          {/* Gauche : chiffre + breakdown */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
-                  <div className="w-3 h-3 rounded-full" style={{ background: badge.color }} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded"
-                    style={{ background: badge.color + "18", color: badge.color }}>
-                    {badge.level}
-                  </span>
-                </div>
-              </div>
-              {streakToast}
-              {savingsStreak > 0 && (
-                <div ref={streakRef} style={{
-                  position: "relative", display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 12px", borderRadius: 999,
-                  background: "rgba(240,168,72,0.12)", border: `1px solid ${T.amber}44`,
-                }}>
-                  <div ref={streakConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
-                  <div ref={streakRingRef} style={{
-                    position: "absolute", inset: -3, borderRadius: 999,
-                    border: `2px solid ${T.amber}`, opacity: 0, pointerEvents: "none",
-                  }} />
-                  <Flame size={14} style={{ color: T.amber }} />
-                  <span style={{ color: T.amber, fontWeight: 800, fontSize: 13 }}>
-                    <AnimatedNumber value={savingsStreak} />
-                  </span>
-                  <span style={{ color: T.muted, fontSize: 12 }}>
-                    mois d'épargne {isNewStreakRecord && <b style={{ color: T.amber }}>· record !</b>}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="mb-3">
-              <span style={{ fontSize: 38, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
-              <span style={{ fontSize: 16, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
-            </div>
-            <div className="text-xs font-semibold mb-2" style={{ color: T.muted, letterSpacing: 1 }}>
-              DÉTAIL PAR CRITÈRE
-            </div>
-            {Object.values(healthScore.breakdown).map((b) => (
-              <div key={b.label} className="mb-2">
-                <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: T.text }}>{b.label}</span>
-                  <span style={{ color: badge.color }}>{b.score}/{b.max} pts</span>
-                </div>
-                <div className="h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-1 rounded-full"
-                    style={{ width: `${(b.score / b.max) * 100}%`, background: badge.color }} />
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Droite : actions */}
-          <div className="flex flex-col gap-3" style={{ minWidth: 170 }}>
-            <button
-              onClick={() => setShareOpen(true)}
-              className="rounded-xl py-3 px-4 font-semibold text-sm"
-              style={{ background: badge.color, color: "#fff" }}>
-              Partager mon score
-            </button>
-            <div className="rounded-xl p-3 text-xs flex-1" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div className="font-semibold mb-2" style={{ color: T.text }}>Pour progresser :</div>
-              {progressTips.length === 0 ? (
-                <p style={{ color: T.green, margin: 0 }}>Excellent — rien à optimiser pour l'instant.</p>
-              ) : (
-                <ul style={{ color: T.muted, margin: 0, padding: 0, listStyle: "none" }}>
-                  {progressTips.map((tip, i) => {
-                    const locked = tip.pro && plan === "free";
-                    return (
-                      <li key={i} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, lineHeight: 1.5 }}>
-                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: locked ? T.amber : T.muted, flexShrink: 0, opacity: 0.6 }} />
-                        {locked ? (
-                          <>
-                            <span style={{ filter: "blur(4px)", userSelect: "none", flex: 1, pointerEvents: "none" }}>{tip.text}</span>
-                            <button onClick={() => setView("pricing")} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${T.amber}1a`, border: `1px solid ${T.amber}55`, borderRadius: 4, padding: "1px 6px", fontWeight: 700, color: T.amber, cursor: "pointer", fontSize: 10, flexShrink: 0 }}>
-                              <Lock size={8} /> Pro
-                            </button>
-                          </>
-                        ) : (
-                          <span style={{ flex: 1 }}>{tip.text}</span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-        {shareOpen && <ShareScoreModal score={healthScore.overall} badge={badge} onClose={() => setShareOpen(false)} />}
-      </Card>
 
       {objectiveOpen && (
         <ObjectiveModal
@@ -1722,77 +1697,6 @@ function PremiumTeaser({ totals, patrimoine, simParams, profile, healthScore, se
         >
           <Crown size={16} /> Passer à Pro — Essai gratuit 7 jours puis 5,99€/mois sans engagement
         </button>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  SHARE MODAL                                                        */
-/* ------------------------------------------------------------------ */
-function ShareScoreModal({ score, badge, onClose }) {
-  const T = useT();
-  useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  const shareText = `Mon score de santé financière : ${score}/100 (${badge.level}) — Et toi, c'est combien ? #WealthTrack`;
-  const shareUrl = "https://wealthtrack.app";
-
-  const copy = () => {
-    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-    alert("Copié ! Prêt à partager.");
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      className="wt-fade-in"
-      style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        className="rounded-2xl p-6 wt-scale-in wt-glass"
-        style={{ maxWidth: 400, width: "90%" }}
-      >
-        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Partager votre score</h2>
-        <div className="rounded-xl p-4 mb-4 text-center" style={{ background: T.bg }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: badge.ring, border: `2px solid ${badge.color}` }}>
-              <div className="w-4 h-4 rounded-full" style={{ background: badge.color }} />
-            </div>
-          </div>
-          <div className="text-4xl font-black mb-1" style={{ color: badge.color }}>{score}/100</div>
-          <div className="text-sm" style={{ color: T.muted }}>Niveau {badge.level}</div>
-        </div>
-        <p className="text-sm mb-4" style={{ color: T.muted }}>"{shareText}"</p>
-        <div className="flex flex-col gap-3">
-          <button onClick={copy} className="rounded-xl py-3 font-bold"
-            style={{ background: badge.color, color: "#0a0f1e" }}>
-            Copier le texte
-          </button>
-          <button
-            onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`)}
-            className="rounded-xl py-3 font-semibold"
-            style={{ background: "rgba(255,255,255,0.05)", color: T.text, border: `1px solid ${T.border}` }}>
-            Partager sur Twitter
-          </button>
-          <button
-            onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`)}
-            className="rounded-xl py-3 font-semibold"
-            style={{ background: "rgba(255,255,255,0.05)", color: T.text, border: `1px solid ${T.border}` }}>
-            Partager sur LinkedIn
-          </button>
-          <button onClick={onClose} className="rounded-xl py-2 text-sm"
-            style={{ background: "transparent", color: T.muted, border: `1px solid ${T.border}` }}>
-            Fermer
-          </button>
-        </div>
       </div>
     </div>
   );

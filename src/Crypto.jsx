@@ -12,7 +12,7 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { ExpandableChart } from "./ChartComponents.jsx";
 import { useT } from "./ThemeProvider.jsx";
-import { useEur as useEurCtx } from "./ui.jsx";
+import { useEur as useEurCtx, useDiscreet } from "./ui.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
 import { API_URL } from "./config.js";
 import { useLocalStorage } from "./storage.js";
@@ -415,7 +415,8 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
 /* ─── COMPOSANT PRINCIPAL ────────────────────────────────────────────── */
 export default function Crypto({ setView, marketsOnly = false }) {
   const T = useT();
-  const fmtCtx = useEurCtx(); // masquage mode discret
+  const fmtCtx = useEurCtx();
+  const discreet = useDiscreet();
   const [holdings, setHoldings]     = useLocalStorage("wt_crypto_holdings", DEFAULT_HOLDINGS);
   const [prices, setPrices]         = useState({});
   const [loading, setLoading]       = useState(false);
@@ -775,7 +776,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
                   </span>
                 )}
               </div>
-              <div style={{ textAlign: "right", color: T.muted }}>{h.amount}</div>
+              <div style={{ textAlign: "right", color: T.muted, filter: discreet ? "blur(8px)" : "none", userSelect: discreet ? "none" : "auto" }}>{h.amount}</div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ color: T.text }}>{h.currentPrice ? eur(h.currentPrice, 0) : "—"}</div>
                 {h.change24h != null && (
@@ -1046,7 +1047,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
                           <div className="font-semibold" style={{ color: T.text }}>{h.symbol}</div>
                           <div style={{ fontSize: 11, color: T.muted }}>{h.name}</div>
                         </div>
-                        <div style={{ textAlign: "right", color: T.muted }}>{h.amount}</div>
+                        <div style={{ textAlign: "right", color: T.muted, filter: discreet ? "blur(8px)" : "none", userSelect: discreet ? "none" : "auto" }}>{h.amount}</div>
                         <div style={{ textAlign: "right", color: T.amber, fontWeight: 700 }}>
                           {h.apy != null ? `${h.apy} %` : "—"}
                         </div>

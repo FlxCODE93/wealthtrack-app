@@ -1132,6 +1132,7 @@ function MonthlyCalendar({ transactions = [] }) {
 
 function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective, breakdown, patrimoine, simParams, setView, histo, transactions, plan, profile, credits = [], incomeRef = totals.revenus, incomeIsSmoothed = false }) {
   const T = useT();
+  const fmt = useEur();
   const { revenus, chargesFixes, depensesVar, invest, restant, tauxEpargne } = totals;
   const savingsRateColor = tauxEpargne >= SAVINGS_RATE_TARGET ? T.green : tauxEpargne >= SAVINGS_RATE_CRITICAL ? T.amber : T.red;
   const savingsRateLabel = tauxEpargne >= SAVINGS_RATE_TARGET ? "Excellent" : tauxEpargne >= SAVINGS_RATE_CRITICAL ? "Correct" : "À renforcer";
@@ -1158,7 +1159,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         <text x={lx} y={y + height / 2 - 5} textAnchor={anchor} dominantBaseline="middle"
           fontSize={12} fontWeight={600} fill={T.text}>{payload.name}</text>
         <text x={lx} y={y + height / 2 + 10} textAnchor={anchor} dominantBaseline="middle"
-          fontSize={11} fill={T.muted}>{eur(payload.value)}</text>
+          fontSize={11} fill={T.muted}>{fmt(payload.value)}</text>
       </g>
     );
   };
@@ -1347,7 +1348,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                 <Icon size={15} style={{ color: p.color, flexShrink: 0 }} />
               </div>
               <div className="text-xl font-bold mt-2 flex items-center gap-1.5 flex-wrap" style={{ color: p.color }}>
-                {eur(p.value)}
+                {fmt(p.value)}
                 {overridden && (
                   <span className="inline-flex items-center gap-1 px-1 py-0.5 rounded-md"
                     title="Montant modifié manuellement — cliquer pour ajuster ou réinitialiser"
@@ -1365,7 +1366,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             <span className="text-xs" style={{ color: T.muted }}>Restant à vivre</span>
             <Wallet size={15} style={{ color: T.green, opacity: 0.6, flexShrink: 0 }} />
           </div>
-          <div className="text-xl font-bold mt-2" style={{ color: T.green }}>{eur(restant)}</div>
+          <div className="text-xl font-bold mt-2" style={{ color: T.green }}>{fmt(restant)}</div>
         </div>
         {/* Taux d'épargne (dérivé) */}
         <div className="rounded-2xl p-4" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)" }}>
@@ -1481,7 +1482,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                   {activeExpSlice != null && expSlices[activeExpSlice] ? (
                     <>
                       <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
-                      <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{eur(expSlices[activeExpSlice].value)}</span>
+                      <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{fmt(expSlices[activeExpSlice].value)}</span>
                       <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
                         {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
                       </span>
@@ -1489,7 +1490,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                   ) : (
                     <>
                       <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
-                      <span className="text-2xl font-bold" style={{ color: T.text }}>{eur(expTotal)}</span>
+                      <span className="text-2xl font-bold" style={{ color: T.text }}>{fmt(expTotal)}</span>
                     </>
                   )}
                 </div>
@@ -7815,6 +7816,10 @@ export default function App() {
   return (
     <DiscreetCtx.Provider value={discreet}>
     <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+      {/* Masquage axes Recharts en mode discret */}
+      {discreet && (
+        <style>{`.recharts-cartesian-axis-tick text,.recharts-cartesian-axis-tick-value{visibility:hidden!important}`}</style>
+      )}
       {/* Bouton mode discret — fixe haut droite */}
       <button
         onClick={() => setDiscreet(!discreet)}

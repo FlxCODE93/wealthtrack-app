@@ -417,12 +417,14 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
         </div>
 
         {/* Graphique — deux courbes divergentes */}
-        <div style={{ height: 200 }}>
+        <div style={{ height: 220 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-              <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false}
-                tickFormatter={v => v === 0 ? "" : `${v} ans`} interval={Math.floor(horizon / 4)} />
-              <YAxis hide />
+            <LineChart data={chartData} margin={{ top: 4, right: 16, bottom: 16, left: 8 }}>
+              <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false}
+                tickFormatter={v => `${v} ans`} interval={Math.floor(horizon / 4)}
+                label={{ value: "Années", position: "insideBottom", offset: -8, fill: T.muted, fontSize: 11 }} />
+              <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false} width={64}
+                tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M €` : `${Math.round(v/1000)}k €`} />
               <Tooltip
                 contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: T.text }}
                 formatter={(val, name) => [eur(val), name === "sans" ? "Sans frais (ETF)" : `Avec ${effectiveFeeRate.toFixed(1).replace(".", ",")} %`]}

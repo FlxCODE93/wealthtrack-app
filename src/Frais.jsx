@@ -282,7 +282,8 @@ export default function Frais({ invested = 0, setView }) {
 
       {/* Simulateur d'impact — EN PREMIER */}
       <Section T={T} first title="Combien les frais vous coûtent">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28, marginBottom: 32 }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "24px 28px", display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28 }}>
           <Field label="Capital initial (€)">
             <input type="number" value={capital || ""} placeholder="0" style={uStyle}
               onFocus={(e) => e.target.select()} onChange={(e) => setCapital(+e.target.value || 0)} />
@@ -313,8 +314,8 @@ export default function Frais({ invested = 0, setView }) {
           </div>
         </div>
 
-        {/* Impact — chiffres en clair, séparés par l'espace, sans cadre */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28, marginBottom: 28 }}>
+        {/* Impact — chiffres */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28 }}>
           <div>
             <div style={{ color: T.muted, fontSize: 13, marginBottom: 6 }}>ETF sans frais (0,25 %)</div>
             <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 26 }}>{eur(impactData.sans)}</div>
@@ -330,11 +331,13 @@ export default function Frais({ invested = 0, setView }) {
           </div>
         </div>
 
-        <p style={{ color: T.muted, fontSize: 12, marginBottom: 20 }}>
-          Comparaison sur {horizon} ans avec un taux brut de {(RATE_ETF_WORLD * 100).toFixed(1).replace(".", ",")} % (ETF World historique).
-        </p>
-
-        <FeeImpactBar horizon={horizon} capital={capital} feeRate={feeRate} />
+        <div>
+          <FeeImpactBar horizon={horizon} capital={capital} feeRate={feeRate} />
+          <p style={{ color: T.muted, fontSize: 12, marginTop: 8, margin: "8px 0 0" }}>
+            Comparaison sur {horizon} ans avec un taux brut de {(RATE_ETF_WORLD * 100).toFixed(1).replace(".", ",")} % (ETF World historique).
+          </p>
+        </div>
+        </div>
       </Section>
 
       {/* Comparatif enveloppes */}

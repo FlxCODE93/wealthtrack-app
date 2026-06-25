@@ -927,13 +927,10 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             <YAxis stroke={T.muted} tick={{ fontSize: 10 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<ChartTooltip fiTarget={fiTarget} />} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-            <ReferenceLine y={fiTarget} stroke={T.green} strokeDasharray="6 3" label={{ value: "Cible FIRE", fill: T.green, fontSize: 11, position: "insideTopLeft" }} />
-            {milestones.pts.map(m => m.year && !m.reached && (
-              <ReferenceLine key={m.pct} x={`${m.age} ans`} stroke={T.border} strokeDasharray="3 3" />
-            ))}
-            <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} strokeDasharray="6 3" />
+            <ReferenceLine y={fiTarget} stroke={T.amber} label={{ value: "Cible FIRE", fill: T.amber, fontSize: 11, position: "insideTopLeft" }} />
+            <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} />
             <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={3} />
-            <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} strokeDasharray="3 3" />
+            <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} />
           </LineChart>
         </ExpandableChart>
       </div>

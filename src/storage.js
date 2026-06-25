@@ -124,6 +124,16 @@ export function flushPendingCloudWrites() {
   Object.keys(pendingValues).forEach(flushKey);
 }
 
+/** Réinitialisation : efface TOUTES les données cloud de l'utilisateur courant.
+   Annule d'abord les écritures en attente pour ne pas re-pousser après suppression. */
+export async function wipeCloudData() {
+  Object.keys(pushTimers).forEach((k) => clearTimeout(pushTimers[k]));
+  Object.keys(pushTimers).forEach((k) => delete pushTimers[k]);
+  Object.keys(pendingValues).forEach((k) => delete pendingValues[k]);
+  if (!supabase || !activeUserId) return;
+  try { await supabase.from("user_data").delete().eq("user_id", activeUserId); } catch { /* hors-ligne : ignoré */ }
+}
+
 // Filet de sécurité : pousse les écritures en attente avant de quitter la page.
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", flushPendingCloudWrites);

@@ -33,7 +33,7 @@ import {
 import {
   RATE_A, RATE_C, RATE_DISCLAIMER, RATE_GOLD,
   SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET, RATE_SCENARIOS,
-  IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
+  IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment, loanRemaining,
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
   loanFromPayment,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
@@ -44,7 +44,7 @@ import {
   creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
-import { useLocalStorage, clearLocalAppData } from "./storage.js";
+import { useLocalStorage, clearLocalAppData, wipeCloudData } from "./storage.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
 import { TX, HISTO, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
@@ -1828,6 +1828,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
   const [mainTab, setMainTab]  = useState("transactions");
   const [filter, setFilter]    = useState("tout");
   const [showAdd, setShowAdd]  = useState(false);
+  const [txError, setTxError]  = useState("");
   const [editId, setEditId]    = useState(null);
   const [editBuf, setEditBuf]  = useState({});
   const [newTx, setNewTx]      = useState({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
@@ -1872,7 +1873,9 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 
   const handleAdd = () => {
     const amount = parseFloat(newTx.amount);
-    if (!newTx.label.trim() || !amount) return;
+    if (!newTx.label.trim()) { setTxError("Indiquez un libellé."); return; }
+    if (!amount)             { setTxError("Indiquez un montant différent de 0."); return; }
+    setTxError("");
     const signed = newTx.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
     onAdd?.({ ...newTx, amount: signed, id: Date.now(), date: new Date().toISOString().slice(0, 10), source: "manual" });
     setNewTx({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
@@ -1971,6 +1974,12 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             <button onClick={() => setShowAdd(false)} className="px-4 py-2.5 rounded-xl text-sm"
               style={{ border: `1px solid ${T.border}`, color: T.muted }}>Annuler</button>
           </div>
+          {txError && (
+            <div role="alert" className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg text-sm"
+              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+              <AlertCircle size={14} /> {txError}
+            </div>
+          )}
         </Card>
       )}
 
@@ -2169,6 +2178,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                     <span style={{ color: T.muted, fontSize: 12 }}>/</span>
                     <NumInput
                       placeholder="illimité"
+                      min={0}
                       value={budgets?.[cat] || 0}
                       onChange={n => setBudgets(b => ({ ...b, [cat]: n }))}
                       style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.04)", color: T.text, fontSize: 13, outline: "none" }}
@@ -4677,9 +4687,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
 
   const ownershipSeries = useMemo(() => Array.from({ length: duration + 1 }, (_, y) => {
     const propValue = Math.round(price * Math.pow(1 + appreciation / 100, y));
-    const paid = mensualite * y * 12;
-    const principalPaid = Math.max(0, paid - (credit * monthlyRate * n * y / n));
-    const remaining = Math.max(0, credit - principalPaid);
+    // Capital restant dû réel (amortissement convexe) — pas une droite.
+    const remaining = loanRemaining(credit, rate / 100, duration, y * 12);
     const equity = propValue - remaining;
     const renterFV = Math.round(fv(0, investMonthly, RATE_A, y));
     return { year: 2026 + y, propValue, "Propriété nette": Math.max(0, equity), "Patrimoine locataire": renterFV };
@@ -5777,6 +5786,28 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
         </div>
           );
         })()}
+
+        {/* Réinitialisation des données (local + cloud) */}
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <div className="font-medium text-sm" style={{ color: T.text }}>Réinitialiser mes données</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>
+              Efface définitivement transactions, patrimoine, objectifs et réglages — sur cet appareil et dans le cloud.
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!window.confirm("Réinitialiser TOUTES vos données (transactions, patrimoine, objectifs…) ?\n\nCette action est irréversible.")) return;
+              await wipeCloudData();
+              clearLocalAppData();
+              window.location.reload();
+            }}
+            className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171", cursor: "pointer" }}
+          >
+            <Trash2 size={14} className="inline mr-1.5" />Réinitialiser
+          </button>
+        </div>
       </Card>
 
 
@@ -7077,7 +7108,7 @@ function ObjectifsView({ goals, setGoals, totals }) {
         {goals.map(g => {
           const pct      = Math.min(100, g.target > 0 ? (g.saved / g.target) * 100 : 0);
           const months   = monthsLeft(g);
-          const done     = g.saved >= g.target;
+          const done     = g.target > 0 && g.saved >= g.target;
           const dateEst  = months != null && !done
             ? (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); })()
             : null;

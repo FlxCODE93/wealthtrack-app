@@ -424,12 +424,6 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
           </div>
         </div>
 
-        <div>
-          <FeeImpactBar horizon={horizon} capital={capital} feeRate={feeRate} />
-          <p style={{ color: T.muted, fontSize: 12, marginTop: 8, margin: "8px 0 0" }}>
-            Comparaison sur {horizon} ans avec un taux brut de {(RATE_ETF_WORLD * 100).toFixed(1).replace(".", ",")} % (ETF World historique).
-          </p>
-        </div>
         </div>
       </Section>
 

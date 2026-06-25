@@ -153,8 +153,8 @@ const PROFILE_CONFIG = {
 /* ------------------------------------------------------------------ */
 const SIM_START_YEAR = 2026;
 
-// Palette test Budget — panels quasi-invisibles, fondus dans le fond sidebar
-const C_BUDGET = { ...C, panel: "rgba(255,255,255,0.025)", card: "#0e1017", border: "rgba(255,255,255,0.07)" };
+// Palette test Budget — panels fondus dans le fond, légère teinte bleu nuit
+const C_BUDGET = { ...C, panel: "rgba(99,130,210,0.05)", card: "#121626", border: "rgba(120,150,230,0.09)" };
 
 const logFmt = (v) => {
   const n = Math.round(Math.pow(10, v));

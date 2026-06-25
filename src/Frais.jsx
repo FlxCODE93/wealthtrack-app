@@ -182,7 +182,21 @@ function GlossaireItem({ term, def }) {
   );
 }
 
-export default function Frais({ invested = 0, setView }) {
+// Smart default fee rate from label keywords
+function guessRate(label = "") {
+  const l = label.toLowerCase();
+  if (l.includes("livret") || l.includes("ldds") || l.includes("ldd")) return 0;
+  if (l.includes("pea")) return 0.2;
+  if (l.includes("etf")) return 0.25;
+  if (l.includes("per")) return 1.5;
+  if (l.includes("scpi")) return 1.0;
+  if (l.includes("av") || l.includes("assurance") || l.includes("vie")) return 1.5;
+  if (l.includes("fonds") || l.includes("sicav") || l.includes("opcvm")) return 2.0;
+  if (l.includes("crypto") || l.includes("bitcoin") || l.includes("eth")) return 0.5;
+  return 1.0;
+}
+
+export default function Frais({ invested = 0, investItems = [], setView }) {
   const T = useT();
   // Input épuré : se fond dans le fond de page, juste un filet inférieur.
   const uStyle = { background: "transparent", border: "none", borderBottom: `1px solid ${T.border}`, borderRadius: 0, color: T.text, padding: "8px 2px", width: "100%", outline: "none", fontSize: 15 };
@@ -191,20 +205,44 @@ export default function Frais({ invested = 0, setView }) {
   const [horizon, setHorizon] = useLocalStorage("wt_frais_horizon", 20);
   const [feeRate, setFeeRate] = useLocalStorage("wt_frais_feerate", 1.8);
   const [expanded, setExpanded] = useState(null);
+  const [itemRates, setItemRates] = useLocalStorage("wt_frais_item_rates", {});
+  const [placementsOpen, setPlacementsOpen] = useState(false);
   const glossaireRef = useRef(null);
   const scrollToGlossaire = () => glossaireRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const hasRealData = invested > 0;
-  const realAnnualCost = Math.round(invested * (feeRate / 100));
+  const hasItems = investItems.length > 0;
   const useRealCapital = () => setCapital(Math.round(invested));
+
+  const getItemRate = (item) => {
+    const key = item.label || item.name || "";
+    return itemRates[key] ?? guessRate(key);
+  };
+
+  const setItemRate = (item, rate) => {
+    const key = item.label || item.name || "";
+    setItemRates(prev => ({ ...prev, [key]: rate }));
+  };
+
+  // Taux pondéré par valeur de marché
+  const weightedFeeRate = useMemo(() => {
+    if (!hasItems) return null;
+    const totalVal = investItems.reduce((s, i) => s + (i.value || 0), 0);
+    if (!totalVal) return null;
+    return investItems.reduce((s, i) => s + ((i.value || 0) / totalVal) * getItemRate(i), 0);
+  }, [investItems, itemRates]);
+
+  // Taux effectif : pondéré si items présents, sinon slider
+  const effectiveFeeRate = weightedFeeRate ?? feeRate;
+  const realAnnualCost = Math.round(invested * (effectiveFeeRate / 100));
 
   const impactData = useMemo(() => {
     const sans = fv(capital, 0, RATE_ETF_WORLD, horizon);
-    const avec = fv(capital, 0, RATE_ETF_WORLD - feeRate / 100, horizon);
+    const avec = fv(capital, 0, RATE_ETF_WORLD - effectiveFeeRate / 100, horizon);
     const perte = sans - avec;
     const pct = ((perte / sans) * 100).toFixed(0);
     return { sans, avec, perte, pct };
-  }, [capital, horizon, feeRate]);
+  }, [capital, horizon, effectiveFeeRate]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
@@ -226,33 +264,103 @@ export default function Frais({ invested = 0, setView }) {
       </div>
 
       {/* Bloc Vos placements */}
-      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: hasRealData ? "rgba(59,130,246,0.14)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Wallet size={20} style={{ color: hasRealData ? T.blue : T.muted }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          {hasRealData ? (
-            <>
-              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Vos placements : {eur(invested)}</div>
-              <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65 }}>
-                À <strong style={{ color: T.text }}>{feeRate.toFixed(1).replace(".", ",")} %</strong> de frais par an, soit environ{" "}
-                <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)} cette année</strong>.
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Personnalisez avec vos vrais placements</div>
-              <div style={{ color: T.muted, fontSize: 14 }}>
-                Renseignez vos investissements dans Patrimoine pour calculer vos frais réels.
-              </div>
-            </>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+        {/* Header — cliquable si items */}
+        <div
+          onClick={() => hasItems && setPlacementsOpen(o => !o)}
+          style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", cursor: hasItems ? "pointer" : "default" }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: hasRealData ? "rgba(59,130,246,0.14)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Wallet size={20} style={{ color: hasRealData ? T.blue : T.muted }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            {hasItems ? (
+              <>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>
+                  Vos placements · {eur(invested)}
+                </div>
+                <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.65 }}>
+                  {investItems.length} ligne{investItems.length > 1 ? "s" : ""} · frais pondérés{" "}
+                  <strong style={{ color: "#ef4444" }}>{effectiveFeeRate.toFixed(2).replace(".", ",")} %/an</strong>
+                  {" "}· coût estimé <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)}/an</strong>
+                </div>
+              </>
+            ) : hasRealData ? (
+              <>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Vos placements : {eur(invested)}</div>
+                <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65 }}>
+                  À <strong style={{ color: T.text }}>{effectiveFeeRate.toFixed(1).replace(".", ",")} %</strong> de frais par an, soit environ{" "}
+                  <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)} cette année</strong>.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Personnalisez avec vos vrais placements</div>
+                <div style={{ color: T.muted, fontSize: 14 }}>
+                  Renseignez vos investissements dans Patrimoine pour calculer vos frais réels.
+                </div>
+              </>
+            )}
+          </div>
+          {hasItems ? (
+            <div style={{ color: T.muted, flexShrink: 0 }}>
+              {placementsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+          ) : setView && (
+            <button onClick={() => setView("patrimoine")}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(91,141,239,0.1)", border: `1px solid ${T.blue}44`, color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 10, flexShrink: 0 }}>
+              {hasRealData ? "Voir mes placements" : "Saisir mes placements"} <ArrowRight size={14} />
+            </button>
           )}
         </div>
-        {setView && (
-          <button onClick={() => setView("patrimoine")}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(91,141,239,0.1)", border: `1px solid ${T.blue}44`, color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 10, flexShrink: 0 }}>
-            {hasRealData ? "Voir mes placements" : "Saisir mes placements"} <ArrowRight size={14} />
-          </button>
+
+        {/* Accordion — liste des lignes avec frais éditables */}
+        {hasItems && placementsOpen && (
+          <div style={{ borderTop: `1px solid ${T.border}`, padding: "16px 24px 20px" }}>
+            <div style={{ marginBottom: 8, display: "grid", gridTemplateColumns: "1fr 80px 110px", gap: 12 }}>
+              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Placement</span>
+              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>Valeur</span>
+              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>Frais/an</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {investItems.map((item, i) => {
+                const key = item.label || item.name || "";
+                const rate = getItemRate(item);
+                const isGuess = itemRates[key] == null;
+                return (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: i < investItems.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                    <div style={{ color: T.text, fontSize: 14, fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{key || "—"}</div>
+                    <div style={{ color: T.muted, fontSize: 13, textAlign: "right" }}>{eur(item.value)}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                      <input
+                        type="number" min={0} max={5} step={0.1}
+                        value={rate}
+                        title={isGuess ? "Taux estimé automatiquement — cliquez pour modifier" : undefined}
+                        onChange={(e) => setItemRate(item, +e.target.value || 0)}
+                        style={{ background: "transparent", border: `1px solid ${isGuess ? T.border : T.blue}`, borderRadius: 6, color: T.text, padding: "4px 6px", width: 56, fontSize: 13, textAlign: "right", outline: "none" }}
+                      />
+                      <span style={{ color: T.muted, fontSize: 13, flexShrink: 0 }}>%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Total pondéré */}
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <span style={{ color: T.muted, fontSize: 13 }}>
+                Frais annuels pondérés · utilisés dans le simulateur ci-dessous
+              </span>
+              <span style={{ color: "#ef4444", fontWeight: 800, fontSize: 16 }}>
+                {effectiveFeeRate.toFixed(2).replace(".", ",")} %/an → {eur(realAnnualCost)}/an
+              </span>
+            </div>
+            {setView && (
+              <button onClick={() => setView("patrimoine")}
+                style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: 0 }}>
+                Modifier dans Patrimoine <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -277,16 +385,25 @@ export default function Frais({ invested = 0, setView }) {
             </select>
           </Field>
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ color: T.muted, fontSize: 13 }}>Frais de votre banque / fonds</span>
-              <span style={{ color: "#ef4444", fontWeight: 700 }}>{feeRate.toFixed(1).replace(".", ",")} %</span>
-            </div>
-            <input type="range" min={0} max={3} step={0.1} value={feeRate}
-              onChange={(e) => setFeeRate(+e.target.value)}
-              style={{ width: "100%", accentColor: "#ef4444" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.muted, marginTop: 4 }}>
-              <span>0 %</span><span>1,5 %</span><span>3 %</span>
-            </div>
+            {hasItems ? (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
+                <span style={{ color: T.muted, fontSize: 13 }}>Frais pondérés de vos placements</span>
+                <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 16 }}>{effectiveFeeRate.toFixed(2).replace(".", ",")} %</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ color: T.muted, fontSize: 13 }}>Frais de votre banque / fonds</span>
+                  <span style={{ color: "#ef4444", fontWeight: 700 }}>{feeRate.toFixed(1).replace(".", ",")} %</span>
+                </div>
+                <input type="range" min={0} max={3} step={0.1} value={feeRate}
+                  onChange={(e) => setFeeRate(+e.target.value)}
+                  style={{ width: "100%", accentColor: "#ef4444" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.muted, marginTop: 4 }}>
+                  <span>0 %</span><span>1,5 %</span><span>3 %</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -297,7 +414,7 @@ export default function Frais({ invested = 0, setView }) {
             <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 26 }}>{eur(impactData.sans)}</div>
           </div>
           <div>
-            <div style={{ color: T.muted, fontSize: 13, marginBottom: 6 }}>Avec {feeRate.toFixed(1).replace(".", ",")} % de frais/an</div>
+            <div style={{ color: T.muted, fontSize: 13, marginBottom: 6 }}>Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} % de frais/an</div>
             <div style={{ color: T.text, fontWeight: 800, fontSize: 26 }}>{eur(impactData.avec)}</div>
           </div>
           <div>

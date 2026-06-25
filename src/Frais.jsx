@@ -240,7 +240,6 @@ export default function Frais({ invested = 0, setView }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ color: T.text, fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Mes frais</h1>
-            <p style={{ color: T.muted, fontSize: 14, margin: "2px 0 0" }}>Combien les frais de vos placements vous coûtent vraiment — et comment payer moins.</p>
           </div>
           <button onClick={scrollToGlossaire}
             style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 10px", border: "none", background: "transparent", color: T.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
@@ -248,36 +247,37 @@ export default function Frais({ invested = 0, setView }) {
           </button>
         </div>
 
-        {/* Bandeau personnalisé — sans boîte, simple ligne d'info */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap", marginTop: 22 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: hasRealData ? "rgba(59,130,246,0.14)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Wallet size={20} style={{ color: hasRealData ? T.blue : T.muted }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            {hasRealData ? (
-              <>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Vos placements : {eur(invested)}</div>
-                <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65 }}>
-                  À <strong style={{ color: T.text }}>{feeRate.toFixed(1).replace(".", ",")} %</strong> de frais par an, ils vous coûtent environ{" "}
-                  <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)} cette année</strong> — et bien plus sur la durée à cause de l'effet cumulé. Le simulateur ci-dessous part de ce montant réel.
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Personnalisez avec vos vrais placements</div>
-                <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65 }}>
-                  Renseignez vos investissements dans le Patrimoine et cette page calculera vos frais réels, pas un exemple générique.
-                </div>
-              </>
-            )}
-          </div>
-          {setView && (
-            <button onClick={() => setView("patrimoine")}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0, padding: "8px 0" }}>
-              {hasRealData ? "Voir mes placements" : "Saisir mes placements"} <ArrowRight size={15} />
-            </button>
+      </div>
+
+      {/* Bloc Vos placements */}
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: hasRealData ? "rgba(59,130,246,0.14)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Wallet size={20} style={{ color: hasRealData ? T.blue : T.muted }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          {hasRealData ? (
+            <>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Vos placements : {eur(invested)}</div>
+              <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65 }}>
+                À <strong style={{ color: T.text }}>{feeRate.toFixed(1).replace(".", ",")} %</strong> de frais par an, soit environ{" "}
+                <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)} cette année</strong>.
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 3 }}>Personnalisez avec vos vrais placements</div>
+              <div style={{ color: T.muted, fontSize: 14 }}>
+                Renseignez vos investissements dans Patrimoine pour calculer vos frais réels.
+              </div>
+            </>
           )}
         </div>
+        {setView && (
+          <button onClick={() => setView("patrimoine")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(91,141,239,0.1)", border: `1px solid ${T.blue}44`, color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 10, flexShrink: 0 }}>
+            {hasRealData ? "Voir mes placements" : "Saisir mes placements"} <ArrowRight size={14} />
+          </button>
+        )}
       </div>
 
       {/* Simulateur d'impact — EN PREMIER */}

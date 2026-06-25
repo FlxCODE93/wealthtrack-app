@@ -788,13 +788,17 @@ export default function Landing({ onStart, onLogin = onStart }) {
           </div>
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={onLogin} className="text-base font-bold px-5 py-3 rounded-xl transition-all"
-            style={btn.ghost} {...ghostHover}>
+        <div className="flex items-center gap-2.5">
+          <button onClick={onLogin} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
+            style={{ background: "transparent", border: `1px solid ${T.blue}`, color: T.blue }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = `${T.blue}14`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
             Se connecter
           </button>
-          <button onClick={onStart} className="text-base font-bold px-5 py-3 rounded-xl"
-            style={btn.primary} {...primaryHover}>
+          <button onClick={onStart} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
+            style={{ background: T.blue, border: `1px solid ${T.blue}`, color: "#fff" }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.filter = "brightness(1.08)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.filter = ""; }}>
             S'inscrire
           </button>
         </div>

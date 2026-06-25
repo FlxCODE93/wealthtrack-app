@@ -3289,7 +3289,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
     );
     return (
       <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", minWidth: 210, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
-        <div style={{ fontSize: 12, color: T.muted }}>{label === 0 ? "Aujourd'hui" : `Dans ${label} an${label > 1 ? "s" : ""}`}</div>
+        <div style={{ fontSize: 12, color: T.muted }}>{(() => { const y = label - SIM_START_YEAR; return y <= 0 ? "Aujourd'hui" : `Dans ${y} an${y > 1 ? "s" : ""}`; })()}</div>
         <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(capital)}</div>
         <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
           {row(T.green, "Intérêts", gains)}

@@ -923,7 +923,7 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
         <ExpandableChart height={300} title="Trajectoire vers l'indépendance financière">
           <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-            <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} interval={Math.floor(chartEnd / 8)} />
+            <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} interval={Math.floor(chartEnd / 8)} tickLine={false} />
             <YAxis stroke={T.muted} tick={{ fontSize: 10 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<ChartTooltip fiTarget={fiTarget} />} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />

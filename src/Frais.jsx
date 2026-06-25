@@ -372,10 +372,10 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Horizon de placement</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
-                  style={{ ...uStyle, fontSize: 28, fontWeight: 700, appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}>
-                  {HORIZONS.map((h) => <option key={h} value={h} style={{ background: T.card }}>{h}</option>)}
-                </select>
+                <input type="number" min={1} max={50} value={horizon || ""} placeholder="20"
+                  style={{ ...uStyle, fontSize: 28, fontWeight: 700, width: 80 }}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setHorizon(Math.min(50, Math.max(1, +e.target.value || 1)))} />
                 <span style={{ color: T.muted, fontSize: 16 }}>ans</span>
               </div>
             </div>

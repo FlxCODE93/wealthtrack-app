@@ -735,7 +735,7 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
         {fiYearETF && (
           <div style={{
             marginTop: 14, padding: "14px 18px",
-            background: "rgba(34,199,154,0.06)", border: `1px solid rgba(34,199,154,0.2)`,
+            background: T.panel, border: `1px solid ${T.border}`,
             borderRadius: 14, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
           }}>
             <div style={{ flex: 1, minWidth: 200 }}>

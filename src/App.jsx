@@ -4013,7 +4013,7 @@ function CreditArbitrage({ initial } = {}) {
           <Num label="Intérêts économisés en remboursant" val={eur(r.interestSaved)} />
           <Num label="Mensualité libérée → investie" val={eur(r.freedMonthly)} />
         </div>
-        <div style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33`, borderRadius: 12, padding: "12px 16px", fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 16px", fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
           {breakeven == null
             ? <>Même à 0 % de rendement, rembourser ce prêt est gagnant : son taux est élevé.</>
             : <>Seuil de bascule : au-dessus de <b style={{ color: T.text }}>{(breakeven * 100).toFixed(1)} %/an net</b> de rendement, garder le prêt devient plus rentable que rembourser.</>}
@@ -4898,7 +4898,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
 
         {mode === "locatif" && (
-          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33` }}>
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: T.panel, border: `1px solid ${T.border}` }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span style={{ color: T.blue, fontWeight: 700 }}>
                 Capacité d'emprunt avec ce loyer
@@ -5310,7 +5310,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
 
         {/* Estimations à partir du code postal */}
         {melCodePostal.length === 5 && (
-          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(91,141,239,0.06)", border: `1px solid ${T.blue}33` }}>
+          <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: T.panel, border: `1px solid ${T.border}` }}>
             {melGeoLoading && <span style={{ color: T.muted }}>Recherche de la commune…</span>}
             {melGeoError && <span style={{ color: T.red }}>{melGeoError}</span>}
             {melGeoInfo && !melGeoLoading && (
@@ -6915,7 +6915,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, setPatrimoine,
             <div><label style={lbl}>Patrimoine immobilier (€)</label>
               <input type="number" inputMode="numeric" min={0} value={immo} placeholder="0"
                 onFocus={clearZero(setImmo)} onChange={e => setImmo(e.target.value)} style={inpO} /></div>
-            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(91,141,239,0.07)", border: `1px solid ${T.blue}22` }}>
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: T.panel, border: `1px solid ${T.border}` }}>
               <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>
                 {eur(Math.round(fvMonthly(num(epargne), RATE_A, 20)))}

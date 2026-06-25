@@ -680,7 +680,7 @@ export default function Tax() {
                 ],
               },
             ].map(card => (
-              <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
+              <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
                 <div className="flex items-center gap-2 mb-3">
                   {card.icon}
                   <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
@@ -763,7 +763,7 @@ export default function Tax() {
           </div>
 
           {/* Stratégie */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
             <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un PEA dès maintenant (même avec 100 €) pour lancer le compteur des 5 ans. Investissez les actions mondiales via un ETF MSCI World synthétique (Amundi, Lyxor) éligible PEA. En parallèle, gardez le CTO pour les titres hors UE (Chine, Inde, Small Caps US) et les obligations. La combinaison PEA + CTO + PEA-PME offre 375 k€ de capacité de versement et une fiscalité optimisée.
           </div>
         </div>
@@ -818,7 +818,7 @@ export default function Tax() {
                 ],
               },
             ].map(card => (
-              <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
+              <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
                 <div className="flex items-center gap-2 mb-3">
                   {card.icon}
                   <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
@@ -910,7 +910,7 @@ export default function Tax() {
           </div>
 
           {/* Conseil */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
             <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un contrat AV dès maintenant pour lancer le compteur des 8 ans. Privilégiez les contrats multisupports (ETF en unités de compte) à frais d'entrée et de gestion réduits. Effectuez vos rachats après 8 ans par tranches annuelles pour maximiser l'abattement de 4 600 € / 9 200 €. En matière de succession, l'AV est l'outil le plus puissant : chaque bénéficiaire peut recevoir 152 500 € sans aucun impôt.
           </div>
         </div>
@@ -967,7 +967,7 @@ export default function Tax() {
                     ],
                   },
                 ].map(card => (
-                  <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
+                  <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
                     <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <tbody>
@@ -1063,7 +1063,7 @@ export default function Tax() {
                     ],
                   },
                 ].map(card => (
-                  <div key={card.title} style={{ background: card.color, border: `1px solid ${card.border}`, borderRadius: 14, padding: "16px 18px" }}>
+                  <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
                     <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {card.items.map(([kind, text], i) => (
@@ -1161,7 +1161,7 @@ export default function Tax() {
           )}
 
           {/* Conseil */}
-          <div style={{ background: "rgba(91,141,239,0.07)", border: `1px solid rgba(91,141,239,0.2)`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
             <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Pour la location longue durée, le LMNP au réel est presque toujours supérieur à la location nue : l'amortissement comptable du bien (2-4 % / an) génère un déficit BIC qui efface les loyers pendant 20-30 ans. Pour les plus-values, conserver un bien locatif 22 ans efface 100 % de l'IR, et 30 ans efface 100 % des PS. Sur la résidence principale, toute plus-value est totalement exonérée sans aucun délai ni aucun plafond.
           </div>
         </div>

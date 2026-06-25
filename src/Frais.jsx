@@ -273,88 +273,74 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
 
       </div>
 
-      {/* Bloc Vos placements */}
-      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
-        {/* En-tête */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: hasItems ? 16 : 0, flexWrap: "wrap" }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: hasRealData ? "rgba(59,130,246,0.14)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Wallet size={20} style={{ color: hasRealData ? T.blue : T.muted }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            {hasItems ? (
-              <>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 2 }}>Vos placements · {eur(invested)}</div>
-                <div style={{ color: T.muted, fontSize: 13 }}>
-                  Frais pondérés <strong style={{ color: T.text }}>{effectiveFeeRate.toFixed(2).replace(".", ",")} %/an</strong>
-                  {" "}· coût estimé <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)}/an</strong>
-                </div>
-              </>
-            ) : hasRealData ? (
-              <>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 2 }}>Vos placements : {eur(invested)}</div>
-                <div style={{ color: T.muted, fontSize: 13 }}>
-                  Frais estimés <strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)}/an</strong> à {effectiveFeeRate.toFixed(1).replace(".", ",")} %
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 2 }}>Personnalisez avec vos vrais placements</div>
-                <div style={{ color: T.muted, fontSize: 13 }}>Renseignez vos investissements dans Patrimoine.</div>
-              </>
-            )}
-          </div>
-          {!hasItems && setView && (
-            <button onClick={() => setView("patrimoine")}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(91,141,239,0.1)", border: `1px solid ${T.blue}44`, color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 10, flexShrink: 0 }}>
-              Saisir mes placements <ArrowRight size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Liste directe — pas de dépliant */}
-        {hasItems && (
-          <>
-            <div style={{ marginBottom: 6, display: "grid", gridTemplateColumns: "1fr 80px 110px", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Placement</span>
-              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>Valeur</span>
-              <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>Frais/an</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {investItems.map((item, i) => {
-                const key = item.label || item.name || "";
-                const rate = getItemRate(item);
-                const isGuess = itemRates[key] == null;
-                return (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px", alignItems: "center", gap: 12, padding: "7px 0", borderBottom: i < investItems.length - 1 ? `1px solid ${T.border}` : "none" }}>
-                    <div style={{ color: T.text, fontSize: 14, fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{key || "—"}</div>
-                    <div style={{ color: T.muted, fontSize: 13, textAlign: "right" }}>{eur(item.value)}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-                      <input type="number" min={0} max={5} step={0.1} value={rate}
-                        title={isGuess ? "Taux estimé — cliquez pour modifier" : undefined}
-                        onChange={(e) => setItemRate(item, +e.target.value || 0)}
-                        style={{ background: "transparent", border: `1px solid ${isGuess ? T.border : T.blue}`, borderRadius: 6, color: T.text, padding: "4px 6px", width: 56, fontSize: 13, textAlign: "right", outline: "none" }} />
-                      <span style={{ color: T.muted, fontSize: 13, flexShrink: 0 }}>%</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {setView && (
-              <button onClick={() => setView("patrimoine")}
-                style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: T.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: 0 }}>
-                Modifier dans Patrimoine <ArrowRight size={13} />
-              </button>
-            )}
-          </>
-        )}
-      </div>
-
       {/* Simulateur d'impact */}
       <Section T={T} first title="Combien les frais vous coûtent">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
 
-          {/* Colonne gauche — saisies */}
-          <div style={{ padding: "28px 28px", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 28 }}>
+          {/* Colonne gauche — placements + saisies */}
+          <div style={{ padding: "24px", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 20, overflow: "auto" }}>
+
+            {/* Vos placements */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <Wallet size={15} style={{ color: hasRealData ? T.blue : T.muted, flexShrink: 0 }} />
+                <span style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Vos placements</span>
+                {hasItems && <span style={{ color: T.text, fontSize: 12, fontWeight: 700, marginLeft: "auto" }}>{eur(invested)}</span>}
+              </div>
+              {hasItems ? (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 76px", gap: 8, marginBottom: 4, paddingBottom: 4, borderBottom: `1px solid ${T.border}` }}>
+                    <span style={{ color: T.muted, fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>Placement</span>
+                    <span style={{ color: T.muted, fontSize: 10, fontWeight: 600, textTransform: "uppercase", textAlign: "right" }}>Valeur</span>
+                    <span style={{ color: T.muted, fontSize: 10, fontWeight: 600, textTransform: "uppercase", textAlign: "right" }}>Frais</span>
+                  </div>
+                  {investItems.map((item, i) => {
+                    const key = item.label || item.name || "";
+                    const rate = getItemRate(item);
+                    const isGuess = itemRates[key] == null;
+                    return (
+                      <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto 76px", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: i < investItems.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                        <div style={{ color: T.text, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{key || "—"}</div>
+                        <div style={{ color: T.muted, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>{eur(item.value)}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>
+                          <input type="number" min={0} max={5} step={0.1} value={rate}
+                            title={isGuess ? "Taux estimé" : undefined}
+                            onChange={(e) => setItemRate(item, +e.target.value || 0)}
+                            style={{ background: "transparent", border: `1px solid ${isGuess ? T.border : T.blue}`, borderRadius: 6, color: T.text, padding: "3px 5px", width: 44, fontSize: 12, textAlign: "right", outline: "none" }} />
+                          <span style={{ color: T.muted, fontSize: 12 }}>%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ marginTop: 8, fontSize: 12, color: T.muted }}>
+                    Frais pondérés <strong style={{ color: T.text }}>{effectiveFeeRate.toFixed(2).replace(".", ",")} %/an</strong>
+                    {" · "}<strong style={{ color: "#ef4444" }}>{eur(realAnnualCost)}/an</strong>
+                  </div>
+                  {setView && (
+                    <button onClick={() => setView("patrimoine")}
+                      style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", color: T.blue, cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>
+                      Modifier dans Patrimoine <ArrowRight size={11} />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ color: T.muted, fontSize: 13 }}>
+                    {hasRealData ? `${eur(invested)} importés — taux global estimé` : "Aucun placement renseigné."}
+                  </div>
+                  {setView && (
+                    <button onClick={() => setView("patrimoine")}
+                      style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(91,141,239,0.1)", border: `1px solid ${T.blue}44`, color: T.blue, cursor: "pointer", fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 8 }}>
+                      {hasRealData ? "Détailler mes placements" : "Saisir mes placements"} <ArrowRight size={12} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ borderTop: `1px solid ${T.border}` }} />
+
+            {/* Capital initial */}
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Capital initial</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -370,6 +356,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               )}
             </div>
 
+            {/* Horizon */}
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Horizon de placement</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -386,6 +373,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               </div>
             </div>
 
+            {/* Taux de frais */}
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Taux de frais</div>
               {hasItems ? (

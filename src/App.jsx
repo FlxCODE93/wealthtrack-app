@@ -153,8 +153,8 @@ const PROFILE_CONFIG = {
 /* ------------------------------------------------------------------ */
 const SIM_START_YEAR = 2026;
 
-// Palette test Budget — panels en bleu nuit, proches du fond sidebar
-const C_BUDGET = { ...C, panel: "#141a2e", card: "#1a2138", border: "rgba(120,150,230,0.10)" };
+// Palette Budget — identique à Patrimoine (thème par défaut)
+const C_BUDGET = C;
 
 const logFmt = (v) => {
   const n = Math.round(Math.pow(10, v));

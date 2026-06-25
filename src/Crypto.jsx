@@ -629,26 +629,6 @@ export default function Crypto({ setView, marketsOnly = false }) {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={refresh} disabled={loading} style={{
-            background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`,
-            color: loading ? T.muted : T.text, borderRadius: 10, padding: "9px 14px",
-            cursor: loading ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            {loading ? "…" : "Actualiser"}
-          </button>
-          {!marketsOnly && (
-          <button onClick={() => exportCSV(holdings, prices)} title="Impôt PFU estimé par ligne — indicatif, ne remplace pas le calcul PMCA officiel"
-            style={{
-              background: "rgba(47,155,255,0.1)", border: `1px solid ${T.blue}44`,
-              color: T.blue, borderRadius: 10, padding: "9px 14px", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6,
-            }}>
-            <Download size={14} /> Export CSV
-          </button>
-          )}
-        </div>
       </div>
 
 

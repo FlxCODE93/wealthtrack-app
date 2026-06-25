@@ -6271,7 +6271,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     if (!cryptoSync?.items?.length || hasCryptoCat) return patrimoine.actifs;
     return [
       ...patrimoine.actifs,
-      { id: "crypto", label: "Cryptomonnaies", color: "#f7931a", items: cryptoSync.items, isSync: true },
+      { id: "crypto", label: "Cryptoactifs", color: "#f7931a", items: cryptoSync.items, isSync: true },
     ];
   }, [patrimoine.actifs, cryptoSync]);
 
@@ -6556,7 +6556,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
               <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histRange > 12 ? 55 : 38} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />

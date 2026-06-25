@@ -796,9 +796,8 @@ export default function Landing({ onStart, onLogin = onStart }) {
             style={btn.ghost} {...ghostHover}>
             Se connecter
           </button>
-          <button onClick={onStart} className="relative group overflow-hidden text-base font-bold px-5 py-3 rounded-xl"
+          <button onClick={onStart} className="text-base font-bold px-5 py-3 rounded-xl"
             style={btn.primary} {...primaryHover}>
-            <NeonGlow />
             S'inscrire
           </button>
         </div>
@@ -830,9 +829,8 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </p>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-6 wt-slide-up">
           <button onClick={onStart}
-            className="relative group overflow-hidden flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold wt-button-press w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold wt-button-press w-full sm:w-auto"
             style={btn.primary} {...primaryHover}>
-            <NeonGlow />
             Commencer gratuitement <ArrowRight size={18} />
           </button>
           <button
@@ -1138,9 +1136,8 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </Reveal>
         <div className="text-center mt-10">
           <button onClick={onStart}
-            className="relative group overflow-hidden inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold"
             style={btn.primary} {...primaryHover}>
-            <NeonGlow />
             Commencer gratuitement <ArrowRight size={18} />
           </button>
         </div>

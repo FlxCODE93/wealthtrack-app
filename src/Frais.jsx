@@ -485,10 +485,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
                         {d.inconvenients.map((i) => <div key={i} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 3 }}>• {i}</div>)}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <Info size={13} style={{ color: T.muted, flexShrink: 0, marginTop: 3 }} />
-                      <span style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{d.note}</span>
-                    </div>
+
                   </div>
                 )}
               </div>

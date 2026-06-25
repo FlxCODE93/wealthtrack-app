@@ -348,113 +348,128 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
         )}
       </div>
 
-      {/* Simulateur d'impact — EN PREMIER */}
+      {/* Simulateur d'impact */}
       <Section T={T} first title="Combien les frais vous coûtent">
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "24px 28px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28 }}>
-          <Field label="Capital initial (€)">
-            <input type="number" value={capital || ""} placeholder="0" style={uStyle}
-              onFocus={(e) => e.target.select()} onChange={(e) => setCapital(+e.target.value || 0)} />
-            {hasRealData && Math.round(invested) !== capital && (
-              <button onClick={useRealCapital}
-                style={{ marginTop: 8, background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12, fontWeight: 600 }}>
-                Utiliser mes placements ({eur(invested)})
-              </button>
-            )}
-          </Field>
-          <Field label="Horizon">
-            <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
-              style={{ ...uStyle, appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}>
-              {HORIZONS.map((h) => <option key={h} value={h} style={{ background: T.card }}>{h} ans</option>)}
-            </select>
-          </Field>
-          <div>
-            {hasItems ? (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
-                <span style={{ color: T.muted, fontSize: 13 }}>Frais pondérés de vos placements</span>
-                <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 16 }}>{effectiveFeeRate.toFixed(2).replace(".", ",")} %</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+
+          {/* Colonne gauche — saisies */}
+          <div style={{ padding: "28px 28px", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 28 }}>
+            <div>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Capital initial</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <input type="number" value={capital || ""} placeholder="0" style={{ ...uStyle, fontSize: 28, fontWeight: 700 }}
+                  onFocus={(e) => e.target.select()} onChange={(e) => setCapital(+e.target.value || 0)} />
+                <span style={{ color: T.muted, fontSize: 16 }}>€</span>
               </div>
-            ) : (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                  <span style={{ color: T.muted, fontSize: 13 }}>Frais de votre banque / fonds</span>
-                  <span style={{ color: "#ef4444", fontWeight: 700 }}>{feeRate.toFixed(1).replace(".", ",")} %</span>
+              {hasRealData && Math.round(invested) !== capital && (
+                <button onClick={useRealCapital}
+                  style={{ marginTop: 6, background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12, fontWeight: 600 }}>
+                  Utiliser mes placements ({eur(invested)})
+                </button>
+              )}
+            </div>
+
+            <div>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Horizon de placement</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
+                  style={{ ...uStyle, fontSize: 28, fontWeight: 700, appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}>
+                  {HORIZONS.map((h) => <option key={h} value={h} style={{ background: T.card }}>{h}</option>)}
+                </select>
+                <span style={{ color: T.muted, fontSize: 16 }}>ans</span>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Taux de frais</div>
+              {hasItems ? (
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ color: T.text, fontSize: 28, fontWeight: 700 }}>{effectiveFeeRate.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ color: T.muted, fontSize: 16 }}>%</span>
+                  <span style={{ color: T.muted, fontSize: 12, marginLeft: 4 }}>pondérés</span>
                 </div>
-                <input type="range" min={0} max={3} step={0.1} value={feeRate}
-                  onChange={(e) => setFeeRate(+e.target.value)}
-                  style={{ width: "100%", accentColor: "#ef4444" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.muted, marginTop: 4 }}>
-                  <span>0 %</span><span>1,5 %</span><span>3 %</span>
-                </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+                    <span style={{ color: T.text, fontSize: 28, fontWeight: 700 }}>{feeRate.toFixed(1).replace(".", ",")}</span>
+                    <span style={{ color: T.muted, fontSize: 16 }}>%</span>
+                  </div>
+                  <input type="range" min={0} max={3} step={0.1} value={feeRate}
+                    onChange={(e) => setFeeRate(+e.target.value)}
+                    style={{ width: "100%", accentColor: T.blue }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.muted, marginTop: 4 }}>
+                    <span>0 %</span><span>1,5 %</span><span>3 %</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Graphique — deux courbes divergentes */}
-        <div style={{ height: 220 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 4, right: 16, bottom: 16, left: 8 }}>
-              <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false}
-                tickFormatter={v => `${v} ans`} interval={Math.floor(horizon / 4)}
-                label={{ value: "Années", position: "insideBottom", offset: -8, fill: T.muted, fontSize: 11 }} />
-              <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false} width={64}
-                tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M €` : `${Math.round(v/1000)}k €`} />
-              <Tooltip
-                cursor={{ stroke: T.border, strokeDasharray: "3 2" }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const yr = payload[0]?.payload?.y;
-                  const sans = payload.find(p => p.dataKey === "sans")?.value ?? 0;
-                  const avec = payload.find(p => p.dataKey === "avec")?.value ?? 0;
-                  const perte = sans - avec;
-                  return (
-                    <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", minWidth: 180 }}>
-                      <div style={{ color: T.muted, fontSize: 12, marginBottom: 6 }}>Dans {yr} an{yr > 1 ? "s" : ""}</div>
-                      <div style={{ color: T.text, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", marginBottom: 12 }}>{eur(avec)}</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />
-                            Sans frais
-                          </span>
-                          <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{eur(sans)}</span>
+          {/* Colonne droite — résultat + graphique */}
+          <div style={{ padding: "28px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Résultat principal */}
+            <div>
+              <div style={{ color: T.muted, fontSize: 13, marginBottom: 4 }}>Manque à gagner</div>
+              <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 36, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                − {eur(impactData.perte)}
+              </div>
+              <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>après {horizon} ans · {impactData.pct} % de capital en moins</div>
+            </div>
+            {/* Légende pills */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: "rgba(255,255,255,0.06)", fontSize: 13, color: T.text, fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />
+                Sans frais {eur(impactData.sans)}
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: "rgba(239,68,68,0.08)", fontSize: 13, color: "#ef4444", fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} % {eur(impactData.avec)}
+              </span>
+            </div>
+            {/* Graphique */}
+            <div style={{ flex: 1, minHeight: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 16, left: 8 }}>
+                  <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false}
+                    tickFormatter={v => `${v} ans`} interval={Math.floor(horizon / 4)} />
+                  <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false} width={60}
+                    tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M €` : `${Math.round(v/1000)}k €`} />
+                  <Tooltip
+                    cursor={{ stroke: T.border, strokeDasharray: "3 2" }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const yr = payload[0]?.payload?.y;
+                      const sans = payload.find(p => p.dataKey === "sans")?.value ?? 0;
+                      const avec = payload.find(p => p.dataKey === "avec")?.value ?? 0;
+                      const perte = sans - avec;
+                      return (
+                        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", minWidth: 180 }}>
+                          <div style={{ color: T.muted, fontSize: 12, marginBottom: 6 }}>Dans {yr} an{yr > 1 ? "s" : ""}</div>
+                          <div style={{ color: T.text, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", marginBottom: 12 }}>{eur(avec)}</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />Sans frais
+                              </span>
+                              <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{eur(sans)}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />Frais perdus
+                              </span>
+                              <span style={{ color: "#ef4444", fontSize: 13, fontWeight: 600 }}>−{eur(perte)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-                            Frais perdus
-                          </span>
-                          <span style={{ color: "#ef4444", fontSize: 13, fontWeight: 600 }}>−{eur(perte)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Line dataKey="sans" stroke={T.text} strokeWidth={2} dot={false} />
-              <Line dataKey="avec" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 3" strokeOpacity={0.75} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Stats — ligne épurée */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-          <div style={{ paddingRight: 24 }}>
-            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Sans frais (ETF 0,25 %)</div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>{eur(impactData.sans)}</div>
+                      );
+                    }}
+                  />
+                  <Line dataKey="sans" stroke={T.text} strokeWidth={2} dot={false} />
+                  <Line dataKey="avec" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 3" strokeOpacity={0.75} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div style={{ paddingRight: 24, borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
-            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} %/an</div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>{eur(impactData.avec)}</div>
-          </div>
-          <div style={{ borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
-            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Manque à gagner sur {horizon} ans</div>
-            <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 18 }}>− {eur(impactData.perte)}</div>
-            <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{impactData.pct} % de capital en moins</div>
-          </div>
-        </div>
-
         </div>
       </Section>
 

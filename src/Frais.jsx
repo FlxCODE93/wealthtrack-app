@@ -4,6 +4,7 @@ import { useLocalStorage } from "./storage.js";
 import { Field } from "./ui.jsx";
 import { fv, RATE_ETF_WORLD } from "./finance.js";
 import { Percent, AlertTriangle, Info, ChevronDown, ChevronUp, BookOpen, Wallet, ArrowRight } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const eur = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(Number.isFinite(n) ? n : 0)) + " €";
@@ -244,6 +245,14 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
     return { sans, avec, perte, pct };
   }, [capital, horizon, effectiveFeeRate]);
 
+  const chartData = useMemo(() => (
+    Array.from({ length: horizon + 1 }, (_, y) => ({
+      y,
+      sans: Math.round(fv(capital, 0, RATE_ETF_WORLD, y)),
+      avec: Math.round(fv(capital, 0, RATE_ETF_WORLD - effectiveFeeRate / 100, y)),
+    }))
+  ), [capital, horizon, effectiveFeeRate]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
       {/* Header */}
@@ -407,19 +416,38 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
           </div>
         </div>
 
-        {/* Impact — ligne épurée */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+        {/* Graphique — deux courbes divergentes */}
+        <div style={{ height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+              <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false}
+                tickFormatter={v => v === 0 ? "" : `${v} ans`} interval={Math.floor(horizon / 4)} />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: T.text }}
+                formatter={(val, name) => [eur(val), name === "sans" ? "Sans frais (ETF)" : `Avec ${effectiveFeeRate.toFixed(1).replace(".", ",")} %`]}
+                labelFormatter={v => `An ${v}`}
+                cursor={{ stroke: T.border }}
+              />
+              <Line dataKey="sans" stroke={T.text} strokeWidth={2} dot={false} />
+              <Line dataKey="avec" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 3" strokeOpacity={0.75} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Stats — ligne épurée */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
           <div style={{ paddingRight: 24 }}>
             <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Sans frais (ETF 0,25 %)</div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 20 }}>{eur(impactData.sans)}</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>{eur(impactData.sans)}</div>
           </div>
           <div style={{ paddingRight: 24, borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
             <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} %/an</div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 20 }}>{eur(impactData.avec)}</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 18 }}>{eur(impactData.avec)}</div>
           </div>
           <div style={{ borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
             <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Manque à gagner sur {horizon} ans</div>
-            <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 20 }}>− {eur(impactData.perte)}</div>
+            <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 18 }}>− {eur(impactData.perte)}</div>
             <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{impactData.pct} % de capital en moins</div>
           </div>
         </div>

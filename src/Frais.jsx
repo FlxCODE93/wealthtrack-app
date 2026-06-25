@@ -423,7 +423,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false}
                 tickFormatter={v => `${v} ans`} interval={Math.floor(horizon / 4)}
                 label={{ value: "Années", position: "insideBottom", offset: -8, fill: T.muted, fontSize: 11 }} />
-              <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false} width={64}
+              <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false} width={64}
                 tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M €` : `${Math.round(v/1000)}k €`} />
               <Tooltip
                 cursor={{ stroke: T.border, strokeDasharray: "3 2" }}

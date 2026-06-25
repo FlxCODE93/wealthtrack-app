@@ -170,7 +170,7 @@ function GlossaireItem({ term, def }) {
         {open ? <ChevronUp size={16} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: T.muted, flexShrink: 0 }} />}
       </button>
       {open && (
-        <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65, paddingBottom: 16, maxWidth: 720 }}>
+        <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.65, paddingBottom: 16 }}>
           {def}
         </div>
       )}

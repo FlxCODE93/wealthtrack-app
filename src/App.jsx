@@ -53,6 +53,7 @@ import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
 import AIChatWidget from "./AIChatWidget.jsx";
 import { Card, Stat, Badge, KpiCard, Pill, Field, MiniStat, makeChartTip, renderDonutPctLabel, makeInputStyle, DiscreetCtx, useEur } from "./ui.jsx";
+import NumInput from "./NumInput.jsx";
 
 /* ------------------------------------------------------------------ */
 /*  Icône d'alerte par niveau (remplace les emojis 🔴🟡💡)            */
@@ -1896,8 +1897,8 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
               </select>
             </Field>
             <Field label="Montant (€)">
-              <input type="number" value={newTx.amount} placeholder="0" style={inputStyle}
-                onChange={(e) => setNewTx((t) => ({ ...t, amount: e.target.value }))} />
+              <NumInput value={newTx.amount} placeholder="0" style={inputStyle}
+                onChange={(n) => setNewTx((t) => ({ ...t, amount: n }))} />
             </Field>
           </div>
           <div className="flex items-center gap-4 mt-3">
@@ -2019,7 +2020,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                         {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                       </select>
                       <div className="flex gap-2 items-center">
-                        <input type="number" value={editBuf.amount} style={{ ...inpSt, width: 90 }} onChange={e => setEditBuf(b => ({ ...b, amount: e.target.value }))} />
+                        <NumInput value={editBuf.amount} style={{ ...inpSt, width: 90 }} onChange={n => setEditBuf(b => ({ ...b, amount: n }))} />
                         <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: T.muted, fontSize: 12 }}>
                           <input type="checkbox" checked={!!editBuf.recurring} onChange={e => setEditBuf(b => ({ ...b, recurring: e.target.checked }))} style={{ accentColor: T.blue }} />
                           <Repeat size={11} />
@@ -2109,11 +2110,10 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                     <span className="text-sm font-semibold flex-1" style={{ color: T.text }}>{cat}</span>
                     <span className="text-sm font-bold" style={{ color: spent > 0 ? T.text : T.muted }}>{fmt(spent)}</span>
                     <span style={{ color: T.muted, fontSize: 12 }}>/</span>
-                    <input
-                      type="number"
+                    <NumInput
                       placeholder="illimité"
-                      value={budgets?.[cat] || ""}
-                      onFocus={(e) => e.target.select()} onChange={e => setBudgets(b => ({ ...b, [cat]: +e.target.value || 0 }))}
+                      value={budgets?.[cat] || 0}
+                      onChange={n => setBudgets(b => ({ ...b, [cat]: n }))}
                       style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.04)", color: T.text, fontSize: 13, outline: "none" }}
                     />
                     <span style={{ color: T.muted, fontSize: 12 }}>€ max</span>
@@ -2194,7 +2194,7 @@ function PERSimulator({ monthly = 200, years = 20 }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 18 }}>
         <Field label="Rendement (%/an)">
-          <input type="number" step="0.5" min={0} value={returnPct} onFocus={(e) => e.target.select()} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+          <NumInput step="0.5" min={0} value={returnPct} onChange={n => setReturnPct(n)} style={inputStyle} />
         </Field>
         <Field label="Votre TMI aujourd'hui">
           <TmiSelect value={tmiNow} onChange={setTmiNow} />
@@ -2455,12 +2455,12 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Investissement mensuel (€)">
-            <input type="number" value={monthly || ""} placeholder="0" style={inputStyle}
-              onFocus={(e) => e.target.select()} onChange={(e) => setMonthly(+e.target.value || 0)} />
+            <NumInput value={monthly || 0} placeholder="0" style={inputStyle}
+              onChange={(n) => setMonthly(n)} />
           </Field>
           <Field label="Épargne / apport initial (€)">
-            <input type="number" value={initial || ""} placeholder="0" style={inputStyle}
-              onFocus={(e) => e.target.select()} onChange={(e) => setInitial(+e.target.value || 0)} />
+            <NumInput value={initial || 0} placeholder="0" style={inputStyle}
+              onChange={(n) => setInitial(n)} />
           </Field>
           <Field label="Horizon">
             <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
@@ -3179,8 +3179,7 @@ function ImmoCard({ price, setPrice, horizon }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <Field label="Prix du bien immobilier (€)">
-              <input type="number" value={price} style={inputStyle}
-                onFocus={(e) => e.target.select()} onChange={(e) => setPrice(+e.target.value || 0)} />
+              <NumInput value={price} style={inputStyle} onChange={n => setPrice(n)} />
             </Field>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -3610,10 +3609,10 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
         <div className="text-xs font-semibold mb-3 mt-5" style={{ color: T.muted, letterSpacing: 1 }}>OBJECTIF COMMUN</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <Field label="Capital cible (€)">
-            <input type="number" value={goalTarget} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setGoalTarget(+e.target.value || 0)} />
+            <NumInput value={goalTarget} style={inputStyle} onChange={n => setGoalTarget(n)} />
           </Field>
           <Field label="Épargne commune supplémentaire (€/mois)">
-            <input type="number" value={sharedMonthly} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setSharedMonthly(+e.target.value || 0)} />
+            <NumInput value={sharedMonthly} style={inputStyle} onChange={n => setSharedMonthly(n)} />
           </Field>
         </div>
 
@@ -3800,7 +3799,7 @@ function Portefeuille() {
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: T.muted }}>Montant (€)</label>
-                  <input type="number" value={pos.amount} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => updatePos(pos.id, "amount", +e.target.value || 0)} />
+                  <NumInput value={pos.amount} style={inputStyle} onChange={n => updatePos(pos.id, "amount", n)} />
                 </div>
                 <div className="flex items-end gap-2">
                   <div className="flex-1 rounded-xl px-3 py-2.5 font-bold text-sm"
@@ -3960,22 +3959,22 @@ function CreditArbitrage({ initial } = {}) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
           <Field label="Capital restant dû (€)">
-            <input type="number" min={0} value={remaining} onFocus={(e) => e.target.select()} onChange={e => setRemaining(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <NumInput min={0} value={remaining} onChange={n => setRemaining(n)} style={inputStyle} />
           </Field>
           <Field label="Taux du prêt (%)">
-            <input type="number" step="0.1" min={0} value={ratePct} onFocus={(e) => e.target.select()} onChange={e => setRatePct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <NumInput step="0.1" min={0} value={ratePct} onChange={n => setRatePct(n)} style={inputStyle} />
           </Field>
           <Field label="Assurance (€/mois)">
-            <input type="number" min={0} value={insurance} onFocus={(e) => e.target.select()} onChange={e => setInsurance(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <NumInput min={0} value={insurance} onChange={n => setInsurance(n)} style={inputStyle} />
           </Field>
           <Field label="Durée restante (ans)">
-            <input type="number" step="1" min={1} value={yearsLeft} onChange={e => setYearsLeft(Math.max(1, +e.target.value || 1))} style={inputStyle} />
+            <NumInput step="1" min={1} value={yearsLeft} onChange={n => setYearsLeft(n)} style={inputStyle} />
           </Field>
           <Field label="Épargne dispo (€)">
-            <input type="number" min={0} value={lumpSum} onFocus={(e) => e.target.select()} onChange={e => setLumpSum(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <NumInput min={0} value={lumpSum} onChange={n => setLumpSum(n)} style={inputStyle} />
           </Field>
           <Field label="Rendement visé (%/an)">
-            <input type="number" step="0.5" min={0} value={returnPct} onFocus={(e) => e.target.select()} onChange={e => setReturnPct(Math.max(0, +e.target.value || 0))} style={inputStyle} />
+            <NumInput step="0.5" min={0} value={returnPct} onChange={n => setReturnPct(n)} style={inputStyle} />
           </Field>
           <Field label="Fiscalité">
             <select value={envelope} onChange={e => setEnvelope(e.target.value)} style={inputStyle}>
@@ -4128,34 +4127,34 @@ function CreditForm({ credit, onSave, onCancel }) {
             onChange={(e) => set("label", e.target.value)} />
         </Field>
         <Field label="Taux (% / an)">
-          <input type="number" step={0.1} min={0} value={c.taux} style={inputStyle} onChange={(e) => setNum("taux", e.target.value)} />
+          <NumInput step={0.1} min={0} value={c.taux} style={inputStyle} onChange={n => setNum("taux", n)} />
         </Field>
 
         {isRevolving ? (
           <>
             <Field label="Capital restant dû (€)">
-              <input type="number" min={0} value={c.capitalRestant} style={inputStyle} onChange={(e) => setNum("capitalRestant", e.target.value)} />
+              <NumInput min={0} value={c.capitalRestant} style={inputStyle} onChange={n => setNum("capitalRestant", n)} />
             </Field>
             <Field label="Paiement mensuel (€)">
-              <input type="number" min={0} value={c.paiementMensuel} style={inputStyle} onChange={(e) => setNum("paiementMensuel", e.target.value)} />
+              <NumInput min={0} value={c.paiementMensuel} style={inputStyle} onChange={n => setNum("paiementMensuel", n)} />
             </Field>
           </>
         ) : (
           <>
             <Field label="Capital emprunté (€)">
-              <input type="number" min={0} value={c.capitalInitial} style={inputStyle} onChange={(e) => setNum("capitalInitial", e.target.value)} />
+              <NumInput min={0} value={c.capitalInitial} style={inputStyle} onChange={n => setNum("capitalInitial", n)} />
             </Field>
             <Field label="Durée totale (mois)">
-              <input type="number" min={1} value={c.dureeMois} style={inputStyle} onChange={(e) => setNum("dureeMois", e.target.value, { min: 1 })} />
+              <NumInput min={1} value={c.dureeMois} style={inputStyle} onChange={n => setNum("dureeMois", n, { min: 1 })} />
             </Field>
             <Field label="Date de début">
               <input type="date" value={c.dateDebut} style={inputStyle} onChange={(e) => set("dateDebut", e.target.value)} />
             </Field>
             <Field label="Assurance (€ / mois)">
-              <input type="number" min={0} value={c.assuranceMensuelle} style={inputStyle} onChange={(e) => setNum("assuranceMensuelle", e.target.value)} />
+              <NumInput min={0} value={c.assuranceMensuelle} style={inputStyle} onChange={n => setNum("assuranceMensuelle", n)} />
             </Field>
             <Field label={<>Capital déjà remboursé (€) <span style={{ color: T.muted, fontWeight: 400 }}>(Optionnel)</span><InfoTooltip text="Optionnel. Si vous le renseignez, le capital restant et l'échéance sont calculés à partir de ce montant (pas besoin d'une date de début exacte). Laissez à 0 pour un calcul automatique depuis la date de début." /></>}>
-              <input type="number" min={0} max={rembourseMax} value={c.capitalRembourse} style={{ ...inputStyle, borderColor: rembourseTrop ? T.red : inputStyle.border }} onChange={(e) => setNum("capitalRembourse", e.target.value)} />
+              <NumInput min={0} max={rembourseMax} value={c.capitalRembourse} style={{ ...inputStyle, borderColor: rembourseTrop ? T.red : inputStyle.border }} onChange={n => setNum("capitalRembourse", n)} />
               {rembourseTrop && <span className="text-xs" style={{ color: T.red }}>Ne peut pas dépasser le capital emprunté ({eur(rembourseMax)}).</span>}
             </Field>
           </>
@@ -4852,11 +4851,10 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
               Crédits existants hors immo (auto-détectés)
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
+              <NumInput
                 min={0}
                 value={creditsExistants}
-                onFocus={(e) => e.target.select()} onChange={e => setCreditsManual(+e.target.value || 0)}
+                onChange={n => setCreditsManual(n)}
                 style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: T.amber, width: "100%" }}
               />
               <span className="text-xs shrink-0" style={{ color: T.muted }}>€/mois</span>
@@ -4925,14 +4923,14 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
-            <input type="number" value={price} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setPrice(+e.target.value || 0)} />
+            <NumInput value={price} style={inputStyle} onChange={(n) => setPrice(n)} />
           </Field>
           <Field label={`Apport total, notaire inclus (${apportPct} % = ${eur(totalApport)})`}>
             <input type="range" min={5} max={50} step={1} value={apportPct} onChange={(e) => setApportPct(+e.target.value)}
               className="w-full" style={{ accentColor: T.blue }} />
           </Field>
           <Field label="Taux crédit (% / an)">
-            <input type="number" value={rate} step={0.1} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setRate(+e.target.value || 0)} />
+            <NumInput value={rate} step={0.1} style={inputStyle} onChange={(n) => setRate(n)} />
           </Field>
           <Field label="Durée du crédit">
             <select value={duration} style={inputStyle} onChange={(e) => setDuration(+e.target.value)}>
@@ -4940,7 +4938,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
             </select>
           </Field>
           <Field label="Appréciation annuelle (%)">
-            <input type="number" value={appreciation} step={0.5} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setAppreciation(+e.target.value || 0)} />
+            <NumInput value={appreciation} step={0.5} style={inputStyle} onChange={(n) => setAppreciation(n)} />
           </Field>
         </div>
       </Card>
@@ -5009,10 +5007,10 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
           <>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Field label="Loyer mensuel (si vous louiez)">
-              <input type="number" value={rentMonthly} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setRentMonthly(+e.target.value || 0)} />
+              <NumInput value={rentMonthly} style={inputStyle} onChange={(n) => setRentMonthly(n)} />
             </Field>
             <Field label={<>Charges propriétaire (€/mois)<InfoTooltip text="Taxe foncière, assurance habitation, entretien et charges de copropriété — coûts récurrents du propriétaire qui n'existent pas (ou sont bien moindres) pour un locataire." align="left" /></>}>
-              <input type="number" value={resChargesProprio} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setResChargesProprio(+e.target.value || 0)} />
+              <NumInput value={resChargesProprio} style={inputStyle} onChange={(n) => setResChargesProprio(n)} />
             </Field>
           </div>
           <div className="rounded-xl px-4 py-2.5 mb-4 text-xs flex flex-wrap gap-x-2 gap-y-1 items-center"
@@ -5097,7 +5095,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Prix du bien (€)">
-            <input type="number" value={locPrice} style={inputStyle} onFocus={(e) => e.target.select()} onChange={(e) => setLocPrice(+e.target.value || 0)} />
+            <NumInput value={locPrice} style={inputStyle} onChange={(n) => setLocPrice(n)} />
           </Field>
           <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
             <div className="flex items-center" style={{ minHeight: 44 }}>
@@ -5112,7 +5110,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
             </div>
           </Field>
           <Field label="Taux crédit (% / an)">
-            <input type="number" value={locRate} step={0.1} style={inputStyle} onChange={(e) => setLocRate(+e.target.value || 0)} />
+            <NumInput value={locRate} step={0.1} style={inputStyle} onChange={(n) => setLocRate(n)} />
           </Field>
           <Field label="Durée du crédit">
             <select value={locDuration} onChange={(e) => setLocDuration(+e.target.value)}
@@ -5124,19 +5122,19 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
             </select>
           </Field>
           <Field label="Loyer mensuel attendu, hors charges (€)">
-            <input type="number" value={locLoyer} style={inputStyle} onChange={(e) => setLocLoyer(+e.target.value || 0)} />
+            <NumInput value={locLoyer} style={inputStyle} onChange={(n) => setLocLoyer(n)} />
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
-            <input type="number" value={locCharges} style={inputStyle} onChange={(e) => setLocCharges(+e.target.value || 0)} />
+            <NumInput value={locCharges} style={inputStyle} onChange={(n) => setLocCharges(n)} />
           </Field>
           <Field label="Taxe foncière (€/an)">
-            <input type="number" value={locTaxeFonciere} style={inputStyle} onChange={(e) => setLocTaxeFonciere(+e.target.value || 0)} />
+            <NumInput value={locTaxeFonciere} style={inputStyle} onChange={(n) => setLocTaxeFonciere(n)} />
           </Field>
           <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." /></>}>
-            <input type="number" value={locAssurancePNO} style={inputStyle} onChange={(e) => setLocAssurancePNO(+e.target.value || 0)} />
+            <NumInput value={locAssurancePNO} style={inputStyle} onChange={(n) => setLocAssurancePNO(n)} />
           </Field>
           <Field label={<>Assurance emprunteur (% / an du capital)<InfoTooltip text="Assurance décès-invalidité exigée par la banque, ici appliquée au capital emprunté. Coût indicatif : de 0,10 % à 0,60 %/an selon l'âge et le profil de santé." /></>}>
-            <input type="number" value={locAssuranceEmprunteurPct} step={0.05} style={inputStyle} onChange={(e) => setLocAssuranceEmprunteurPct(+e.target.value || 0)} />
+            <NumInput value={locAssuranceEmprunteurPct} step={0.05} style={inputStyle} onChange={(n) => setLocAssuranceEmprunteurPct(n)} />
           </Field>
         </div>
       </Card>
@@ -5275,13 +5273,13 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
               style={inputStyle} onChange={(e) => setMelCodePostal(e.target.value.replace(/\D/g, "").slice(0, 5))} />
           </Field>
           <Field label="Surface du bien (m²)">
-            <input type="number" value={melSurface} style={inputStyle} onChange={(e) => setMelSurface(+e.target.value || 0)} />
+            <NumInput value={melSurface} style={inputStyle} onChange={(n) => setMelSurface(n)} />
           </Field>
           <Field label="Loyer mensuel brut estimé (€)">
-            <input type="number" value={melLoyerBrut} style={inputStyle} onChange={(e) => setMelLoyerBrut(+e.target.value || 0)} />
+            <NumInput value={melLoyerBrut} style={inputStyle} onChange={(n) => setMelLoyerBrut(n)} />
           </Field>
           <Field label={<>Mensualité de crédit, assurances comprises (€)<InfoTooltip text="Le montant total que vous remboursez chaque mois sur le crédit de ce bien (capital + intérêts + assurance emprunteur). Indiquez 0 si le bien est déjà entièrement remboursé." align="left" /></>}>
-            <input type="number" value={melMensualite} style={inputStyle} onChange={(e) => setMelMensualite(+e.target.value || 0)} />
+            <NumInput value={melMensualite} style={inputStyle} onChange={(n) => setMelMensualite(n)} />
           </Field>
           <Field label={`Vacance locative (${melVacance} mois/an)`}>
             <div className="flex items-center" style={{ minHeight: 44 }}>
@@ -5290,22 +5288,22 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
             </div>
           </Field>
           <Field label="Charges de copropriété non récupérables (€/mois)">
-            <input type="number" value={melChargesCopro} style={inputStyle} onChange={(e) => setMelChargesCopro(+e.target.value || 0)} />
+            <NumInput value={melChargesCopro} style={inputStyle} onChange={(n) => setMelChargesCopro(n)} />
           </Field>
           <Field label="Taxe foncière (€/an)" compact>
-            <input type="number" value={melTaxeFonciere} style={inputStyle} onChange={(e) => setMelTaxeFonciere(+e.target.value || 0)} />
+            <NumInput value={melTaxeFonciere} style={inputStyle} onChange={(n) => setMelTaxeFonciere(n)} />
           </Field>
           <Field label={<>Assurance PNO (€/an)<InfoTooltip text="Assurance Propriétaire Non Occupant : couvre le logement loué (dégâts des eaux, incendie, responsabilité civile…) lorsque vous ne l'habitez pas. Souvent exigée par le syndic en copropriété." align="left" /></>} compact>
-            <input type="number" value={melPNO} style={inputStyle} onChange={(e) => setMelPNO(+e.target.value || 0)} />
+            <NumInput value={melPNO} style={inputStyle} onChange={(n) => setMelPNO(n)} />
           </Field>
           <Field label={<>GLI — Garantie Loyers Impayés (% du loyer)<InfoTooltip text="Assurance qui couvre les loyers impayés et certaines dégradations locatives. Facultative mais recommandée — coût indicatif : 2 % à 3,5 % du loyer mensuel charges comprises." align="left" /></>}>
-            <input type="number" value={melGLIPct} step={0.1} style={inputStyle} onChange={(e) => setMelGLIPct(+e.target.value || 0)} />
+            <NumInput value={melGLIPct} step={0.1} style={inputStyle} onChange={(n) => setMelGLIPct(n)} />
           </Field>
           <Field label={<>Frais de gestion locative (% du loyer)<InfoTooltip text="Si vous confiez la gestion à une agence : comptez 5 % à 8 % du loyer charges comprises. Laissez à 0 si vous gérez vous-même." align="left" /></>}>
-            <input type="number" value={melGestionPct} step={0.5} style={inputStyle} onChange={(e) => setMelGestionPct(+e.target.value || 0)} />
+            <NumInput value={melGestionPct} step={0.5} style={inputStyle} onChange={(n) => setMelGestionPct(n)} />
           </Field>
           <Field label={<>Provision entretien / travaux (% du loyer)<InfoTooltip text="Mise de côté mensuelle pour l'entretien courant et les imprévus (chaudière, peinture, électroménager…). Recommandé : 5 % à 10 % du loyer." align="left" /></>}>
-            <input type="number" value={melEntretienPct} step={0.5} style={inputStyle} onChange={(e) => setMelEntretienPct(+e.target.value || 0)} />
+            <NumInput value={melEntretienPct} step={0.5} style={inputStyle} onChange={(n) => setMelEntretienPct(n)} />
           </Field>
         </div>
 
@@ -5701,8 +5699,7 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
           </Field>
         </div>
         <Field label="Âge actuel">
-          <input type="number" value={profile.age}
-            onChange={(e) => setProfile((p) => ({ ...p, age: +e.target.value || 0 }))} style={inputStyle} />
+          <NumInput value={profile.age} onChange={n => setProfile(p => ({ ...p, age: n }))} style={inputStyle} />
         </Field>
         <p className="text-sm mt-2" style={{ color: T.muted }}>
           Utilisé pour calculer votre âge FIRE estimé dans les simulations.
@@ -6088,7 +6085,7 @@ function CompleterPatrimoineModal({ onClose, onPick, onManualAdd }) {
                 <div style={fieldWrap}>
                   <label style={fieldLabel}>Quotité détenue</label>
                   <div className="flex items-center gap-2">
-                    <input type="number" inputMode="decimal" value={detention} onChange={(e) => setDetention(e.target.value)} onFocus={(e) => e.target.select()} style={fieldInput} placeholder="100" />
+                    <NumInput inputMode="decimal" value={detention} onChange={n => setDetention(n)} style={fieldInput} placeholder="100" />
                     <span style={{ color: T.muted, fontSize: 14 }}>%</span>
                   </div>
                 </div>
@@ -6452,13 +6449,11 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     >
                       {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    <input
-                      type="number"
+                    <NumInput
                       value={item.valueNative ?? item.value}
-                      onChange={e => {
-                        const native = +e.target.value || 0;
+                      onChange={n => {
                         const cur = item.currency || "EUR";
-                        updateItem(side, cat.id, idx, { valueNative: native, value: Math.round(toEUR(native, cur)) });
+                        updateItem(side, cat.id, idx, { valueNative: n, value: Math.round(toEUR(n, cur)) });
                       }}
                       style={{ ...inp, width: "100%", maxWidth: 120, padding: "8px 10px", fontSize: 13 }}
                     />
@@ -6878,9 +6873,7 @@ function OnboardingWizard({ profile, setProfile, setTransactions, setPatrimoine,
             <div><label style={lbl}>Votre prénom</label>
               <input value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" style={inpO} /></div>
             <div><label style={lbl}>Votre âge</label>
-              <input type="number" min={16} max={100} value={age}
-                onChange={e => setAge(e.target.value === "" ? "" : Math.min(100, +e.target.value || 0))}
-                onBlur={e => setAge(Math.min(100, Math.max(16, +e.target.value || 16)))} style={inpO} /></div>
+              <NumInput min={16} max={100} value={age} onChange={n => setAge(n)} style={inpO} /></div>
             {/* CTA connexion bancaire dès la 1re page */}
             <button onClick={onConnectBank}
               style={{ marginTop: 4, padding: "12px 14px", borderRadius: 12, border: `1px solid ${T.blue}55`, background: `${T.blue}12`, color: T.text, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -6895,24 +6888,19 @@ function OnboardingWizard({ profile, setProfile, setTransactions, setPatrimoine,
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div><label style={lbl}>Revenus mensuels nets (€)</label>
-              <input type="number" inputMode="numeric" min={0} value={revenus} placeholder="0"
-                onFocus={clearZero(setRevenus)} onChange={e => setRevenus(e.target.value)} style={inpO} /></div>
+              <NumInput inputMode="numeric" min={0} value={revenus} placeholder="0" onChange={n => setRevenus(n)} style={inpO} /></div>
             <div><label style={lbl}>Loyer / Mensualité (crédit) (€/mois)</label>
-              <input type="number" inputMode="numeric" min={0} value={loyer} placeholder="0"
-                onFocus={clearZero(setLoyer)} onChange={e => setLoyer(e.target.value)} style={inpO} /></div>
+              <NumInput inputMode="numeric" min={0} value={loyer} placeholder="0" onChange={n => setLoyer(n)} style={inpO} /></div>
           </div>
         )}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div><label style={lbl}>Épargne / investissement mensuel (€)</label>
-              <input type="number" inputMode="numeric" min={0} value={epargne} placeholder="0"
-                onFocus={clearZero(setEpargne)} onChange={e => setEpargne(e.target.value)} style={inpO} /></div>
+              <NumInput inputMode="numeric" min={0} value={epargne} placeholder="0" onChange={n => setEpargne(n)} style={inpO} /></div>
             <div><label style={lbl}>Épargne totale déjà constituée (€)</label>
-              <input type="number" inputMode="numeric" min={0} value={epargneTotale} placeholder="0"
-                onFocus={clearZero(setEpargneTotale)} onChange={e => setEpargneTotale(e.target.value)} style={inpO} /></div>
+              <NumInput inputMode="numeric" min={0} value={epargneTotale} placeholder="0" onChange={n => setEpargneTotale(n)} style={inpO} /></div>
             <div><label style={lbl}>Patrimoine immobilier (€)</label>
-              <input type="number" inputMode="numeric" min={0} value={immo} placeholder="0"
-                onFocus={clearZero(setImmo)} onChange={e => setImmo(e.target.value)} style={inpO} /></div>
+              <NumInput inputMode="numeric" min={0} value={immo} placeholder="0" onChange={n => setImmo(n)} style={inpO} /></div>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: T.panel, border: `1px solid ${T.border}` }}>
               <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Votre potentiel à 20 ans (ETF {(RATE_A * 100).toFixed(1)}%/an)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: T.blue }}>
@@ -6936,9 +6924,8 @@ function OnboardingWizard({ profile, setProfile, setTransactions, setPatrimoine,
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{env.label}</span>
                   </button>
                   {r.on && (
-                    <input type="number" inputMode="numeric" min={0} value={r.val} placeholder="Montant (€)"
-                      onFocus={e => { if (e.target.value === "0") setRepart(p => ({ ...p, [env.id]: { ...p[env.id], val: "" } })); }}
-                      onChange={e => setRepart(p => ({ ...p, [env.id]: { ...p[env.id], val: e.target.value } }))}
+                    <NumInput inputMode="numeric" min={0} value={r.val} placeholder="Montant (€)"
+                      onChange={n => setRepart(p => ({ ...p, [env.id]: { ...p[env.id], val: n } }))}
                       style={{ ...inputStyle, marginTop: 8 }} />
                   )}
                 </div>
@@ -7049,13 +7036,13 @@ function ObjectifsView({ goals, setGoals, totals }) {
               <input value={newGoal.name} placeholder="Mon objectif" style={inpG} onChange={e => setNewGoal(g => ({ ...g, name: e.target.value }))} />
             </Field>
             <Field label="Montant cible (€)">
-              <input type="number" min={0} value={newGoal.target} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, target: e.target.value }))} />
+              <NumInput min={0} value={newGoal.target} style={inpG} onChange={n => setNewGoal(g => ({ ...g, target: n }))} />
             </Field>
             <Field label="Déjà épargné (€)">
-              <input type="number" min={0} value={newGoal.saved} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, saved: e.target.value }))} />
+              <NumInput min={0} value={newGoal.saved} style={inpG} onChange={n => setNewGoal(g => ({ ...g, saved: n }))} />
             </Field>
             <Field label="Versement mensuel (€)">
-              <input type="number" min={0} value={newGoal.monthly} style={inpG} onFocus={e => e.target.select()} onChange={e => setNewGoal(g => ({ ...g, monthly: e.target.value }))} />
+              <NumInput min={0} value={newGoal.monthly} style={inpG} onChange={n => setNewGoal(g => ({ ...g, monthly: n }))} />
             </Field>
           </div>
           <div className="flex gap-3 mt-3">
@@ -7376,8 +7363,8 @@ function Champ({ T, label, value, set, unit, step }) {
     <div className="mb-5">
       <label style={{ fontSize: 13, color: T.muted, marginBottom: 8, display: "block" }}>{label}</label>
       <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${T.border}`, paddingBottom: 8 }}>
-        <input type="number" inputMode="numeric" min={0} step={step} value={value}
-          onChange={(e) => set(e.target.value)}
+        <NumInput inputMode="numeric" min={0} step={step} value={value}
+          onChange={(n) => set(n)}
           style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 26, fontWeight: 700 }} />
         <span style={{ color: T.muted, fontSize: 18, fontWeight: 600 }}>{unit}</span>
       </div>

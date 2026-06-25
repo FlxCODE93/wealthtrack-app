@@ -478,7 +478,8 @@ export default function Tax() {
                   </p>
                 </div>
               )}
-              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
+              <div style={{ overflowX: "auto" }}>
+              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, minWidth: 660 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "92px 56px 82px 108px 108px 110px 88px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                   <span>Date</span><span>Actif</span>
                   <span style={{ textAlign: "right" }}>Qté</span>
@@ -510,6 +511,7 @@ export default function Tax() {
                   <span style={{ textAlign: "right", color: netGain >= 0 ? T.green : T.red }}>{netGain >= 0 ? "+" : ""}{eur(netGain)}</span>
                   <span style={{ textAlign: "right", color: isExonere ? T.green : T.red }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
                 </div>
+              </div>
               </div>
               </div>
             )
@@ -594,7 +596,8 @@ export default function Tax() {
                   </button>
                 </div>
               ) : (
-                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+                <div style={{ overflowX: "auto" }}>
+                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, minWidth: 520 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "90px 70px 100px 110px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                     <span>Date</span><span>Symbole</span>
                     <span style={{ textAlign: "right" }}>Quantité</span>
@@ -614,6 +617,7 @@ export default function Tax() {
                       </button>
                     </div>
                   ))}
+                </div>
                 </div>
               )}
             </>
@@ -647,7 +651,7 @@ export default function Tax() {
           </div>
 
           {/* Règles clés */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
             {[
               {
                 icon: <Landmark size={16} style={{ color: T.cyan }} />,
@@ -786,7 +790,7 @@ export default function Tax() {
           </div>
 
           {/* Règles */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
             {[
               {
                 icon: <Shield size={16} style={{ color: T.green }} />,
@@ -946,7 +950,7 @@ export default function Tax() {
           {/* Calculateur Plus-values */}
           {immoMode === "pv" && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                 {[
                   {
                     title: "Abattements IR (exonération à 22 ans)",
@@ -1036,7 +1040,7 @@ export default function Tax() {
           {/* Calculateur Revenus locatifs */}
           {immoMode === "loc" && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                 {[
                   {
                     title: "Location nue — régimes",

@@ -143,7 +143,7 @@ function FeeImpactBar({ horizon, capital, feeRate }) {
     <div style={{ minWidth: 480 }}>
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 56 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+        <CartesianGrid horizontal={false} stroke={T.border} vertical={false} />
         <XAxis dataKey="name" tick={{ fontSize: 11, fill: T.muted }} angle={-35} textAnchor="end" interval={0} height={60} />
         <YAxis tickFormatter={(v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : Math.round(v / 1e3) + "k"} tick={{ fontSize: 10, fill: T.muted }} width={44} />
         <Tooltip {...makeChartTip(T)} formatter={(v) => [eur(v), "Capital final"]} />
@@ -187,6 +187,7 @@ export default function Frais({ invested = 0, setView }) {
   const [horizon, setHorizon] = useLocalStorage("wt_frais_horizon", 20);
   const [feeRate, setFeeRate] = useLocalStorage("wt_frais_feerate", 1.8);
   const [expanded, setExpanded] = useState(null);
+  const [showLearn, setShowLearn] = useState(false);
   const glossaireRef = useRef(null);
   const scrollToGlossaire = () => glossaireRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -279,35 +280,8 @@ export default function Frais({ invested = 0, setView }) {
         </div>
       </div>
 
-      {/* Comprendre les frais — typographie pure, aucun fond par élément */}
-      <Section T={T} first title="Comprendre les frais">
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {concepts.map((f, i) => (
-            <div key={f.title} style={{ padding: "20px 0", borderTop: i ? `1px solid ${T.border}` : "none" }}>
-              <h3 style={{ color: T.text, fontSize: 17, fontWeight: 700, margin: "0 0 6px" }}>{f.title}</h3>
-              <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px", maxWidth: 760 }}>{f.desc}</p>
-              <p style={{ color: f.color, fontSize: 13.5, fontWeight: 600, margin: 0 }}>{f.tip}</p>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginTop: 36 }}>
-          {arbitrages.map((a) => (
-            <div key={a.title}>
-              <h3 style={{ color: T.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>{a.title}</h3>
-              {a.lines.map(([label, color, text]) => (
-                <p key={label} style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  <strong style={{ color }}>{label} :</strong> {text}
-                </p>
-              ))}
-              <p style={{ color: a.takeColor, fontSize: 13.5, fontWeight: 600, margin: "4px 0 0" }}>{a.takeaway}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Simulateur d'impact */}
-      <Section T={T} title="Combien les frais vous coûtent">
+      {/* Simulateur d'impact — EN PREMIER */}
+      <Section T={T} first title="Combien les frais vous coûtent">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28, marginBottom: 32 }}>
           <Field label="Capital initial (€)">
             <input type="number" value={capital || ""} placeholder="0" style={uStyle}
@@ -443,6 +417,43 @@ export default function Frais({ invested = 0, setView }) {
             1 % de frais en plus pendant 30 ans, c'est <strong style={{ color: "#ef4444" }}>environ 26 % de capital en moins</strong> au final.
           </div>
         </div>
+      </div>
+
+      {/* Comprendre les frais — collapsible, en bas */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 32 }}>
+        <button
+          onClick={() => setShowLearn(o => !o)}
+          style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", marginBottom: showLearn ? 24 : 0 }}
+        >
+          <h2 style={{ color: T.text, fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: "-0.01em" }}>Comprendre les frais</h2>
+          {showLearn ? <ChevronUp size={20} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={20} style={{ color: T.muted, flexShrink: 0 }} />}
+        </button>
+        {showLearn && (
+          <>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {concepts.map((f, i) => (
+                <div key={f.title} style={{ padding: "20px 0", borderTop: i ? `1px solid ${T.border}` : "none" }}>
+                  <h3 style={{ color: T.text, fontSize: 17, fontWeight: 700, margin: "0 0 6px" }}>{f.title}</h3>
+                  <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px", maxWidth: 760 }}>{f.desc}</p>
+                  <p style={{ color: f.color, fontSize: 13.5, fontWeight: 600, margin: 0 }}>{f.tip}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginTop: 36 }}>
+              {arbitrages.map((a) => (
+                <div key={a.title}>
+                  <h3 style={{ color: T.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>{a.title}</h3>
+                  {a.lines.map(([label, color, text]) => (
+                    <p key={label} style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px" }}>
+                      <strong style={{ color }}>{label} :</strong> {text}
+                    </p>
+                  ))}
+                  <p style={{ color: a.takeColor, fontSize: 13.5, fontWeight: 600, margin: "4px 0 0" }}>{a.takeaway}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Glossaire */}

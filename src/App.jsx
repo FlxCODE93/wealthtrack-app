@@ -2394,8 +2394,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
   const TABS = [
     { id: "etf",      label: "ETF World",  color: ASSET.etf },
-    { id: "or",       label: "Or",         color: "#f59e0b" },
     { id: "defensif", label: "Livret A",   color: ASSET.livret },
+    { id: "or",       label: "Or",         color: "#f59e0b" },
     { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
     { id: "eth",      label: "Ethereum",   color: ASSET.eth },
     { id: "compare",  label: "Comparatif", color: T.blue },

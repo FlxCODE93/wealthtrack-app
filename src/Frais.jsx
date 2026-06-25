@@ -426,10 +426,36 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               <YAxis tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false} width={64}
                 tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M €` : `${Math.round(v/1000)}k €`} />
               <Tooltip
-                contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: T.text }}
-                formatter={(val, name) => [eur(val), name === "sans" ? "Sans frais (ETF)" : `Avec ${effectiveFeeRate.toFixed(1).replace(".", ",")} %`]}
-                labelFormatter={v => `An ${v}`}
-                cursor={{ stroke: T.border }}
+                cursor={{ stroke: T.border, strokeDasharray: "3 2" }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const yr = payload[0]?.payload?.y;
+                  const sans = payload.find(p => p.dataKey === "sans")?.value ?? 0;
+                  const avec = payload.find(p => p.dataKey === "avec")?.value ?? 0;
+                  const perte = sans - avec;
+                  return (
+                    <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", minWidth: 180 }}>
+                      <div style={{ color: T.muted, fontSize: 12, marginBottom: 6 }}>Dans {yr} an{yr > 1 ? "s" : ""}</div>
+                      <div style={{ color: T.text, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", marginBottom: 12 }}>{eur(avec)}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />
+                            Sans frais
+                          </span>
+                          <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{eur(sans)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                            Frais perdus
+                          </span>
+                          <span style={{ color: "#ef4444", fontSize: 13, fontWeight: 600 }}>−{eur(perte)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
               />
               <Line dataKey="sans" stroke={T.text} strokeWidth={2} dot={false} />
               <Line dataKey="avec" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 3" strokeOpacity={0.75} />

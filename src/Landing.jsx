@@ -792,10 +792,14 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onLogin} className="relative group overflow-hidden text-base font-bold px-5 py-3 rounded-xl"
+          <button onClick={onLogin} className="text-base font-bold px-5 py-3 rounded-xl transition-all"
+            style={btn.ghost} {...ghostHover}>
+            Se connecter
+          </button>
+          <button onClick={onStart} className="relative group overflow-hidden text-base font-bold px-5 py-3 rounded-xl"
             style={btn.primary} {...primaryHover}>
             <NeonGlow />
-            Se connecter
+            S'inscrire
           </button>
         </div>
       </nav>

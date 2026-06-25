@@ -927,7 +927,7 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             <YAxis stroke={T.muted} tick={{ fontSize: 10 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<ChartTooltip fiTarget={fiTarget} />} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-            <ReferenceLine y={fiTarget} stroke={T.amber} label={{ value: "Cible FIRE", fill: T.amber, fontSize: 11, position: "insideTopLeft" }} />
+            <ReferenceLine y={fiTarget} stroke={T.cyan} label={{ value: "Cible FIRE", fill: T.cyan, fontSize: 11, position: "insideTopLeft" }} />
             <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} />
             <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={3} />
             <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} />

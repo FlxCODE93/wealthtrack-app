@@ -447,6 +447,8 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
   const settledMonthsRef = useRef(fiMonthsBase);
   const fireDebounceRef  = useRef(null);
   const [fireGain, setFireGain] = useState(null); // { months, positive }
+  const [showOpt,  setShowOpt]  = useState(false);
+  const [showPess, setShowPess] = useState(false);
   const [toastNode, triggerToast] = useCelebrationToast();
 
   useEffect(() => {
@@ -913,7 +915,16 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
       {/* ── Timeline chart ── */}
       <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: "24px 28px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16 }}>Trajectoire</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16, margin: 0 }}>Trajectoire</h2>
+            {[{ key: "opt", label: "Optimiste", color: "#10b981", show: showOpt, set: setShowOpt },
+              { key: "pess", label: "Pessimiste", color: "#f97316", show: showPess, set: setShowPess }].map(({ key, label, color, show, set }) => (
+              <label key={key} style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 12, color: show ? color : T.muted, userSelect: "none" }}>
+                <input type="checkbox" checked={show} onChange={e => set(e.target.checked)} style={{ accentColor: color, cursor: "pointer" }} />
+                {label}
+              </label>
+            ))}
+          </div>
           {fiYearBase && (
             <div style={{ fontSize: 13, color: T.muted }}>
               IF atteinte en <span style={{ color: T.green, fontWeight: 700 }}>{fiYearBase.year}</span> · âge {fiYearBase.age}
@@ -926,11 +937,10 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             <XAxis dataKey="label" stroke={T.muted} tick={{ fontSize: 10 }} interval={Math.floor(chartEnd / 8)} tickLine={false} />
             <YAxis stroke={T.muted} tick={{ fontSize: 10 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<ChartTooltip fiTarget={fiTarget} />} />
-            <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
             <ReferenceLine y={fiTarget} stroke={T.cyan} label={{ value: "Cible FIRE", fill: T.cyan, fontSize: 11, position: "insideTopLeft" }} />
-            <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} />
+            {showOpt  && <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} />}
             <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={3} />
-            <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} />
+            {showPess && <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} />}
           </LineChart>
         </ExpandableChart>
       </div>

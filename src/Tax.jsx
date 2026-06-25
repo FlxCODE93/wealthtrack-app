@@ -10,79 +10,27 @@ import {
 import { eur } from "./theme.js";
 import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION, pmcaSummary } from "./finance.js";
-import { API_URL } from "./config.js";
+import { TAX } from "./taxRates.js";
 import InfoTooltip from "./InfoTooltip.jsx";
 import { useLocalStorage } from "./storage.js";
 
 /* ─── Constantes ────────────────────────────────────────────────────── */
-const TAX_RATE    = 0.30;
 const CURRENT_YEAR = new Date().getFullYear();
 
-/* ─── Données démo ──────────────────────────────────────────────────── */
-const DEMO_LOTS = [
+/* ─── Données démo (dev uniquement) ─────────────────────────────────── */
+const DEMO_LOTS = import.meta.env.DEV ? [
   { id: 10001, symbol: "BTC", name: "Bitcoin",  amount: 0.20, costPerUnit: 35000, date: "2025-01-15" },
   { id: 10002, symbol: "BTC", name: "Bitcoin",  amount: 0.10, costPerUnit: 40000, date: "2025-03-10" },
   { id: 10003, symbol: "ETH", name: "Ethereum", amount: 2.00, costPerUnit:  2200, date: "2025-02-01" },
   { id: 10004, symbol: "ETH", name: "Ethereum", amount: 1.00, costPerUnit:  2800, date: "2025-04-15" },
   { id: 10005, symbol: "SOL", name: "Solana",   amount: 50,   costPerUnit:   120, date: "2025-01-20" },
-];
+] : [];
 
-const DEMO_SELLS = [
+const DEMO_SELLS = import.meta.env.DEV ? [
   { id: 20001, symbol: "BTC", amount: 0.15, pricePerUnit: 58000, portfolioValue: 32000, date: "2025-09-10", notes: "Kraken → EUR" },
   { id: 20002, symbol: "ETH", amount: 1.50, pricePerUnit:  3500, portfolioValue: 28000, date: "2025-10-05", notes: "Coinbase" },
   { id: 20003, symbol: "SOL", amount: 20,   pricePerUnit:   180, portfolioValue: 25000, date: "2025-11-20", notes: "Binance → EUR" },
-];
-
-/* ─── FIFO engine ───────────────────────────────────────────────────── */
-function computeFIFO(lots, sells) {
-  const remaining = lots.map(l => ({ ...l, remaining: l.amount }));
-  const results   = [];
-
-  for (const sell of [...sells].sort((a, b) => new Date(a.date) - new Date(b.date))) {
-    let toSell   = sell.amount;
-    let costUsed = 0;
-
-    const matchLots = remaining
-      .filter(l => l.symbol === sell.symbol)
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    for (const lot of matchLots) {
-      if (toSell <= 0) break;
-      const used      = Math.min(lot.remaining, toSell);
-      costUsed       += used * lot.costPerUnit;
-      lot.remaining  -= used;
-      toSell         -= used;
-    }
-
-    const proceeds = sell.amount * sell.pricePerUnit;
-    const gain     = proceeds - costUsed;
-    results.push({
-      id:        sell.id,
-      date:      sell.date,
-      symbol:    sell.symbol,
-      amount:    sell.amount,
-      proceeds,
-      costBasis: costUsed,
-      gain,
-      tax:       gain > 0 ? gain * TAX_RATE : 0,
-    });
-  }
-  return results;
-}
-
-/* ─── Répartition par actif ─────────────────────────────────────────── */
-function groupByAsset(cessions) {
-  const map = {};
-  for (const c of cessions) {
-    if (!map[c.symbol]) map[c.symbol] = { symbol: c.symbol, gain: 0, loss: 0, proceeds: 0, tax: 0, count: 0 };
-    if (c.gain >= 0) map[c.symbol].gain += c.gain;
-    else             map[c.symbol].loss += c.gain;
-    map[c.symbol].proceeds += c.proceeds;
-    map[c.symbol].tax      += c.tax;
-    map[c.symbol].count++;
-  }
-  return Object.values(map).sort((a, b) => (b.gain + b.loss) - (a.gain + a.loss));
-}
+] : [];
 
 /* ─── Harvest opportunities ─────────────────────────────────────────── */
 function computeHarvest(lots, sells, currentPrices, netGain) {
@@ -111,113 +59,32 @@ function computeHarvest(lots, sells, currentPrices, netGain) {
   return candidates.map(l => {
     const gainOffset = Math.min(-l.unrealized, remainingGain);
     remainingGain   -= gainOffset;
-    return { ...l, taxSaving: gainOffset * TAX_RATE };
+    return { ...l, taxSaving: gainOffset * TAX.PFU };
   }).filter(h => h.taxSaving > 0);
 }
 
-/* ─── Export récapitulatif fiscal indicatif (non officiel) ──────────── */
-function exportFiscalRecap(cessions, lots, taxYear) {
-  const inYear = cessions.filter(c => c.date?.startsWith(String(taxYear)));
-  if (!inYear.length) { alert(`Aucune cession en ${taxYear}`); return; }
-
-  const totalAcq = lots.reduce((s, l) => s + l.amount * l.costPerUnit, 0);
-
+/* ─── Export CSV PMCA — méthode légale art. 150 VH bis CGI ──────────── */
+function exportPmcaCsv(pmca, taxYear) {
+  if (!pmca.cessions.length) { alert(`Aucune cession en ${taxYear}`); return; }
+  const n2 = n => (n || 0).toFixed(2).replace(".", ",");
   const header = [
-    "Date de cession", "Actif", "Quantité cédée",
-    "Prix de cession (€)", "Prix de revient total portefeuille (€)",
-    "Fraction cédée (%)", "Quote-part acquisition (€)",
-    "Plus-value / Moins-value (€)", "PFU estimé 30 % (€)",
+    "Date", "Actif", "Quantité cédée",
+    "Prix de cession (€)", "Valeur portefeuille (€)",
+    "Coût acquisition PMCA (€)", "Plus/moins-value (€)", `PFU estimé ${TAX.PFU * 100}% (€)`,
   ].join(";");
-
-  const rows = inYear.map(c => {
-    const denom = c.proceeds + totalAcq - c.costBasis;
-    const fraction = (totalAcq > 0 && denom > 0) ? c.proceeds / denom : 0;
-    return [
-      c.date, c.symbol, c.amount.toFixed(8),
-      c.proceeds.toFixed(2), totalAcq.toFixed(2),
-      (fraction * 100).toFixed(4),
-      (totalAcq * fraction).toFixed(2),
-      c.gain.toFixed(2), c.tax.toFixed(2),
-    ].join(";");
-  });
-
-  const totals = [
-    "", "TOTAL", "",
-    inYear.reduce((s, c) => s + c.proceeds, 0).toFixed(2), "", "", "",
-    inYear.reduce((s, c) => s + c.gain, 0).toFixed(2),
-    inYear.reduce((s, c) => s + c.tax, 0).toFixed(2),
-  ].join(";");
-
-  const csv  = [header, ...rows, totals].join("\n");
+  const rows = pmca.cessions.map(c => [
+    c.date, c.symbol, (c.amount ?? "").toString(),
+    n2(c.proceeds), c.portfolioValue ? n2(c.portfolioValue) : "À COMPLÉTER",
+    n2(c.acquisitionFraction), n2(c.gain), n2(Math.max(0, c.gain) * TAX.PFU),
+  ].join(";"));
+  const totals = [`TOTAL ${taxYear}`, "", "", n2(pmca.totalProceeds), "", "", n2(pmca.netGain), n2(pmca.tax)].join(";");
+  const note = `NOTE: Méthode PMCA art. 150 VH bis CGI. PFU ${TAX.PFU * 100}% (taux au ${TAX.updatedAt}). Document indicatif - à vérifier sur impots.gouv.fr`;
+  const csv  = ["sep=;", header, ...rows, totals, "", note].join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href     = URL.createObjectURL(blob);
-  link.download = `recap-fiscal-indicatif-crypto-${taxYear}.csv`;
+  link.download = `pmca-2086-${taxYear}.csv`;
   link.click();
-}
-
-/* ─── Formulaire 2086 pré-rempli (PDF) — méthode légale PMCA ─────────── */
-const eur2 = (n) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0) + " €";
-
-async function generate2086PDF(pmca, taxYear) {
-  if (!pmca.cessions.length) { alert(`Aucune cession en ${taxYear}.`); return; }
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const ML = 14, MR = 196;
-  let y = 18;
-
-  doc.setFont("helvetica", "bold"); doc.setFontSize(15);
-  doc.text(`Formulaire 2086 — Cessions d'actifs numériques ${taxYear}`, ML, y); y += 6;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(90);
-  doc.text("Méthode PMCA (prix moyen pondéré d'acquisition) — art. 150 VH bis du CGI.", ML, y); y += 4;
-  doc.text("Document d'aide à la déclaration. À vérifier et reporter sur impots.gouv.fr. Ne constitue pas un conseil fiscal.", ML, y); y += 8;
-  doc.setTextColor(0);
-
-  // Détail par cession
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-  doc.text("Détail des cessions (un bloc = une cession à reporter sur le formulaire 2086)", ML, y); y += 2;
-  doc.setLineWidth(0.2); doc.line(ML, y, MR, y); y += 5;
-  doc.setFontSize(8);
-  pmca.cessions.forEach((c, i) => {
-    doc.setFont("helvetica", "bold");
-    doc.text(`Cession ${i + 1} — ${c.date} — ${c.symbol}${c.estimated ? "  (valeur portefeuille manquante : à compléter)" : ""}`, ML, y); y += 4;
-    doc.setFont("helvetica", "normal");
-    const lines = [
-      `Prix de cession : ${eur2(c.proceeds)}`,
-      `Valeur globale du portefeuille au jour de la cession : ${c.portfolioValue ? eur2(c.portfolioValue) : "— à renseigner —"}`,
-      `Prix d'acquisition de la fraction cédée (PMCA) : ${eur2(c.acquisitionFraction)}`,
-      `Plus ou moins-value de la cession : ${eur2(c.gain)}`,
-    ];
-    lines.forEach(t => { doc.text(t, ML + 4, y); y += 4; });
-    y += 2;
-    if (y > 260) { doc.addPage(); y = 18; }
-  });
-
-  // Synthèse → report 2042-C
-  y += 2; doc.setLineWidth(0.2); doc.line(ML, y, MR, y); y += 6;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-  doc.text("Synthèse annuelle → report sur la déclaration 2042-C", ML, y); y += 6;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  const synth = [
-    `Total des prix de cession ${taxYear} : ${eur2(pmca.totalProceeds)}`,
-    `Plus-value nette globale (case 3AN) : ${eur2(Math.max(0, pmca.netGain))}`,
-    `Moins-value nette globale (case 3BN) : ${eur2(Math.min(0, pmca.netGain))}`,
-    `Imposition forfaitaire 30 % (PFU) estimée : ${eur2(pmca.tax)}`,
-  ];
-  synth.forEach(t => { doc.text(t, ML + 2, y); y += 5; });
-  y += 2;
-  if (pmca.exonerated) {
-    doc.setTextColor(180, 100, 20);
-    doc.text(`Total des cessions ≤ ${SEUIL_EXONERATION_CESSION} € → exonération (art. 150 VH bis).`, ML + 2, y); y += 5;
-    doc.setTextColor(0);
-  }
-  if (pmca.anyEstimated) {
-    doc.setTextColor(200, 40, 40);
-    doc.text("⚠ Certaines cessions n'ont pas de valeur de portefeuille : montants incomplets, à corriger.", ML + 2, y);
-    doc.setTextColor(0);
-  }
-
-  doc.save(`formulaire-2086-crypto-${taxYear}.pdf`);
 }
 
 /* ─── Styles partagés ───────────────────────────────────────────────── */
@@ -277,7 +144,6 @@ export default function Tax() {
   const [lotForm,  setLotForm]  = useState(EMPTY_LOT);
   const [sellForm, setSellForm] = useState(EMPTY_SELL);
   const [prices,  setPrices]   = useState({});
-  const [serverOk, setServerOk] = useState(false);
 
   /* ── Envelope nav ── */
   const [envelope, setEnvelope] = useState("crypto");
@@ -308,13 +174,6 @@ export default function Tax() {
       .catch(() => {});
   }, [lots, sells]);
 
-  /* ── Ping serveur ── */
-  useEffect(() => {
-    fetch(`${API_URL}/api/tax/ping`, { signal: AbortSignal.timeout(1500) })
-      .then(r => r.ok && setServerOk(true))
-      .catch(() => {});
-  }, []);
-
   /* ── Fermeture des modals à l'Échap ── */
   useEffect(() => {
     if (!showLotForm && !showSellForm) return;
@@ -326,20 +185,11 @@ export default function Tax() {
   /* ── PMCA (méthode légale, art. 150 VH bis) — pour le formulaire 2086 ── */
   const pmca = useMemo(() => pmcaSummary(lots, sells, taxYear), [lots, sells, taxYear]);
 
-  /* ── FIFO + dérivés (vue indicative interne) ── */
-  const cessions      = useMemo(() => computeFIFO(lots, sells), [lots, sells]);
-  const sessionsInYear = useMemo(() => cessions.filter(c => c.date?.startsWith(String(taxYear))), [cessions, taxYear]);
-  const byAsset       = useMemo(() => groupByAsset(sessionsInYear), [sessionsInYear]);
-
-  const totalProfit = sessionsInYear.filter(c => c.gain > 0).reduce((s, c) => s + c.gain, 0);
-  const totalLoss   = sessionsInYear.filter(c => c.gain < 0).reduce((s, c) => s + c.gain, 0);
-  const netGain     = totalProfit + totalLoss;
-
-  /* Seuil d'exonération annuel (art. 150 VH bis CGI) : si la somme des prix
-     de cession de l'année n'excède pas 305 €, la plus-value est exonérée. */
-  const totalProceeds = sessionsInYear.reduce((s, c) => s + c.proceeds, 0);
-  const isExonere     = totalProceeds > 0 && totalProceeds <= SEUIL_EXONERATION_CESSION;
-  const estimTax      = isExonere ? 0 : (netGain > 0 ? netGain * TAX_RATE : 0);
+  /* Dérivés PMCA — source unique de vérité */
+  const sessionsInYear = pmca.cessions;
+  const netGain        = pmca.netGain;
+  const isExonere      = pmca.exonerated;
+  const estimTax       = pmca.tax;
 
   const harvestOps  = useMemo(() => computeHarvest(lots, sells, prices, netGain), [lots, sells, prices, netGain]);
   const harvestSave = harvestOps.reduce((s, h) => s + h.taxSaving, 0);
@@ -348,15 +198,12 @@ export default function Tax() {
   const peaResult = useMemo(() => {
     const g = parseFloat(peaCalc.gain) || 0;
     if (!g) return null;
-    const taxCTO     = g * 0.30;
-    const taxPEAlt5  = g * 0.30;
-    const taxPEAge5  = g * 0.172;
     return {
       gain: g,
-      cto:     { total: taxCTO,    ir: g * 0.128, ps: g * 0.172 },
-      peaLt5:  { total: taxPEAlt5, ir: g * 0.128, ps: g * 0.172, note: "Clôture obligatoire du PEA" },
-      peaGe5:  { total: taxPEAge5, ir: 0,          ps: g * 0.172, note: "Retraits partiels autorisés sans clôture" },
-      saving:  peaCalc.years === "5+" ? g * 0.128 : 0,
+      cto:     { total: g * TAX.PFU,  ir: g * TAX.PFU_IR, ps: g * TAX.PS },
+      peaLt5:  { total: g * TAX.PFU,  ir: g * TAX.PFU_IR, ps: g * TAX.PS, note: "Clôture obligatoire du PEA" },
+      peaGe5:  { total: g * TAX.PS,   ir: 0,               ps: g * TAX.PS, note: "Retraits partiels autorisés sans clôture" },
+      saving:  peaCalc.years === "5+" ? g * TAX.PFU_IR : 0,
     };
   }, [peaCalc]);
 
@@ -366,21 +213,21 @@ export default function Tax() {
     const gains      = parseFloat(avCalc.gains) || 0;
     if (!gains) return null;
     const abattement = avCalc.couple ? 9200 : 4600;
-    const ps = gains * 0.172;
+    const ps = gains * TAX.PS;
     let ir;
     if (avCalc.age === "<8") {
-      ir = gains * 0.128;
+      ir = gains * TAX.PFU_IR;
     } else {
       const gainsNets = Math.max(0, gains - abattement);
       if (!versements || versements <= 150000) {
-        ir = gainsNets * 0.075;
+        ir = gainsNets * TAX.AV_GE8;
       } else {
         const fracRed = gains > 0 ? gainsNets * (150000 / versements) : 0;
-        ir = fracRed * 0.075 + Math.max(0, gainsNets - fracRed) * 0.128;
+        ir = fracRed * TAX.AV_GE8 + Math.max(0, gainsNets - fracRed) * TAX.PFU_IR;
       }
     }
     const abattEffectif = avCalc.age === "8+" ? Math.min(gains, abattement) : 0;
-    return { ps, ir, total: ps + ir, gains, abattement: abattEffectif, cto: gains * 0.30 };
+    return { ps, ir, total: ps + ir, gains, abattement: abattEffectif, cto: gains * TAX.PFU };
   }, [avCalc]);
 
   /* ── Calculs Plus-values immobilières ── */
@@ -411,8 +258,8 @@ export default function Tax() {
 
     const pvIR = pvBrute * (1 - abatIR / 100);
     const pvPS = pvBrute * (1 - abatPS / 100);
-    const ir   = pvIR * 0.19;
-    const ps   = pvPS * 0.172;
+    const ir   = pvIR * TAX.IMMO_IR;
+    const ps   = pvPS * TAX.PS;
 
     return { pvBrute, prixRevient, pvIR, pvPS, ir, ps, total: ir + ps, abatIR, abatPS, duree };
   }, [immoCalc]);
@@ -426,11 +273,11 @@ export default function Tax() {
 
     if (locCalc.regime === "micro") {
       const net = loyers * 0.70;
-      return { net, ir: net * tmi, ps: net * 0.172, total: net * (tmi + 0.172), abat: loyers * 0.30 };
+      return { net, ir: net * tmi, ps: net * TAX.PS, total: net * (tmi + TAX.PS), abat: loyers * 0.30 };
     } else {
       const net    = Math.max(0, loyers - charges);
       const deficit = Math.max(0, charges - loyers);
-      return { net, ir: net * tmi, ps: net * 0.172, total: net * (tmi + 0.172), deficit, abat: charges };
+      return { net, ir: net * tmi, ps: net * TAX.PS, total: net * (tmi + TAX.PS), deficit, abat: charges };
     }
   }, [locCalc]);
 
@@ -473,7 +320,7 @@ export default function Tax() {
           </div>
           {envelope === "crypto" && (
             <div className="flex items-center gap-2 flex-wrap">
-              {lots.length === 0 && (
+              {lots.length === 0 && import.meta.env.DEV && (
                 <button onClick={loadDemo} style={{ background: "rgba(91,141,239,0.12)", border: `1px solid ${T.blue}44`, color: T.blue, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
                   <FlaskConical size={14} /> Données démo
                 </button>
@@ -487,13 +334,9 @@ export default function Tax() {
                   ))}
                 </select>
               </div>
-              <button onClick={() => generate2086PDF(pmca, taxYear)} title="Formulaire 2086 pré-rempli (méthode légale PMCA) — aide à la déclaration"
+              <button onClick={() => exportPmcaCsv(pmca, taxYear)} title="Export CSV PMCA — méthode légale art. 150 VH bis CGI"
                 style={{ background: T.green, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
-                <Download size={14} /> Formulaire 2086 {taxYear}
-              </button>
-              <button onClick={() => exportFiscalRecap(cessions, lots, taxYear)} title="Export CSV interne (vue FIFO indicative)"
-                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "8px 14px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
-                <Download size={14} /> CSV interne
+                <Download size={14} /> Export PMCA {taxYear}
               </button>
             </div>
           )}
@@ -519,24 +362,11 @@ export default function Tax() {
       {/* ══ CRYPTO ══════════════════════════════════════════════════════ */}
       {envelope === "crypto" && (
         <>
-          <div className="flex items-start gap-2" style={{
-            background: "rgba(245,158,11,0.08)", border: `1px solid rgba(245,158,11,0.3)`,
-            borderRadius: 12, padding: "12px 16px", fontSize: 12, color: T.text, lineHeight: 1.6,
-          }}>
-            <AlertTriangle size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
-            <p style={{ margin: 0 }}>
-              <strong style={{ color: "#f59e0b" }}>Vue interne en FIFO (indicative).</strong>{" "}
-              Le tableau ci-dessous utilise le FIFO pour un aperçu rapide. Pour votre <strong>déclaration officielle</strong>, utilisez le bouton <strong>« Formulaire 2086 »</strong> en haut : il applique la méthode légale <strong>PMCA</strong> (art. 150 VH bis CGI) et pré-remplit le formulaire.
-              <br />
-              Renseignez la <em>valeur globale de votre portefeuille</em> à chaque vente pour un calcul exact. Document d'aide — vérifiez avant de reporter sur impots.gouv.fr.
-            </p>
-          </div>
-
           {/* Cartes résumé */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
             {[
-              { label: "Gains réalisés",    value: eur(totalProfit), color: T.green, icon: TrendingUp },
-              { label: "Pertes réalisées",  value: eur(totalLoss),   color: T.red,   icon: TrendingDown },
+              { label: "Gains réalisés",    value: eur(Math.max(0, netGain)), color: T.green, icon: TrendingUp },
+              { label: "Pertes réalisées",  value: eur(Math.min(0, netGain)), color: T.red,   icon: TrendingDown },
               { label: "Gain net",          value: eur(netGain),     color: netGain >= 0 ? T.green : T.red, icon: netGain >= 0 ? TrendingUp : TrendingDown },
               {
                 label: "Impôt estimé 30 %",
@@ -557,45 +387,6 @@ export default function Tax() {
               </div>
             ))}
           </div>
-
-          {/* Répartition par actif */}
-          {byAsset.length > 0 && (
-            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
-              <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Gains par actif — {taxYear}</span>
-                <span style={{ color: T.muted, fontSize: 12 }}>{byAsset.length} actif{byAsset.length > 1 ? "s" : ""}</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "9px 20px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
-                <span>Actif</span>
-                <span style={{ textAlign: "right" }}>Produits cession</span>
-                <span style={{ textAlign: "right" }}>Plus-value</span>
-                <span style={{ textAlign: "right" }}>Moins-value</span>
-                <span style={{ textAlign: "right" }}>PFU estimé (30 %)</span>
-              </div>
-              {byAsset.map(a => (
-                <div key={a.symbol} className="hover:bg-white/[0.025] transition-colors" style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "13px 20px", borderBottom: `1px solid ${T.border}`, alignItems: "center", fontSize: 13 }}>
-                  <span style={{ color: T.text, fontWeight: 800, fontSize: 15 }}>{a.symbol}</span>
-                  <span style={{ textAlign: "right", color: T.muted }}>{eur(a.proceeds)}</span>
-                  <span style={{ textAlign: "right", color: T.green, fontWeight: 600 }}>{a.gain > 0 ? `+${eur(a.gain)}` : "—"}</span>
-                  <span style={{ textAlign: "right", color: T.red,   fontWeight: 600 }}>{a.loss < 0 ? eur(a.loss) : "—"}</span>
-                  <div style={{ textAlign: "right" }}>
-                    {isExonere
-                      ? <span style={{ color: T.green, fontSize: 12 }}>Exonéré</span>
-                      : a.tax > 0
-                        ? <span style={{ color: T.red, fontWeight: 700 }}>{eur(a.tax)}</span>
-                        : <span style={{ color: T.green, fontSize: 12 }}>0 €</span>}
-                  </div>
-                </div>
-              ))}
-              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderTop: `2px solid ${T.border}`, fontSize: 13, fontWeight: 700 }}>
-                <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
-                <span style={{ textAlign: "right", color: T.muted }}>{eur(byAsset.reduce((s, a) => s + a.proceeds, 0))}</span>
-                <span style={{ textAlign: "right", color: T.green }}>{totalProfit > 0 ? `+${eur(totalProfit)}` : "—"}</span>
-                <span style={{ textAlign: "right", color: T.red }}>{totalLoss < 0 ? eur(totalLoss) : "—"}</span>
-                <span style={{ textAlign: "right", color: isExonere ? T.green : estimTax > 0 ? T.red : T.muted }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
-              </div>
-            </div>
-          )}
 
           {/* Tax-loss harvesting */}
           {harvestOps.length > 0 && netGain > 0 && (
@@ -623,7 +414,7 @@ export default function Tax() {
               ))}
               {(() => {
                 const totalHarvestLoss = harvestOps.reduce((s, h) => s + (-h.unrealized), 0);
-                const offsetUsed       = harvestSave / TAX_RATE;
+                const offsetUsed       = harvestSave / TAX.PFU;
                 const pctBillErased    = estimTax > 0 ? Math.round((harvestSave / estimTax) * 100) : 0;
                 return (
                   <p style={{ color: T.muted, fontSize: 11, marginTop: 12, lineHeight: 1.7 }}>
@@ -663,9 +454,11 @@ export default function Tax() {
                 <div style={{ color: T.text, fontWeight: 600, marginBottom: 8 }}>Aucune cession en {taxYear}</div>
                 <div style={{ color: T.muted, fontSize: 13, marginBottom: 20 }}>Saisissez vos achats puis vos ventes, ou chargez les données démo</div>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                  <button onClick={loadDemo} style={{ background: T.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                    <FlaskConical size={14} /> Données démo
-                  </button>
+                  {import.meta.env.DEV && (
+                    <button onClick={loadDemo} style={{ background: T.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                      <FlaskConical size={14} /> Données démo
+                    </button>
+                  )}
                   <button onClick={() => setTab("lots")} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
                     Saisir des achats
                   </button>
@@ -681,7 +474,7 @@ export default function Tax() {
                   <CheckCircle2 size={14} style={{ color: T.green, flexShrink: 0, marginTop: 2 }} />
                   <p style={{ margin: 0 }}>
                     <strong style={{ color: T.green }}>Plus-value exonérée d'impôt.</strong>{" "}
-                    Le total des prix de cession en {taxYear} ({eur(totalProceeds)}) ne dépasse pas le seuil de {SEUIL_EXONERATION_CESSION} €/an (art. 150 VH bis CGI) — aucun PFU n'est dû sur ces cessions, quel que soit le gain réalisé.
+                    Le total des prix de cession en {taxYear} ({eur(pmca.totalProceeds)}) ne dépasse pas le seuil de {SEUIL_EXONERATION_CESSION} €/an (art. 150 VH bis CGI) — aucun PFU n'est dû sur ces cessions, quel que soit le gain réalisé.
                   </p>
                 </div>
               )}
@@ -690,7 +483,7 @@ export default function Tax() {
                   <span>Date</span><span>Actif</span>
                   <span style={{ textAlign: "right" }}>Qté</span>
                   <span style={{ textAlign: "right" }}>Cession</span>
-                  <span style={{ textAlign: "right" }}>Coût FIFO<InfoTooltip text="FIFO (First In, First Out) : le coût retenu ici est celui des unités achetées en premier. La méthode légale française (PMCA — prix moyen pondéré d'acquisition du portefeuille global, art. 150 VH bis CGI) donne un coût différent : ces montants sont indicatifs, pas votre déclaration officielle." align="right" /></span>
+                  <span style={{ textAlign: "right" }}>Coût PMCA<InfoTooltip text="PMCA (prix moyen pondéré d'acquisition) — méthode légale art. 150 VH bis CGI. Quote-part du portefeuille global au moment de la cession." align="right" /></span>
                   <span style={{ textAlign: "right" }}>+/- value</span>
                   <span style={{ textAlign: "right" }}>PFU 30 %</span>
                 </div>
@@ -700,12 +493,12 @@ export default function Tax() {
                     <span style={{ color: T.text, fontWeight: 700 }}>{c.symbol}</span>
                     <span style={{ textAlign: "right", color: T.muted }}>{c.amount.toFixed(4)}</span>
                     <span style={{ textAlign: "right", color: T.text }}>{eur(c.proceeds)}</span>
-                    <span style={{ textAlign: "right", color: T.muted }}>{eur(c.costBasis)}</span>
+                    <span style={{ textAlign: "right", color: T.muted }}>{eur(c.acquisitionFraction)}</span>
                     <span style={{ textAlign: "right", fontWeight: 700, color: c.gain >= 0 ? T.green : T.red }}>
                       {c.gain >= 0 ? "+" : ""}{eur(c.gain)}
                     </span>
-                    <span style={{ textAlign: "right", color: isExonere ? T.green : c.tax > 0 ? T.red : T.muted, fontWeight: 600 }}>
-                      {isExonere ? "Exonéré" : c.tax > 0 ? eur(c.tax) : "0 €"}
+                    <span style={{ textAlign: "right", color: isExonere ? T.green : c.gain > 0 ? T.red : T.muted, fontWeight: 600 }}>
+                      {isExonere ? "Exonéré" : c.gain > 0 ? eur(c.gain * TAX.PFU) : "0 €"}
                     </span>
                   </div>
                 ))}
@@ -713,7 +506,7 @@ export default function Tax() {
                   <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" }}>TOTAL</span>
                   <span /><span />
                   <span style={{ textAlign: "right", color: T.text }}>{eur(sessionsInYear.reduce((s, c) => s + c.proceeds, 0))}</span>
-                  <span style={{ textAlign: "right", color: T.muted }}>{eur(sessionsInYear.reduce((s, c) => s + c.costBasis, 0))}</span>
+                  <span style={{ textAlign: "right", color: T.muted }}>{eur(sessionsInYear.reduce((s, c) => s + (c.acquisitionFraction || 0), 0))}</span>
                   <span style={{ textAlign: "right", color: netGain >= 0 ? T.green : T.red }}>{netGain >= 0 ? "+" : ""}{eur(netGain)}</span>
                   <span style={{ textAlign: "right", color: isExonere ? T.green : T.red }}>{isExonere ? "Exonéré" : eur(estimTax)}</span>
                 </div>
@@ -741,9 +534,11 @@ export default function Tax() {
                     <button onClick={() => setShowLotForm(true)} style={{ background: T.blue, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
                       <Plus size={14} /> Ajouter un achat
                     </button>
-                    <button onClick={loadDemo} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                      <FlaskConical size={14} /> Données démo
-                    </button>
+                    {import.meta.env.DEV && (
+                      <button onClick={loadDemo} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                        <FlaskConical size={14} /> Données démo
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -825,10 +620,8 @@ export default function Tax() {
           )}
 
           <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-            <span style={{ color: T.text, fontWeight: 600 }}>Tableau FIFO</span> = aperçu interne indicatif ·
-            Le <strong>Formulaire 2086</strong> (bouton en haut) applique la méthode légale <strong>PMCA</strong> (art. 150 VH bis CGI), quote-part du portefeuille global ·
-            PFU 30 % (art. 200 A CGI) · Document d'aide à la déclaration — vérifiez vos montants avant report
-            {serverOk && <span style={{ color: T.green, marginLeft: 8 }}>· Serveur connecté</span>}
+            Méthode légale <strong>PMCA</strong> (art. 150 VH bis CGI) · PFU {TAX.PFU * 100} % (art. 200 A CGI) ·
+            Taux à jour au {TAX.updatedAt} · Document d'aide à la déclaration — vérifiez sur impots.gouv.fr
           </div>
         </>
       )}
@@ -1090,7 +883,7 @@ export default function Tax() {
                   },
                   {
                     label: "CTO (référence)",
-                    ir: avResult.cto * (0.128 / 0.30), ps: avResult.cto * (0.172 / 0.30), total: avResult.cto,
+                    ir: avResult.cto * (TAX.PFU_IR / TAX.PFU), ps: avResult.cto * (TAX.PS / TAX.PFU), total: avResult.cto,
                     note: "PFU 30 % sans abattement",
                     color: T.red, bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.2)",
                   },

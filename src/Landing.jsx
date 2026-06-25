@@ -739,7 +739,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
     primary: {
       background: T.gradientPrimary,
       color: "#fff",
-      boxShadow: glow(T.violet, 40, "33"),
     },
     ghost: {
       border: `1px solid ${T.border}`,
@@ -752,11 +751,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
   const primaryHover = {
     onMouseEnter: (e) => {
       e.currentTarget.style.transform = "translateY(-1px) scale(1.015)";
-      e.currentTarget.style.boxShadow = glow(T.violet, 56, "55");
     },
     onMouseLeave: (e) => {
       e.currentTarget.style.transform = "";
-      e.currentTarget.style.boxShadow = glow(T.violet, 40, "33");
     },
   };
   const ghostHover = {

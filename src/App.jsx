@@ -3478,54 +3478,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         )}
       </ExpandableChart>
 
-      <button
-        onClick={() => setShowTable((s) => !s)}
-        className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-        style={{ border: `1px solid ${T.border}`, color: T.muted, background: "rgba(255,255,255,0.02)" }}>
-        <Activity size={14} />
-        {showTable ? "Masquer" : "Voir"} la timeline année par année
-      </button>
-
-      {showTable && (
-        <div className="mt-3 overflow-y-auto rounded-xl" style={{ maxHeight: 320, border: `1px solid ${T.border}` }}>
-          <table className="w-full text-xs">
-            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: T.panel }}>
-              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                {["Année", "Apports cumulés", "Capital total", "Gains générés", "Variation ann."].map((h) => (
-                  <th key={h} className="py-2 px-3 text-left font-semibold" style={{ color: T.muted }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {detailedData.map((row, idx) => {
-                const prevCap = idx > 0 ? detailedData[idx - 1].capital : row.capital;
-                const varPct = idx > 0 && prevCap > 0 ? ((row.capital - prevCap) / prevCap) * 100 : 0;
-                const yearOffset = row.year - detailedData[0].year;
-                const isMilestone = [0, 5, 10, 15, 20, 25, 30].includes(yearOffset);
-                return (
-                  <tr key={row.year}
-                    style={{
-                      borderBottom: `1px solid ${T.border}`,
-                      background: isMilestone ? `${lineColor}14` : "transparent",
-                    }}>
-                    <td className="py-2 px-3 font-semibold" style={{ color: isMilestone ? lineColor : T.text }}>
-                      {row.year}{isMilestone && idx > 0 ? " ★" : ""}
-                    </td>
-                    <td className="py-2 px-3" style={{ color: T.muted }}>{eur(row.apports)}</td>
-                    <td className="py-2 px-3 font-bold" style={{ color: lineColor }}>{eur(row.capital)}</td>
-                    <td className="py-2 px-3" style={{ color: row.gains >= 0 ? T.green : T.red }}>
-                      {row.gains >= 0 ? "+" : ""}{eur(row.gains)}
-                    </td>
-                    <td className="py-2 px-3" style={{ color: idx === 0 ? T.muted : varPct >= 0 ? T.green : T.red }}>
-                      {idx === 0 ? "—" : (varPct > 0 ? "+" : "") + varPct.toFixed(1).replace(".", ",") + " %"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* Summary at horizon */}
       {(() => {

@@ -415,17 +415,6 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               </div>
               <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>après {horizon} ans · {impactData.pct} % de capital en moins</div>
             </div>
-            {/* Légende pills */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: "rgba(255,255,255,0.06)", fontSize: 13, color: T.text, fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />
-                Sans frais {eur(impactData.sans)}
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: "rgba(239,68,68,0.08)", fontSize: 13, color: "#ef4444", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-                Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} % {eur(impactData.avec)}
-              </span>
-            </div>
             {/* Graphique */}
             <div style={{ flex: 1, minHeight: 200 }}>
               <ResponsiveContainer width="100%" height="100%">

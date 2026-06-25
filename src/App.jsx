@@ -599,10 +599,11 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // Le header navigue vers la calculatrice d'intérêts composés ("interets").
   const SIMS = [
     { id: "simulations", label: "Projection d'Actifs" },
+    { id: "interets",    label: "Intérêts composés" },
     { id: "immobilier",  label: "Immobilier" },
     { id: "fi",          label: "Indépendance Financière" },
   ];
-  const simActive = view === "interets" || SIMS.some((s) => s.id === view);
+  const simActive = SIMS.some((s) => s.id === view);
   const [simOpen, setSimOpen] = useState(simActive);
 
   // Mode réduit : la sidebar n'affiche que les icônes (style Finary). Persisté.
@@ -690,7 +691,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
           return (
             <div key="simulations" className="flex flex-col">
               <button
-                onClick={() => { setView("interets"); setSimOpen(true); }}
+                onClick={() => setSimOpen((o) => !o)}
                 className="flex items-center gap-3 py-2 rounded-xl text-left transition"
                 style={{
                   paddingLeft: 16, paddingRight: 16,

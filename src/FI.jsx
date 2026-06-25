@@ -11,6 +11,7 @@ import { fv, yearsTo, monthsTo, RATE_A, RATE_C, RATE_LEP, RATE_IMMO_APPRECIATION
 import InfoTooltip from "./InfoTooltip.jsx";
 import { useLocalStorage } from "./storage.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, celebrate, useCelebrateOnTrue, useCelebrationToast, prefersReducedMotion } from "./lib/motion.jsx";
+import NumInput from "./NumInput.jsx";
 
 const MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 /* Seuil (en mois) à partir duquel un gain sur la date de liberté déclenche une célébration */
@@ -822,11 +823,11 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             <label style={{ display: "block", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
               Montant (€/mois)
             </label>
-            <input
-              type="number"
-              value={pensionMonthly || ""}
+            <NumInput
+              min={0}
+              value={pensionMonthly || 0}
               placeholder="Ex. 1 400"
-              onChange={e => setPensionMonthly(Math.max(0, +e.target.value || 0))}
+              onChange={(n) => setPensionMonthly(n)}
               style={{
                 width: "100%", background: T.card,
                 border: `1.5px solid ${pensionMonthly > 0 ? T.amber : T.border}`,

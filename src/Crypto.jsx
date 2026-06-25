@@ -13,6 +13,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import { ExpandableChart } from "./ChartComponents.jsx";
 import { useT } from "./ThemeProvider.jsx";
 import { useEur as useEurCtx, useDiscreet } from "./ui.jsx";
+import NumInput from "./NumInput.jsx";
 import { SEUIL_EXONERATION_CESSION } from "./finance.js";
 import { API_URL } from "./config.js";
 import { useLocalStorage } from "./storage.js";
@@ -798,10 +799,10 @@ export default function Crypto({ setView, marketsOnly = false }) {
                     <option key={c.id} value={c.id} style={{ background: T.panel }}>{c.symbol} — {c.name}</option>
                   ))}
                 </select>
-                <input placeholder="Quantité" value={form.amount} type="number"
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS} />
-                <input placeholder="Prix achat (€)" value={form.buyPrice} type="number"
-                  onChange={(e) => setForm({ ...form, buyPrice: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS} />
+                <NumInput placeholder="Quantité" value={form.amount}
+                  onChange={(n) => setForm({ ...form, amount: n })} style={inp} className={INPUT_FOCUS_CLASS} />
+                <NumInput placeholder="Prix achat (€)" value={form.buyPrice}
+                  onChange={(n) => setForm({ ...form, buyPrice: n })} style={inp} className={INPUT_FOCUS_CLASS} />
                 <input placeholder="Date achat" value={form.buyDate} type="date"
                   onChange={(e) => setForm({ ...form, buyDate: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS} />
                 <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inp} className={INPUT_FOCUS_CLASS}>

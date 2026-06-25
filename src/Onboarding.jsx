@@ -1,5 +1,6 @@
 import React, { useState, useMemo, lazy, Suspense } from "react";
 import { useT } from "./ThemeProvider.jsx";
+import NumInput from "./NumInput.jsx";
 import { RATE_A, RATE_DISCLAIMER, fvMonthly } from "./finance.js";
 import {
   ArrowRight, ArrowLeft, Search, Check, AlertTriangle,
@@ -200,8 +201,8 @@ export default function Onboarding({ onComplete, onLogin }) {
             <h2 style={h2}>Enchanté {prenom || "👋"}, quel est votre âge ?</h2>
             <p style={sub}>Pour situer votre horizon d'investissement.</p>
             <label style={lbl}>Votre âge</label>
-            <input autoFocus type="number" inputMode="numeric" min={16} max={100} value={age} placeholder=""
-              onChange={(e) => setAge(e.target.value)}
+            <NumInput autoFocus inputMode="numeric" min={16} max={100} value={age} placeholder=""
+              onChange={(n) => setAge(n)}
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue()) next(); }}
               style={input} />
           </>
@@ -276,13 +277,13 @@ export default function Onboarding({ onComplete, onLogin }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
                 <label style={lbl}>Revenus mensuels nets (€)</label>
-                <input autoFocus type="number" inputMode="numeric" min={0} value={revenus} placeholder="3 000"
-                  onChange={(e) => setRevenus(e.target.value)} style={input} />
+                <NumInput autoFocus inputMode="numeric" min={0} value={revenus} placeholder="3 000"
+                  onChange={(n) => setRevenus(n)} style={input} />
               </div>
               <div>
                 <label style={lbl}>Loyer / Mensualité de crédit (€/mois)</label>
-                <input type="number" inputMode="numeric" min={0} value={loyer} placeholder="800"
-                  onChange={(e) => setLoyer(e.target.value)} style={input} />
+                <NumInput inputMode="numeric" min={0} value={loyer} placeholder="800"
+                  onChange={(n) => setLoyer(n)} style={input} />
               </div>
             </div>
           </>
@@ -295,18 +296,18 @@ export default function Onboarding({ onComplete, onLogin }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
                 <label style={lbl}>Épargne / investissement mensuel (€)</label>
-                <input autoFocus type="number" inputMode="numeric" min={0} value={epargne} placeholder="300"
-                  onChange={(e) => setEpargne(e.target.value)} style={input} />
+                <NumInput autoFocus inputMode="numeric" min={0} value={epargne} placeholder="300"
+                  onChange={(n) => setEpargne(n)} style={input} />
               </div>
               <div>
                 <label style={lbl}>Épargne totale déjà constituée (€)</label>
-                <input type="number" inputMode="numeric" min={0} value={epargneTotale} placeholder="0"
-                  onChange={(e) => setEpargneTotale(e.target.value)} style={input} />
+                <NumInput inputMode="numeric" min={0} value={epargneTotale} placeholder="0"
+                  onChange={(n) => setEpargneTotale(n)} style={input} />
               </div>
               <div>
                 <label style={lbl}>Patrimoine immobilier (€)</label>
-                <input type="number" inputMode="numeric" min={0} value={immo} placeholder="0"
-                  onChange={(e) => setImmo(e.target.value)} style={input} />
+                <NumInput inputMode="numeric" min={0} value={immo} placeholder="0"
+                  onChange={(n) => setImmo(n)} style={input} />
               </div>
               {num(epargne) > 0 && (
                 <div style={{ padding: "16px 18px", borderRadius: 14, background: `${T.blue}0d`, border: `1px solid ${T.blue}22` }}>
@@ -339,8 +340,8 @@ export default function Onboarding({ onComplete, onLogin }) {
                       <span style={{ fontSize: 15, fontWeight: 600 }}>{env.label}</span>
                     </button>
                     {r.on && (
-                      <input type="number" inputMode="numeric" min={0} value={r.val} placeholder="Montant (€)"
-                        onChange={(e) => setRepart((p) => ({ ...p, [env.id]: { ...p[env.id], val: e.target.value } }))}
+                      <NumInput inputMode="numeric" min={0} value={r.val} placeholder="Montant (€)"
+                        onChange={(n) => setRepart((p) => ({ ...p, [env.id]: { ...p[env.id], val: n } }))}
                         style={{ ...input, marginTop: 8 }} />
                     )}
                   </div>

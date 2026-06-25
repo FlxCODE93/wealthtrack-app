@@ -16,6 +16,7 @@ import { Card, Stat, Field, makeInputStyle, makeChartTip } from "./ui.jsx";
 import { eur } from "./theme.js";
 import { useT } from "./ThemeProvider.jsx";
 import { fv, fvBandSeries, RATE_GOLD } from "./finance.js";
+import NumInput from "./NumInput.jsx";
 
 // Accent doré premium, en accord avec la charte sombre/haut de gamme.
 const GOLD       = "#f59e0b";
@@ -71,24 +72,24 @@ export default function Or({ patrimoine }) {
       <Card>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="Capital de départ (€)">
-            <input type="number" min={0} value={initial} style={inputStyle}
-              onChange={(e) => setInitial(Math.max(0, +e.target.value || 0))} />
+            <NumInput min={0} value={initial} style={inputStyle}
+              onChange={(n) => setInitial(n)} />
           </Field>
           <Field label="Versement mensuel (€)">
-            <input type="number" min={0} value={monthly} style={inputStyle}
-              onChange={(e) => setMonthly(Math.max(0, +e.target.value || 0))} />
+            <NumInput min={0} value={monthly} style={inputStyle}
+              onChange={(n) => setMonthly(n)} />
           </Field>
           <Field label="Horizon (années)">
-            <input type="number" min={1} max={60} value={horizon} style={inputStyle}
-              onChange={(e) => setHorizon(Math.min(60, Math.max(1, +e.target.value || 1)))} />
+            <NumInput min={1} max={60} value={horizon} style={inputStyle}
+              onChange={(n) => setHorizon(n)} />
           </Field>
           <Field label="Rendement annuel estimé (%)">
-            <input type="number" step={0.1} value={rate} style={inputStyle}
-              onChange={(e) => setRate(+e.target.value || 0)} />
+            <NumInput step={0.1} value={rate} style={inputStyle}
+              onChange={(n) => setRate(n)} />
           </Field>
           <Field label="Frais de stockage / an (%)">
-            <input type="number" step={0.1} min={0} value={storageFee} style={inputStyle}
-              onChange={(e) => setStorageFee(Math.max(0, +e.target.value || 0))} />
+            <NumInput step={0.1} min={0} value={storageFee} style={inputStyle}
+              onChange={(n) => setStorageFee(n)} />
           </Field>
           <Field label="Rendement net retenu">
             <div style={{ ...inputStyle, display: "flex", alignItems: "center", color: GOLD, fontWeight: 700 }}>

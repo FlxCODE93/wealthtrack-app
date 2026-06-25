@@ -12,6 +12,7 @@ import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION, pmcaSummary } from "./finance.js";
 import { TAX } from "./taxRates.js";
 import InfoTooltip from "./InfoTooltip.jsx";
+import NumInput from "./NumInput.jsx";
 import { useLocalStorage } from "./storage.js";
 
 /* ─── Constantes ────────────────────────────────────────────────────── */
@@ -703,7 +704,7 @@ export default function Tax() {
             <div className="flex gap-4 flex-wrap mb-4">
               <div style={{ flex: "1 1 180px" }}>
                 <label style={LBL}>Gain net à encaisser (€)</label>
-                <input type="number" value={peaCalc.gain} onChange={e => setPeaCalc(p => ({ ...p, gain: e.target.value }))}
+                <NumInput value={peaCalc.gain} onChange={n => setPeaCalc(p => ({ ...p, gain: n }))}
                   placeholder="Ex. 50 000" className={INPUT_FOCUS_CLASS} style={INPUT} />
               </div>
               <div style={{ flex: "1 1 180px" }}>
@@ -841,12 +842,12 @@ export default function Tax() {
             <div className="flex gap-4 flex-wrap mb-2">
               <div style={{ flex: "1 1 160px" }}>
                 <label style={LBL}>Total versements (€)</label>
-                <input type="number" value={avCalc.versements} onChange={e => setAvCalc(p => ({ ...p, versements: e.target.value }))}
+                <NumInput value={avCalc.versements} onChange={n => setAvCalc(p => ({ ...p, versements: n }))}
                   placeholder="Ex. 100 000" className={INPUT_FOCUS_CLASS} style={INPUT} />
               </div>
               <div style={{ flex: "1 1 160px" }}>
                 <label style={LBL}>Gains à encaisser (€)</label>
-                <input type="number" value={avCalc.gains} onChange={e => setAvCalc(p => ({ ...p, gains: e.target.value }))}
+                <NumInput value={avCalc.gains} onChange={n => setAvCalc(p => ({ ...p, gains: n }))}
                   placeholder="Ex. 30 000" className={INPUT_FOCUS_CLASS} style={INPUT} />
               </div>
               <div style={{ flex: "1 1 160px" }}>
@@ -997,8 +998,8 @@ export default function Tax() {
                   ].map(f => (
                     <div key={f.key} style={{ flex: "1 1 180px" }}>
                       <label style={LBL}>{f.label}</label>
-                      <input type="number" value={immoCalc[f.key]} placeholder={f.placeholder}
-                        onChange={e => setImmoCalc(p => ({ ...p, [f.key]: e.target.value }))} className={INPUT_FOCUS_CLASS} style={INPUT} />
+                      <NumInput value={immoCalc[f.key]} placeholder={f.placeholder}
+                        onChange={n => setImmoCalc(p => ({ ...p, [f.key]: n }))} className={INPUT_FOCUS_CLASS} style={INPUT} />
                     </div>
                   ))}
                 </div>
@@ -1082,7 +1083,7 @@ export default function Tax() {
                 <div className="flex gap-4 flex-wrap mb-4">
                   <div style={{ flex: "1 1 160px" }}>
                     <label style={LBL}>Loyers annuels bruts (€)</label>
-                    <input type="number" value={locCalc.loyers} onChange={e => setLocCalc(p => ({ ...p, loyers: e.target.value }))}
+                    <NumInput value={locCalc.loyers} onChange={n => setLocCalc(p => ({ ...p, loyers: n }))}
                       placeholder="Ex. 12 000" className={INPUT_FOCUS_CLASS} style={INPUT} />
                   </div>
                   <div style={{ flex: "1 1 160px" }}>
@@ -1100,7 +1101,7 @@ export default function Tax() {
                   {locCalc.regime === "reel" && (
                     <div style={{ flex: "1 1 160px" }}>
                       <label style={LBL}>Charges déductibles (€)</label>
-                      <input type="number" value={locCalc.charges} onChange={e => setLocCalc(p => ({ ...p, charges: e.target.value }))}
+                      <NumInput value={locCalc.charges} onChange={n => setLocCalc(p => ({ ...p, charges: n }))}
                         placeholder="Intérêts + travaux…" className={INPUT_FOCUS_CLASS} style={INPUT} />
                     </div>
                   )}

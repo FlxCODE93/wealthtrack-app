@@ -2322,7 +2322,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   const setInitial = (v) => setSimParams((p) => ({ ...p, initial: v }));
   const setPrice = (v) => setSimParams((p) => ({ ...p, price: v }));
   const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
-  const [activeTab, setActiveTab] = useState("or");
+  const [activeTab, setActiveTab] = useState("etf");
   const [orRate, setOrRate] = useState(+(RATE_GOLD * 100).toFixed(1));
   const [orStorageFee, setOrStorageFee] = useState(0.5);
   const [cryptoTip, setCryptoTip] = useState(null);

@@ -2714,7 +2714,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             points: [
               "Drawdowns historiques significatifs (−80 % en 2018, −77 % en 2022) avec une récupération de 2 à 3 ans",
               "Cadre réglementaire en évolution — risque juridique selon les juridictions",
-              "Allocation recommandée : 5 à 10 % maximum du portefeuille global",
+              "Exposition typique observée : 5 à 10 % du portefeuille global",
             ],
 
           }}
@@ -2740,7 +2740,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             points: [
               "Drawdowns historiques importants (−85 % en 2018, −81 % en 2022), recul historique limité à 8 ans",
               "Risque technologique : protocole en développement actif, exposition à la concurrence",
-              "Allocation recommandée : 2 à 5 % maximum du portefeuille global",
+              "Exposition typique observée : 2 à 5 % du portefeuille global",
             ],
 
           }}

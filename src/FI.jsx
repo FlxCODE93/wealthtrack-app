@@ -938,9 +938,9 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             <YAxis stroke={T.muted} tick={{ fontSize: 10 }} tickFormatter={fmt} width={58} />
             <Tooltip content={<ChartTooltip fiTarget={fiTarget} />} />
             <ReferenceLine y={fiTarget} stroke={T.cyan} label={{ value: "Cible FIRE", fill: T.cyan, fontSize: 11, position: "insideTopLeft" }} />
-            {showOpt  && <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={2} />}
-            <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={3} />
-            {showPess && <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={2} />}
+            {showOpt  && <Line dataKey="opt"  name="Optimiste" stroke="#10b981" dot={false} strokeWidth={1.5} />}
+            <Line dataKey="base" name="Base"       stroke="#3b82f6" dot={false} strokeWidth={2.5} />
+            {showPess && <Line dataKey="pess" name="Pessimiste" stroke="#f97316" dot={false} strokeWidth={1.5} />}
           </LineChart>
         </ExpandableChart>
       </div>

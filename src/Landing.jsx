@@ -1045,8 +1045,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 const Icon = p.icon;
                 return (
                   <div key={p.title}
-                    className={`text-left rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    className={`text-left rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter cursor-pointer ${inView ? "wt-slide-up" : "opacity-0"}`}
                     style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                    onClick={onLogin}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.blue + "66"; e.currentTarget.style.background = `${T.blue}08`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
                     <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: `${T.blue}18` }}>
@@ -1076,6 +1077,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 return (
                   <div key={f.title} className={`rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter cursor-pointer ${inView ? "wt-slide-up" : "opacity-0"}`}
                     style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                    onClick={onLogin}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = f.color + "66"; e.currentTarget.style.background = `${f.color}08`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
                     <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: f.color + "1a" }}>

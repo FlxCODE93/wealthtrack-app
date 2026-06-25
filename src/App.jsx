@@ -3372,7 +3372,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <stop offset="100%" stopColor={T.green} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={logFmt} width={64} />
@@ -3398,7 +3398,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <stop offset="100%" stopColor={T.green} stopOpacity={0.12} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
             <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
             <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
               tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />

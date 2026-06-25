@@ -7942,7 +7942,7 @@ export default function App() {
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "frais"        && <Frais invested={investedCapital} investItems={(patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []} setView={setView} />}
+        {view === "frais"        && <Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} />}
         {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
 

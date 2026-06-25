@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { C, glow, ASSET } from "./theme.js";
-import { useT } from "./ThemeProvider.jsx";
+import { useT, ThemeOverrideContext } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
 import TransactionImportTab from "./TransactionImportTab.jsx";
 import Plans   from "./Plans.jsx";
@@ -152,6 +152,9 @@ const PROFILE_CONFIG = {
 /*  Constantes financières & simulation                               */
 /* ------------------------------------------------------------------ */
 const SIM_START_YEAR = 2026;
+
+// Palette test Budget — panels quasi-invisibles, fondus dans le fond sidebar
+const C_BUDGET = { ...C, panel: "rgba(255,255,255,0.025)", card: "#0e1017", border: "rgba(255,255,255,0.07)" };
 
 const logFmt = (v) => {
   const n = Math.round(Math.pow(10, v));
@@ -7920,7 +7923,7 @@ export default function App() {
         {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
         {view === "interets"     && <CompoundCalc setView={setView} />}
         {view === "marches"      && <Crypto setView={setView} marketsOnly />}
-        {view === "dashboard"    && <Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />}
+        {view === "dashboard"    && <ThemeOverrideContext.Provider value={C_BUDGET}><Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} /></ThemeOverrideContext.Provider>}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
             onDelete={handleDeleteTx}

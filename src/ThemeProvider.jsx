@@ -1,8 +1,9 @@
-import React, { createContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { C } from "./theme.js";
 import { storage } from "./storage.js";
 
 export const ThemeContext = createContext();
+export const ThemeOverrideContext = createContext(null);
 
 // Thème sombre uniquement (Luxe Institutionnel). Aucun white mode possible.
 export const ThemeProvider = ({ children }) => {
@@ -35,4 +36,4 @@ export const useTheme = () => {
   return context;
 };
 
-export const useT = () => C;
+export const useT = () => useContext(ThemeOverrideContext) ?? C;

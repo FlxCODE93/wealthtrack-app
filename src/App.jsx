@@ -7596,16 +7596,22 @@ export default function App() {
   const [simParams,  setSimParams]  = useLocalStorage("wt_simParams", { monthly: 500, initial: 10000, price: 200000, horizon: 20 });
   const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", DEFAULT_PATRIMOINE);
   const [credits,    setCredits]    = useLocalStorage("wt_credits", []);
-  // Patrimoine enrichi : les crédits saisis alimentent les passifs (source unique),
-  // sans dupliquer la saisie. La catégorie dérivée "Crédits" remplace toute version
-  // précédemment injectée (id stable "credits-derived").
-  const patrimoineDerived = useMemo(() => ({
-    ...patrimoine,
-    passifs: [
-      ...(patrimoine.passifs || []).filter((c) => c.id !== "credits-derived"),
-      ...(credits.length ? [creditsToPassifCategory(credits)] : []),
-    ],
-  }), [patrimoine, credits]);
+  const [cryptoSyncApp] = useLocalStorage("wt_crypto_sync", null);
+  // Patrimoine enrichi : crédits en passifs + cryptoactifs synchro injectés en actifs.
+  const patrimoineDerived = useMemo(() => {
+    const hasCryptoCat = (patrimoine.actifs || []).some((c) => c.id === "crypto");
+    const actifs = (!hasCryptoCat && cryptoSyncApp?.items?.length)
+      ? [...(patrimoine.actifs || []), { id: "crypto", label: "Cryptoactifs", color: "#f7931a", items: cryptoSyncApp.items, isSync: true }]
+      : (patrimoine.actifs || []);
+    return {
+      ...patrimoine,
+      actifs,
+      passifs: [
+        ...(patrimoine.passifs || []).filter((c) => c.id !== "credits-derived"),
+        ...(credits.length ? [creditsToPassifCategory(credits)] : []),
+      ],
+    };
+  }, [patrimoine, credits, cryptoSyncApp]);
   // Nouvelles features
   const [budgets,    setBudgets]    = useLocalStorage("wt_budgets", {});
   const [goals,      setGoals]      = useLocalStorage("wt_goals", []);

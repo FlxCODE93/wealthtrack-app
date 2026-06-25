@@ -9,12 +9,17 @@ import { useT } from "./ThemeProvider.jsx";
 /* graphique recharts BRUT (children = l'élément chart sans          */
 /* ResponsiveContainer, fourni ici). Utilisable dans tous les fichiers. */
 /* ─────────────────────────────────────────────────────────────── */
-export function ExpandableChart({ children, height = 280, title, controls, legend }) {
+export function ExpandableChart({ children, height = 280, title, controls, legend, overlay }) {
   const T = useT();
   const [full, setFull] = useState(false);
   const body = (h) => (
-    <div style={{ width: "100%", height: h }}>
+    <div style={{ width: "100%", height: h, position: "relative" }}>
       <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
+      {overlay && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+          {overlay}
+        </div>
+      )}
     </div>
   );
   return (

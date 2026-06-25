@@ -6677,36 +6677,9 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               </div>
               <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
             </div>
-            <div className="relative">
-              <ExpandableChart height={330} title="Répartition du patrimoine"
-                legend={
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
-                    {allSlices.map((s, i) => (
-                      <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                        {s.name}
-                        <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                      </span>
-                    ))}
-                  </div>
-                }
-              >
-                <PieChart>
-                  <Pie data={allSlices} dataKey="value" nameKey="name"
-                    innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-                    stroke="none" startAngle={90} endAngle={-270}
-                    activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                    onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                    {allSlices.map((s, i) => (
-                      <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
-                        style={{ transition: "opacity 0.2s" }} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ExpandableChart>
-              {/* Centre — total, ou détail du segment survolé */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 24 }}>
-                {activeSlice != null && allSlices[activeSlice] ? (
+            <ExpandableChart height={330} title="Répartition du patrimoine"
+              overlay={
+                activeSlice != null && allSlices[activeSlice] ? (
                   <>
                     <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
                     <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
@@ -6719,9 +6692,33 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
                     <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
                   </>
-                )}
-              </div>
-            </div>
+                )
+              }
+              legend={
+                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+                  {allSlices.map((s, i) => (
+                    <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                      {s.name}
+                      <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                    </span>
+                  ))}
+                </div>
+              }
+            >
+              <PieChart>
+                <Pie data={allSlices} dataKey="value" nameKey="name"
+                  innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                  stroke="none" startAngle={90} endAngle={-270}
+                  activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                  onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                  {allSlices.map((s, i) => (
+                    <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                      style={{ transition: "opacity 0.2s" }} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ExpandableChart>
           </div>
         </div>
       </Card>

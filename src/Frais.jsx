@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
+import NumInput from "./NumInput.jsx";
 import { useT } from "./ThemeProvider.jsx";
 import { useLocalStorage } from "./storage.js";
 import { Field } from "./ui.jsx";
@@ -204,7 +205,6 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
 
   const [capital, setCapital] = useLocalStorage("wt_frais_capital", invested > 0 ? Math.round(invested) : 10000);
   const [horizon, setHorizon] = useLocalStorage("wt_frais_horizon", 20);
-  const [horizonStr, setHorizonStr] = useState(String(20));
   const [feeRate, setFeeRate] = useLocalStorage("wt_frais_feerate", 1.8);
   const [expanded, setExpanded] = useState(null);
   const [itemRates, setItemRates] = useLocalStorage("wt_frais_item_rates", {});
@@ -303,9 +303,9 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
                         <div style={{ color: T.text, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{key || "—"}</div>
                         <div style={{ color: T.muted, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>{eur(item.value)}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>
-                          <input type="number" min={0} max={5} step={0.1} value={rate}
+                          <NumInput min={0} max={5} step={0.1} value={rate}
                             title={isGuess ? "Taux estimé" : undefined}
-                            onChange={(e) => setItemRate(item, +e.target.value || 0)}
+                            onChange={(n) => setItemRate(item, n)}
                             style={{ background: "transparent", border: `1px solid ${isGuess ? T.border : T.blue}`, borderRadius: 6, color: T.text, padding: "3px 5px", width: 44, fontSize: 12, textAlign: "right", outline: "none" }} />
                           <span style={{ color: T.muted, fontSize: 12 }}>%</span>
                         </div>
@@ -344,8 +344,8 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Capital initial</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <input type="number" value={capital || ""} placeholder="0" style={{ ...uStyle, fontSize: 28, fontWeight: 700 }}
-                  onFocus={(e) => e.target.select()} onChange={(e) => setCapital(+e.target.value || 0)} />
+                <NumInput value={capital} placeholder="0" style={{ ...uStyle, fontSize: 28, fontWeight: 700 }}
+                  onChange={(n) => setCapital(n)} />
                 <span style={{ color: T.muted, fontSize: 16 }}>€</span>
               </div>
               {hasRealData && Math.round(invested) !== capital && (
@@ -360,15 +360,9 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Horizon de placement</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <input type="number" min={1} max={50} value={horizonStr} placeholder="20"
+                <NumInput min={1} max={50} value={horizon} placeholder="20"
                   style={{ ...uStyle, fontSize: 28, fontWeight: 700, width: 80 }}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => setHorizonStr(e.target.value)}
-                  onBlur={(e) => {
-                    const v = Math.min(50, Math.max(1, +e.target.value || horizon));
-                    setHorizon(v);
-                    setHorizonStr(String(v));
-                  }} />
+                  onChange={(n) => setHorizon(n)} />
                 <span style={{ color: T.muted, fontSize: 16 }}>ans</span>
               </div>
             </div>

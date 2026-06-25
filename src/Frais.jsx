@@ -438,7 +438,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                               <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />Sans frais
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.text, display: "inline-block" }} />ETF 0,25 %/an
                               </span>
                               <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{eur(sans)}</span>
                             </div>

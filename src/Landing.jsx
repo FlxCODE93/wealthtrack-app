@@ -1011,8 +1011,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
           </div>
         </div>
 
-        {/* Rendu mobile, posé à côté/sur le tableau de bord façon Finary */}
-        <PhoneMockup />
       </div>
 
       {/* ── STATS ── */}
@@ -1128,9 +1126,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     </div>
                   );
                 })}
-              </div>
-              <div className={`flex justify-center ${inView ? "wt-scale-in" : "opacity-0"}`}>
-                <SyncPhoneMockup />
               </div>
             </div>
           )}

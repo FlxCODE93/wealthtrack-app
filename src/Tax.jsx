@@ -133,7 +133,7 @@ const RuleItem = ({ kind, children }) => {
 export default function Tax() {
   const T = useT();
   const INPUT = { width: "100%", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" };
-  const LBL   = { display: "block", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
+  const LBL   = { display: "block", color: T.muted, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
 
   /* ── Crypto state ── */
   const [lots,    setLots]   = useLocalStorage("wt_tax_lots",  []);

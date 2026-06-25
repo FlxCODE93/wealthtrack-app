@@ -1,14 +1,14 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { C, glow, ASSET } from "./theme.js";
 import { useT, ThemeOverrideContext } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
-import TransactionImportTab from "./TransactionImportTab.jsx";
-import Plans   from "./Plans.jsx";
-import Crypto  from "./Crypto.jsx";
-import Tax     from "./Tax.jsx";
-import FI      from "./FI.jsx";
-import Frais   from "./Frais.jsx";
+const TransactionImportTab = lazy(() => import("./TransactionImportTab.jsx"));
+const Plans   = lazy(() => import("./Plans.jsx"));
+const Crypto  = lazy(() => import("./Crypto.jsx"));
+const Tax     = lazy(() => import("./Tax.jsx"));
+const FI      = lazy(() => import("./FI.jsx"));
+const Frais   = lazy(() => import("./Frais.jsx"));
 import {
   ExpandableChart,
 } from "./ChartComponents.jsx";
@@ -1173,8 +1173,8 @@ function MonthlyCalendar({ transactions = [] }) {
           <div className="flex flex-col overflow-y-auto wt-no-scrollbar" style={{ maxHeight: 380 }}>
             {listTx.length === 0
               ? <p className="text-sm" style={{ color: T.muted }}>Aucune transaction ce mois-ci.</p>
-              : listTx.map((t, i) => (
-                <div key={i} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+              : listTx.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
                   <Pastille t={t} size={30} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate" style={{ color: T.text }}>{t.label}</div>
@@ -2127,12 +2127,12 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                             </span>
                           )}
                           <div className="flex gap-1 ml-auto">
-                            <button onClick={() => startEdit(t)}
-                              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.muted }}>
+                            <button onClick={() => startEdit(t)} aria-label="Modifier la transaction"
+                              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "8px 10px", minHeight: 36, minWidth: 36, cursor: "pointer", color: T.muted, display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <Pencil size={12} />
                             </button>
                             <button onClick={() => onDelete?.(t.id)} aria-label="Supprimer la transaction"
-                              style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.red }}>
+                              style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 7, padding: "8px 10px", minHeight: 36, minWidth: 36, cursor: "pointer", color: T.red, display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <Trash2 size={12} />
                             </button>
                           </div>
@@ -7916,7 +7916,7 @@ export default function App() {
         {view === "parrainage"   && <ReferralPage profile={profile} />}
         {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
         {view === "interets"     && <CompoundCalc setView={setView} />}
-        {view === "marches"      && <Crypto setView={setView} marketsOnly />}
+        {view === "marches"      && <Suspense fallback={null}><Crypto setView={setView} marketsOnly /></Suspense>}
         {view === "dashboard"    && <ThemeOverrideContext.Provider value={C_BUDGET}><Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} /></ThemeOverrideContext.Provider>}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
@@ -7930,17 +7930,17 @@ export default function App() {
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} setView={setView} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
-        {view === "importer"     && <TransactionImportTab onImport={handleImport} onBack={() => setView("finances")} />}
-        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "importer"     && <Suspense fallback={null}><TransactionImportTab onImport={handleImport} onBack={() => setView("finances")} /></Suspense>}
+        {view === "plans"        && <Suspense fallback={null}>{canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fi"           && <Suspense fallback={null}>{canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "frais"        && <Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} />}
-        {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "frais"        && <Suspense fallback={null}><Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} /></Suspense>}
+        {view === "crypto"       && <Suspense fallback={null}>{canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
+        {view === "fiscalite"    && <Suspense fallback={null}>{canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
 
         {/* Vues Pro */}
         {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}

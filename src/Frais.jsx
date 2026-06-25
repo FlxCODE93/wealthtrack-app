@@ -433,7 +433,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
           <Info size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 3 }} />
           <span style={{ color: T.muted, fontSize: 12.5, lineHeight: 1.65 }}>
-            Fourchettes <strong style={{ color: T.text }}>moyennes du marché</strong>, à titre indicatif. Vos frais réels dépendent du contrat et du courtier choisis — un même produit peut coûter 0,5 % ou 3 %/an. Vérifiez toujours les conditions avant de souscrire.
+            Fourchettes <strong style={{ color: T.text }}>moyennes du marché</strong>, à titre indicatif. Vos frais réels dépendent du contrat et du courtier choisis.
           </span>
         </div>
 

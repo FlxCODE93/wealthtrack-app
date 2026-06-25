@@ -2445,12 +2445,20 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     const mk = (name, tab, rateRange, color, risk, cap, apport) =>
       ({ name, tab, rateRange, color, risk, apport: Math.round(apport), yN: cap, gain: cap - Math.round(apport) });
     return [
+      mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
+      mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Modéré",      capAt(0.10),                        apports),
       mk("Or",         "or",       "5 %",        "#f59e0b",    "Modéré",      capAt(0.05),                        apports),
+      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Spéculatif",  capAt(0.10),                        apports),
+      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Spéculatif",  capAt(0.065),                       apports),
     ];
   }, [initial, monthly, horizon, price, sim]);
 
   const TABS = [
+    { id: "etf",      label: "ETF World",  color: ASSET.etf },
+    { id: "defensif", label: "Livret A",   color: ASSET.livret },
     { id: "or",       label: "Or",         color: "#f59e0b" },
+    { id: "btc",      label: "Bitcoin",    color: ASSET.btc },
+    { id: "eth",      label: "Ethereum",   color: ASSET.eth },
     { id: "compare",  label: "Comparatif", color: T.blue },
   ];
   const activeColor = TABS.find((t) => t.id === activeTab)?.color || T.blue;
@@ -2556,6 +2564,34 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         })}
       </div>
 
+      {/* ── TAB: ETF ── */}
+      {activeTab === "etf" && <>
+        <ScenarioCard
+          title="ETF PEA — MSCI World"
+          rate="médian 10,5 %/an" accent={ASSET.etf}
+          stats={[
+            { label: "Capital final", value: eur(sim.A.cap), color: ASSET.etf },
+            { label: "Apports totaux", value: eur(sim.apports), color: T.text },
+            { label: "Intérêts générés", value: eur(sim.A.gain), color: T.green },
+            { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: T.amber },
+          ]}
+          detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" showBand={false}
+          note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
+        />
+
+        {/* Teaser → Analyse des frais */}
+        <div style={{ borderRadius: 14, padding: 16, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Mes frais — simulateur complet</div>
+            <div style={{ color: T.muted, fontSize: 13 }}>Comparez ETF PEA, AV, PER, OPCVM, SCPI — et mesurez le coût réel des frais sur votre capital.</div>
+          </div>
+          <button onClick={() => setView("frais")}
+            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "10px 18px", color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+            Ouvrir →
+          </button>
+        </div>
+
+      </>}
 
       {/* ── TAB: OR ── */}
       {activeTab === "or" && <>
@@ -2650,16 +2686,85 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
       {/* ── TAB: IMMO ── */}
 
+      {/* ── TAB: DÉFENSIF ── */}
+      {activeTab === "defensif" && (
+        <ScenarioCard
+          title="Livret A — Livret A & Épargne Sécurisée"
+          rate="médian 1,5 %/an · capital garanti" accent={ASSET.livret}
+          stats={[
+            { label: "Capital final", value: eur(sim.C.cap), color: ASSET.livret },
+            { label: "Apports totaux", value: eur(sim.apports), color: T.text },
+            { label: "Intérêts générés", value: eur(sim.C.gain), color: T.green },
+            { label: "Revenu passif/mois", value: eur(sim.C.passif), color: T.text },
+          ]}
+          detailedData={sim.detailedC} lineColor={ASSET.livret} chartKey="C" showBand={false}
+          note="Intérêts composés sur Livret A, LDDS ou épargne de précaution — capital garanti et disponible à tout moment."
+        />
+      )}
+
+
+      {/* ── TAB: BITCOIN ── */}
+      {activeTab === "btc" && (
+        <ScenarioCard
+          title="Bitcoin"
+          rate="rendement annualisé moyen · 10 ans" accent={ASSET.btc}
+          lineColor={ASSET.btc} chartKey="BTC" logScale showBand={false}
+          warning={{
+            title: "Actif hautement spéculatif — points de vigilance",
+            points: [
+              "Drawdowns historiques significatifs (−80 % en 2018, −77 % en 2022) avec une récupération de 2 à 3 ans",
+              "Cadre réglementaire en évolution — risque juridique selon les juridictions",
+              "Allocation recommandée : 5 à 10 % maximum du portefeuille global",
+            ],
+
+          }}
+          stats={[
+            { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: ASSET.btc },
+            { label: "Apports totaux",     value: eur(sim.apports),                       color: T.text },
+            { label: "Gains potentiels",   value: eur(sim.BTC.gain),                      color: T.green },
+            { label: "Multiple",           value: (sim.BTC.cap / sim.apports).toFixed(1) + "×", color: ASSET.btc },
+          ]}
+          detailedData={sim.detailedBTC}
+          note="Rendement annualisé moyen de Bitcoin sur 10 ans. N'intègre pas les cycles de −80 %. Purement indicatif — les performances passées ne préjugent pas de l'avenir."
+        />
+      )}
+
+      {/* ── TAB: ETHEREUM ── */}
+      {activeTab === "eth" && (
+        <ScenarioCard
+          title="Ethereum"
+          rate="rendement annualisé moyen · 8 ans" accent={ASSET.eth}
+          lineColor={ASSET.eth} chartKey="ETH" logScale showBand={false}
+          warning={{
+            title: "Actif hautement spéculatif — points de vigilance",
+            points: [
+              "Drawdowns historiques importants (−85 % en 2018, −81 % en 2022), recul historique limité à 8 ans",
+              "Risque technologique : protocole en développement actif, exposition à la concurrence",
+              "Allocation recommandée : 2 à 5 % maximum du portefeuille global",
+            ],
+
+          }}
+          stats={[
+            { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: ASSET.eth },
+            { label: "Apports totaux",   value: eur(sim.apports),                       color: T.text },
+            { label: "Gains potentiels", value: eur(sim.ETH.gain),                      color: T.green },
+            { label: "Multiple",         value: (sim.ETH.cap / sim.apports).toFixed(1) + "×", color: ASSET.eth },
+          ]}
+          detailedData={sim.detailedETH}
+          note="Rendement annualisé moyen d'Ethereum sur 8 ans. Plus volatil que Bitcoin, moins de recul historique. Purement indicatif."
+        />
+      )}
+
       {/* ── TAB: COMPARATIF ── */}
       {activeTab === "compare" && (
         <Card>
           {/* En-tête */}
           <div className="flex items-center flex-wrap gap-3 mb-2">
             <TrendingUp size={20} style={{ color: T.blue }} />
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparatif</h2>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>Comparatif — 7 scénarios</h2>
           </div>
           <p className="text-xs mb-4" style={{ color: T.muted }}>
-            Même apport initial ({eur(initial)}), même versement mensuel ({eur(monthly)}) et même horizon ({horizon} ans). Recalcul instantané dès que vous modifiez un paramètre ci-dessus.
+            Les 7 actifs au même apport initial ({eur(initial)}), même versement mensuel ({eur(monthly)}) et même horizon ({horizon} ans). Recalcul instantané dès que vous modifiez un paramètre ci-dessus. Cliquez un scénario pour son analyse détaillée.
           </p>
 
           {/* Tableau comparatif dynamique — colonnes = scénarios, lignes = indicateurs */}

@@ -427,71 +427,80 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
         </div>
       </Section>
 
-      {/* Comparatif enveloppes */}
-      <Section T={T} title="Comparer les frais par enveloppe"
->
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
-          <Info size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 3 }} />
-          <span style={{ color: T.muted, fontSize: 12.5, lineHeight: 1.65 }}>
-            Fourchettes <strong style={{ color: T.text }}>moyennes du marché</strong>, à titre indicatif. Vos frais réels dépendent du contrat et du courtier choisis.
-          </span>
-        </div>
-
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "4px 20px" }}>
-          {DEVICES.map((d, idx) => {
+      {/* Comparatif enveloppes — grille de cartes */}
+      <Section T={T} title="Comparer les frais par enveloppe">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+          {DEVICES.map((d) => {
             const isOpen = expanded === d.id;
+            const annualColor = d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e";
             return (
-              <div key={d.id} style={{ borderTop: idx ? `1px solid ${T.border}` : "none" }}>
-                <button
-                  onClick={() => setExpanded(isOpen ? null : d.id)}
-                  style={{ width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: "16px 0", display: "flex", flexDirection: "column", gap: 10, textAlign: "left" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 5, background: d.color, flexShrink: 0 }} />
-                    <div style={{ color: T.text, fontWeight: 700, fontSize: 15, flex: 1, minWidth: 0 }}>{d.label}</div>
-                    {d.fraisEntree > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", flexShrink: 0 }}>Entrée {d.entreeRange}</span>
-                    )}
-                    <span style={{ fontSize: 12, fontWeight: 700, color: d.color, flexShrink: 0 }}>
-                      {d.annuelsRange}/an
-                    </span>
-                    {isOpen ? <ChevronUp size={16} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: T.muted, flexShrink: 0 }} />}
-                  </div>
-                </button>
-
-                {isOpen && (
-                  <div style={{ paddingBottom: 18, paddingLeft: 20 }}>
-                    <div style={{ display: "flex", gap: 32, flexWrap: "wrap", marginBottom: 16 }}>
-                      <div>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Frais d'entrée</div>
-                        <div style={{ color: d.fraisEntree > 0 ? "#ef4444" : "#22c55e", fontWeight: 700, fontSize: 15 }}>
-                          {d.entreeRange}{d.fraisEntree === 0 ? " ✓" : ""}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Frais annuels</div>
-                        <div style={{ color: d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e", fontWeight: 700, fontSize: 15 }}>
-                          {d.annuelsRange}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 32, flexWrap: "wrap", marginBottom: 14 }}>
-                      <div style={{ flex: 1, minWidth: 160 }}>
-                        <div style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>✓ Avantages</div>
-                        {d.avantages.map((a) => <div key={a} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 3 }}>• {a}</div>)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 160 }}>
-                        <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>✗ Inconvénients</div>
-                        {d.inconvenients.map((i) => <div key={i} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 3 }}>• {i}</div>)}
-                      </div>
-                    </div>
-
-                  </div>
-                )}
-              </div>
+              <button key={d.id} onClick={() => setExpanded(isOpen ? null : d.id)}
+                style={{
+                  background: isOpen ? `${d.color}10` : T.panel,
+                  border: `1px solid ${isOpen ? d.color + "55" : T.border}`,
+                  borderRadius: 14,
+                  padding: "18px 20px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "border-color 0.15s, background 0.15s",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}>
+                {/* Nom */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{d.label}</span>
+                </div>
+                {/* Taux annuels — gros */}
+                <div>
+                  <div style={{ color: T.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Frais annuels</div>
+                  <div style={{ color: annualColor, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em" }}>{d.annuelsRange}</div>
+                </div>
+                {/* Entrée */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ color: T.muted, fontSize: 12 }}>Entrée</span>
+                  <span style={{ color: d.fraisEntree === 0 ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 12 }}>{d.entreeRange}</span>
+                </div>
+              </button>
             );
           })}
         </div>
+
+        {/* Panneau détail — pleine largeur sous la grille */}
+        {expanded && (() => {
+          const d = DEVICES.find(x => x.id === expanded);
+          if (!d) return null;
+          const annualColor = d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e";
+          return (
+            <div style={{ background: T.panel, border: `1px solid ${d.color}44`, borderRadius: 14, padding: "20px 24px", marginTop: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color }} />
+                <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>{d.label}</span>
+                <span style={{ marginLeft: "auto", color: annualColor, fontWeight: 700, fontSize: 14 }}>{d.annuelsRange}/an</span>
+                {d.fraisEntree > 0 && <span style={{ color: "#ef4444", fontSize: 13, fontWeight: 600 }}>· Entrée {d.entreeRange}</span>}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <div>
+                  <div style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>✓ Avantages</div>
+                  {d.avantages.map((a) => (
+                    <div key={a} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>• {a}</div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>✗ Inconvénients</div>
+                  {d.inconvenients.map((i) => (
+                    <div key={i} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>• {i}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        <p style={{ color: T.muted, fontSize: 12, marginTop: 8 }}>
+          Fourchettes <strong style={{ color: T.text }}>moyennes du marché</strong>, à titre indicatif. Frais réels dépendent du contrat et du courtier.
+        </p>
       </Section>
 
       {/* Alerte OPCVM — accent sémantique léger, sans bordure ni cadre fermé */}

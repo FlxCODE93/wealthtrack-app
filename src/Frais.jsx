@@ -429,7 +429,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
 
       {/* Comparatif enveloppes */}
       <Section T={T} title="Comparer les frais par enveloppe"
-        sub="PEA, assurance-vie, PER, fonds actifs et SCPI. Cliquez sur une enveloppe pour voir le détail.">
+>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
           <Info size={14} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 3 }} />
           <span style={{ color: T.muted, fontSize: 12.5, lineHeight: 1.65 }}>

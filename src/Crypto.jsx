@@ -621,10 +621,10 @@ export default function Crypto({ setView, marketsOnly = false }) {
           )}
           <h1 className="text-3xl font-bold" style={{ color: T.text }}>{marketsOnly ? "Marché des cryptoactifs" : "Crypto Portfolio"}</h1>
           <p style={{ color: T.muted }}>
-            {marketsOnly ? "Cours live · Top 100 · Capitalisation" : "Prix live · Staking"}
+            {marketsOnly ? "Cours en temps réel · Top 100 · Capitalisation" : "Valorisation en temps réel · Holdings & Staking"}
             {lastUpdate && (
               <span style={{ fontSize: 11, marginLeft: 8 }}>
-                Mis à jour {lastUpdate.toLocaleTimeString("fr-FR")}
+                — {lastUpdate.toLocaleTimeString("fr-FR")}
               </span>
             )}
           </p>

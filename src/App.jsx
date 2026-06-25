@@ -1466,9 +1466,26 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           const expSlices = breakdown.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted }));
           const expTotal = expSlices.reduce((s, b) => s + b.value, 0);
           return (
-            <div className="relative flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center">
               <div className="w-full">
-                <ExpandableChart height={300} title="Répartition des dépenses">
+                <ExpandableChart height={300} title="Répartition des dépenses"
+                  overlay={
+                    activeExpSlice != null && expSlices[activeExpSlice] ? (
+                      <>
+                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
+                        <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{fmt(expSlices[activeExpSlice].value)}</span>
+                        <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                          {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
+                        <span className="text-2xl font-bold" style={{ color: T.text }}>{fmt(expTotal)}</span>
+                      </>
+                    )
+                  }
+                >
                   <PieChart>
                     <Pie data={expSlices} dataKey="value" nameKey="name"
                       innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
@@ -1482,22 +1499,6 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                     </Pie>
                   </PieChart>
                 </ExpandableChart>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  {activeExpSlice != null && expSlices[activeExpSlice] ? (
-                    <>
-                      <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{expSlices[activeExpSlice].name}</span>
-                      <span className="text-2xl font-bold" style={{ color: expSlices[activeExpSlice].color }}>{fmt(expSlices[activeExpSlice].value)}</span>
-                      <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                        {pct(expTotal > 0 ? (expSlices[activeExpSlice].value / expTotal) * 100 : 0)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Total</span>
-                      <span className="text-2xl font-bold" style={{ color: T.text }}>{fmt(expTotal)}</span>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           );

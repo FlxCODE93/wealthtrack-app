@@ -18,6 +18,8 @@ const DEVICES = [
     color: "#22c55e",
     fraisEntree: 0,
     fraisAnnuels: 0.25,
+    entreeRange: "0 %",
+    annuelsRange: "0,07–0,25 %",
     rendementBrut: RATE_ETF_WORLD * 100,
     type: "passif",
     avantages: ["Pas de frais d'entrée en courtage en ligne", "Enveloppe fiscale PEA avantageuse", "Liquidité immédiate"],
@@ -31,6 +33,8 @@ const DEVICES = [
     color: "#3b82f6",
     fraisEntree: 0,
     fraisAnnuels: 1.4,
+    entreeRange: "0–5 %",
+    annuelsRange: "1,0–2,5 %",
     rendementBrut: RATE_ETF_WORLD * 100,
     type: "mixte",
     avantages: ["Fiscalité successorale avantageuse", "Gestion libre ou pilotée", "Arbitrages possibles"],
@@ -44,6 +48,8 @@ const DEVICES = [
     color: "#f59e0b",
     fraisEntree: 0,
     fraisAnnuels: 0.66,
+    entreeRange: "0–3 %",
+    annuelsRange: "0,5–0,9 %",
     rendementBrut: 2.6,
     type: "garanti",
     avantages: ["Capital garanti", "Liquidité sous 72h", "Pas de frais d'entrée en ligne"],
@@ -57,6 +63,8 @@ const DEVICES = [
     color: "#8b5cf6",
     fraisEntree: 0,
     fraisAnnuels: 1.5,
+    entreeRange: "0–5 %",
+    annuelsRange: "0,5–2,0 %",
     rendementBrut: 8.0,
     type: "retraite",
     avantages: ["Déduction fiscale à l'entrée (jusqu'à 30%)", "Épargne retraite structurée", "UC + fonds €"],
@@ -70,6 +78,8 @@ const DEVICES = [
     color: "#ef4444",
     fraisEntree: 2.0,
     fraisAnnuels: 2.0,
+    entreeRange: "0–5 %",
+    annuelsRange: "1,5–2,5 %",
     rendementBrut: RATE_ETF_WORLD * 100,
     type: "actif",
     avantages: ["Gestion professionnelle active", "Diversification automatique"],
@@ -83,6 +93,8 @@ const DEVICES = [
     color: "#f97316",
     fraisEntree: 10.0,
     fraisAnnuels: 1.0,
+    entreeRange: "8–12 %",
+    annuelsRange: "~1 %",
     rendementBrut: 4.9,
     type: "immo",
     avantages: ["Exposition immobilière sans gestion", "Pas de frais d'entrée sur certaines SCPI récentes", "Diversification géographique"],
@@ -327,10 +339,10 @@ export default function Frais({ invested = 0, setView }) {
                     <div style={{ width: 10, height: 10, borderRadius: 5, background: d.color, flexShrink: 0 }} />
                     <div style={{ color: T.text, fontWeight: 700, fontSize: 15, flex: 1, minWidth: 0 }}>{d.label}</div>
                     {d.fraisEntree > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", flexShrink: 0 }}>Entrée {d.fraisEntree} %</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", flexShrink: 0 }}>Entrée {d.entreeRange}</span>
                     )}
                     <span style={{ fontSize: 12, fontWeight: 700, color: d.color, flexShrink: 0 }}>
-                      {d.fraisAnnuels.toFixed(2).replace(".", ",")} %/an
+                      {d.annuelsRange}/an
                     </span>
                     {isOpen ? <ChevronUp size={16} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: T.muted, flexShrink: 0 }} />}
                   </div>
@@ -342,13 +354,13 @@ export default function Frais({ invested = 0, setView }) {
                       <div>
                         <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Frais d'entrée</div>
                         <div style={{ color: d.fraisEntree > 0 ? "#ef4444" : "#22c55e", fontWeight: 700, fontSize: 15 }}>
-                          {d.fraisEntree > 0 ? `${d.fraisEntree} %` : "0 % ✓"}
+                          {d.entreeRange}{d.fraisEntree === 0 ? " ✓" : ""}
                         </div>
                       </div>
                       <div>
                         <div style={{ color: T.muted, fontSize: 11, marginBottom: 2 }}>Frais annuels</div>
                         <div style={{ color: d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e", fontWeight: 700, fontSize: 15 }}>
-                          {d.fraisAnnuels.toFixed(2).replace(".", ",")} %
+                          {d.annuelsRange}
                         </div>
                       </div>
                     </div>

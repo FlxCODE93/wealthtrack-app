@@ -1,12 +1,9 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useT } from "./ThemeProvider.jsx";
 import { useLocalStorage } from "./storage.js";
-import { Field, makeChartTip } from "./ui.jsx";
+import { Field } from "./ui.jsx";
 import { fv, RATE_ETF_WORLD } from "./finance.js";
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
-} from "recharts";
-import { Percent, AlertTriangle, TrendingDown, Info, ChevronDown, ChevronUp, BookOpen, Wallet, ArrowRight } from "lucide-react";
+import { Percent, AlertTriangle, Info, ChevronDown, ChevronUp, BookOpen, Wallet, ArrowRight } from "lucide-react";
 
 const eur = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(Number.isFinite(n) ? n : 0)) + " €";
@@ -126,33 +123,28 @@ function Section({ T, title, sub, action, first, children }) {
 
 function FeeImpactBar({ horizon, capital, feeRate }) {
   const T = useT();
-  const data = useMemo(() => {
-    return DEVICES.map((d) => {
-      const entryDeduction = capital * (d.fraisEntree / 100);
-      const capitalNet = capital - entryDeduction;
-      const netRate = (d.rendementBrut - d.fraisAnnuels) / 100;
-      const final = fv(capitalNet, 0, netRate, horizon);
-      return { name: d.name, final: Math.round(final), color: d.color };
-    }).concat([
-      { name: "Banque trad.", final: Math.round(fv(capital, 0, (RATE_ETF_WORLD - feeRate / 100), horizon)), color: "#64748b" }
-    ]);
+  const rows = useMemo(() => {
+    const items = DEVICES.map((d) => {
+      const capitalNet = capital * (1 - d.fraisEntree / 100);
+      const final = fv(capitalNet, 0, (d.rendementBrut - d.fraisAnnuels) / 100, horizon);
+      return { name: d.label, final: Math.round(final), color: d.color };
+    });
+    items.sort((a, b) => b.final - a.final);
+    const max = items[0]?.final || 1;
+    return items.map(r => ({ ...r, pct: (r.final / max) * 100 }));
   }, [capital, horizon, feeRate]);
 
   return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
-    <div style={{ minWidth: 480 }}>
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 56 }}>
-        <CartesianGrid horizontal={false} stroke={T.border} vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 11, fill: T.muted }} angle={-35} textAnchor="end" interval={0} height={60} />
-        <YAxis tickFormatter={(v) => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : Math.round(v / 1e3) + "k"} tick={{ fontSize: 10, fill: T.muted }} width={44} />
-        <Tooltip {...makeChartTip(T)} formatter={(v) => [eur(v), "Capital final"]} />
-        <Bar dataKey="final" radius={[6, 6, 0, 0]}>
-          {data.map((d) => <Cell key={d.name} fill={d.color} />)}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {rows.map((r) => (
+        <div key={r.name} style={{ display: "grid", gridTemplateColumns: "140px 1fr 100px", alignItems: "center", gap: 12 }}>
+          <span style={{ color: T.muted, fontSize: 12, fontWeight: 600, textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</span>
+          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 6, height: 10, overflow: "hidden" }}>
+            <div style={{ width: `${r.pct}%`, height: "100%", background: r.color, borderRadius: 6, transition: "width 0.4s ease" }} />
+          </div>
+          <span style={{ color: r.color, fontSize: 13, fontWeight: 700 }}>{eur(r.final)}</span>
+        </div>
+      ))}
     </div>
   );
 }

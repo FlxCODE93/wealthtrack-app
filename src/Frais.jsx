@@ -407,20 +407,20 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
           </div>
         </div>
 
-        {/* Impact — chiffres */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 28 }}>
-          <div>
-            <div style={{ color: T.muted, fontSize: 13, marginBottom: 6 }}>ETF sans frais (0,25 %)</div>
-            <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 26 }}>{eur(impactData.sans)}</div>
+        {/* Impact — ligne épurée */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+          <div style={{ paddingRight: 24 }}>
+            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Sans frais (ETF 0,25 %)</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 20 }}>{eur(impactData.sans)}</div>
           </div>
-          <div>
-            <div style={{ color: T.muted, fontSize: 13, marginBottom: 6 }}>Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} % de frais/an</div>
-            <div style={{ color: T.text, fontWeight: 800, fontSize: 26 }}>{eur(impactData.avec)}</div>
+          <div style={{ paddingRight: 24, borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
+            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Avec {effectiveFeeRate.toFixed(1).replace(".", ",")} %/an</div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 20 }}>{eur(impactData.avec)}</div>
           </div>
-          <div>
-            <div style={{ color: "#ef4444", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Perdu sur {horizon} ans</div>
-            <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 26 }}>− {eur(impactData.perte)}</div>
-            <div style={{ color: "#ef4444", fontSize: 12, opacity: 0.8, marginTop: 2 }}>soit {impactData.pct} % de votre capital en moins</div>
+          <div style={{ borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
+            <div style={{ color: T.muted, fontSize: 12, marginBottom: 4 }}>Manque à gagner sur {horizon} ans</div>
+            <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 20 }}>− {eur(impactData.perte)}</div>
+            <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{impactData.pct} % de capital en moins</div>
           </div>
         </div>
 
@@ -429,68 +429,60 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
 
       {/* Comparatif enveloppes — grille de cartes */}
       <Section T={T} title="Comparer les frais par enveloppe">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
           {DEVICES.map((d) => {
             const isOpen = expanded === d.id;
-            const annualColor = d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e";
             return (
               <button key={d.id} onClick={() => setExpanded(isOpen ? null : d.id)}
                 style={{
-                  background: isOpen ? `${d.color}10` : T.panel,
-                  border: `1px solid ${isOpen ? d.color + "55" : T.border}`,
-                  borderRadius: 14,
-                  padding: "18px 20px",
+                  background: T.panel,
+                  border: `1px solid ${isOpen ? T.blue + "55" : T.border}`,
+                  borderLeft: `3px solid ${d.color}`,
+                  borderRadius: 12,
+                  padding: "16px 18px",
                   cursor: "pointer",
                   textAlign: "left",
-                  transition: "border-color 0.15s, background 0.15s",
+                  transition: "border-color 0.15s",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: 10,
                 }}>
-                {/* Nom */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{d.label}</span>
-                </div>
-                {/* Taux annuels — gros */}
+                <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{d.label}</span>
                 <div>
                   <div style={{ color: T.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Frais annuels</div>
-                  <div style={{ color: annualColor, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em" }}>{d.annuelsRange}</div>
+                  <div style={{ color: T.text, fontWeight: 800, fontSize: 20, letterSpacing: "-0.01em" }}>{d.annuelsRange}</div>
                 </div>
-                {/* Entrée */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: T.muted, fontSize: 12 }}>Entrée</span>
-                  <span style={{ color: d.fraisEntree === 0 ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 12 }}>{d.entreeRange}</span>
+                  <span style={{ color: T.muted, fontSize: 12, fontWeight: 600 }}>{d.entreeRange}</span>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Panneau détail — pleine largeur sous la grille */}
+        {/* Panneau détail */}
         {expanded && (() => {
           const d = DEVICES.find(x => x.id === expanded);
           if (!d) return null;
-          const annualColor = d.fraisAnnuels > 1.5 ? "#ef4444" : d.fraisAnnuels > 0.8 ? "#f59e0b" : "#22c55e";
           return (
-            <div style={{ background: T.panel, border: `1px solid ${d.color}44`, borderRadius: 14, padding: "20px 24px", marginTop: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color }} />
+            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderLeft: `3px solid ${d.color}`, borderRadius: 12, padding: "20px 24px", marginTop: 4 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
                 <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>{d.label}</span>
-                <span style={{ marginLeft: "auto", color: annualColor, fontWeight: 700, fontSize: 14 }}>{d.annuelsRange}/an</span>
-                {d.fraisEntree > 0 && <span style={{ color: "#ef4444", fontSize: 13, fontWeight: 600 }}>· Entrée {d.entreeRange}</span>}
+                <span style={{ color: T.muted, fontSize: 13 }}>{d.annuelsRange}/an</span>
+                {d.fraisEntree > 0 && <span style={{ color: T.muted, fontSize: 13 }}>· Entrée {d.entreeRange}</span>}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                 <div>
-                  <div style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>✓ Avantages</div>
+                  <div style={{ color: T.text, fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Avantages</div>
                   {d.avantages.map((a) => (
-                    <div key={a} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>• {a}</div>
+                    <div key={a} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>· {a}</div>
                   ))}
                 </div>
                 <div>
-                  <div style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>✗ Inconvénients</div>
+                  <div style={{ color: T.text, fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Limites</div>
                   {d.inconvenients.map((i) => (
-                    <div key={i} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>• {i}</div>
+                    <div key={i} style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>· {i}</div>
                   ))}
                 </div>
               </div>
@@ -503,15 +495,12 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
         </p>
       </Section>
 
-      {/* Alerte OPCVM — accent sémantique léger, sans bordure ni cadre fermé */}
-      <div style={{ display: "flex", gap: 14, alignItems: "flex-start", borderLeft: "2px solid #ef4444", paddingLeft: 16 }}>
-        <AlertTriangle size={20} style={{ color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
-        <div>
-          <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Attention aux fonds gérés activement</div>
-          <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, maxWidth: 760 }}>
-            D'après une grande étude de S&P, <strong style={{ color: T.text }}>plus de 8 fonds gérés activement sur 10 font moins bien qu'un simple ETF sur 10 ans</strong>, une fois les frais déduits.
-            1 % de frais en plus pendant 30 ans, c'est <strong style={{ color: "#ef4444" }}>environ 26 % de capital en moins</strong> au final.
-          </div>
+      {/* Note OPCVM */}
+      <div style={{ borderLeft: `2px solid ${T.border}`, paddingLeft: 16 }}>
+        <div style={{ color: T.text, fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Fonds actifs : attention aux frais cachés</div>
+        <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.7, maxWidth: 760 }}>
+          Plus de 8 fonds gérés activement sur 10 font moins bien qu'un simple ETF sur 10 ans (S&P SPIVA).
+          1 % de frais en plus pendant 30 ans représente environ <strong style={{ color: T.text }}>26 % de capital en moins</strong>.
         </div>
       </div>
 

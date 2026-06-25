@@ -195,8 +195,8 @@ const FAQS = [
     a: "Oui. Par défaut, l'intégralité de vos données est stockée en local sur votre appareil (localStorage du navigateur) et aucune donnée patrimoniale n'est transmise à nos serveurs. Une éventuelle synchronisation cloud resterait optionnelle et chiffrée. Si vous connectez une banque via Plaid, seul un token sécurisé est utilisé — jamais vos identifiants. L'accès est strictement en lecture seule : nous ne stockons pas vos identifiants bancaires et n'effectuons aucune transaction sur vos comptes.",
   },
   {
-    q: "Puis-je exporter ou supprimer mes données ?",
-    a: "À tout moment. Export en Excel, CSV, PDF ou JSON en un clic. Tant que vos données restent locales, il suffit de vider le localStorage de votre navigateur pour une suppression complète, sans résidu côté serveur.",
+    q: "WealthTrack est-il gratuit ?",
+    a: "WealthTrack est gratuit : vous pouvez créer un compte et explorer l'application sans carte bancaire. Les fonctionnalités avancées présentées — simulations long terme, projection d'actifs, immobilier locatif, optimisation fiscale, mode Couple — sont disponibles avec un abonnement Pro ou Couple.",
   },
   {
     q: "Quelles banques sont prises en charge ?",

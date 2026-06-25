@@ -187,7 +187,6 @@ export default function Frais({ invested = 0, setView }) {
   const [horizon, setHorizon] = useLocalStorage("wt_frais_horizon", 20);
   const [feeRate, setFeeRate] = useLocalStorage("wt_frais_feerate", 1.8);
   const [expanded, setExpanded] = useState(null);
-  const [showLearn, setShowLearn] = useState(false);
   const glossaireRef = useRef(null);
   const scrollToGlossaire = () => glossaireRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -202,33 +201,6 @@ export default function Frais({ invested = 0, setView }) {
     const pct = ((perte / sans) * 100).toFixed(0);
     return { sans, avec, perte, pct };
   }, [capital, horizon, feeRate]);
-
-  const concepts = [
-    { title: "Frais d'entrée", color: "#ef4444", desc: "Prélevés une seule fois, au moment où vous placez votre argent. Exemple : 3 % sur 10 000 €, c'est 300 € perdus dès le premier jour.", tip: "Visez 0 % : ils ont disparu chez les courtiers en ligne." },
-    { title: "Frais de gestion annuels", color: "#f59e0b", desc: "Prélevés chaque année sur tout l'argent que vous avez placé. Le piège : 1,5 %/an pendant 20 ans, c'est environ 25 % de votre capital final qui part en frais.", tip: "ETF en PEA : ~0,25 %/an. Fonds gérés activement : 1,5 à 2,5 %/an." },
-    { title: "Commission sur les gains", color: "#8b5cf6", desc: "Certains fonds prennent 10 à 20 % de vos gains au-delà d'un objectif — parfois même les années où votre épargne a baissé.", tip: "Préférez les fonds qui n'en prélèvent pas." },
-  ];
-
-  const arbitrages = [
-    {
-      title: "Gestion libre ou gestion pilotée ?",
-      lines: [
-        ["Gestion libre", "#22c55e", "vous choisissez vous-même où va votre argent. Le moins cher, et vous gardez le contrôle."],
-        ["Gestion pilotée", "#3b82f6", "quelqu'un (ou un robot) décide à votre place selon votre profil. Plus simple, mais 0,3 à 0,9 %/an de frais en plus."],
-      ],
-      takeaway: "Si vous savez expliquer où va votre argent, gérez-le vous-même.",
-      takeColor: "#22c55e",
-    },
-    {
-      title: "Sécurisé ou plus rémunérateur ?",
-      lines: [
-        ["Le sûr (fonds euros)", "#f59e0b", "votre argent ne peut pas baisser, mais rapporte peu (~2–3 %/an). Pour l'épargne que vous voulez protéger."],
-        ["Le dynamique (actions, ETF, immobilier)", "#3b82f6", "peut rapporter plus, mais peut aussi baisser. Pour faire croître votre argent sur le long terme."],
-      ],
-      takeaway: "Jeune : surtout du dynamique. Proche de la retraite : sécurisez peu à peu.",
-      takeColor: "#f59e0b",
-    },
-  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
@@ -350,7 +322,7 @@ export default function Frais({ invested = 0, setView }) {
           </span>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "4px 20px" }}>
           {DEVICES.map((d, idx) => {
             const isOpen = expanded === d.id;
             return (
@@ -420,43 +392,6 @@ export default function Frais({ invested = 0, setView }) {
             1 % de frais en plus pendant 30 ans, c'est <strong style={{ color: "#ef4444" }}>environ 26 % de capital en moins</strong> au final.
           </div>
         </div>
-      </div>
-
-      {/* Comprendre les frais — collapsible, en bas */}
-      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 32 }}>
-        <button
-          onClick={() => setShowLearn(o => !o)}
-          style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", marginBottom: showLearn ? 24 : 0 }}
-        >
-          <h2 style={{ color: T.text, fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: "-0.01em" }}>Comprendre les frais</h2>
-          {showLearn ? <ChevronUp size={20} style={{ color: T.muted, flexShrink: 0 }} /> : <ChevronDown size={20} style={{ color: T.muted, flexShrink: 0 }} />}
-        </button>
-        {showLearn && (
-          <>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {concepts.map((f, i) => (
-                <div key={f.title} style={{ padding: "20px 0", borderTop: i ? `1px solid ${T.border}` : "none" }}>
-                  <h3 style={{ color: T.text, fontSize: 17, fontWeight: 700, margin: "0 0 6px" }}>{f.title}</h3>
-                  <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px", maxWidth: 760 }}>{f.desc}</p>
-                  <p style={{ color: f.color, fontSize: 13.5, fontWeight: 600, margin: 0 }}>{f.tip}</p>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginTop: 36 }}>
-              {arbitrages.map((a) => (
-                <div key={a.title}>
-                  <h3 style={{ color: T.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>{a.title}</h3>
-                  {a.lines.map(([label, color, text]) => (
-                    <p key={label} style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, margin: "0 0 8px" }}>
-                      <strong style={{ color }}>{label} :</strong> {text}
-                    </p>
-                  ))}
-                  <p style={{ color: a.takeColor, fontSize: 13.5, fontWeight: 600, margin: "4px 0 0" }}>{a.takeaway}</p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       {/* Glossaire */}

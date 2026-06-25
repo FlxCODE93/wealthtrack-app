@@ -598,8 +598,8 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
   // Sous-pages du groupe dépliant "Simulations" (style Finary).
   // Le header navigue vers la calculatrice d'intérêts composés ("interets").
   const SIMS = [
-    { id: "simulations", label: "Projection d'Actifs" },
     { id: "interets",    label: "Intérêts composés" },
+    { id: "simulations", label: "Projection d'Actifs" },
     { id: "immobilier",  label: "Immobilier" },
     { id: "fi",          label: "Indépendance Financière" },
   ];

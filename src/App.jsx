@@ -567,6 +567,63 @@ function PricingPage({ plan, setPlan }) {
   );
 }
 
+// Mode réduit : groupe à icône avec menu volant (flyout) au survol — style Finary.
+// Le flyout est rendu via portal pour échapper à l'overflow de l'aside.
+function CollapsedGroup({ Icon, label, active, items, view, setView, plan, onHeaderClick }) {
+  const T = useT();
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const closeTimer = useRef(null);
+
+  const show = () => {
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.top, left: r.right + 8 });
+    setOpen(true);
+  };
+  // Petit délai de fermeture pour laisser traverser le gap icône→flyout.
+  const hide = () => { closeTimer.current = setTimeout(() => setOpen(false), 120); };
+
+  return (
+    <div onMouseEnter={show} onMouseLeave={hide} style={{ position: "relative" }}>
+      <button ref={btnRef} onClick={onHeaderClick} aria-label={label}
+        className="flex items-center justify-center py-3 rounded-xl transition w-full"
+        style={{ background: open || active ? "rgba(255,255,255,0.06)" : "transparent", border: "none", cursor: "pointer", color: active ? T.text : T.muted }}>
+        <Icon size={20} />
+      </button>
+      {open && createPortal(
+        <div onMouseEnter={show} onMouseLeave={hide}
+          style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 100,
+                   background: T.card, border: `1px solid ${T.border}`, borderRadius: 14,
+                   padding: 8, minWidth: 230, boxShadow: "0 16px 40px -12px rgba(0,0,0,0.6)" }}>
+          <button onClick={() => { onHeaderClick?.(); setOpen(false); }}
+            className="w-full text-left rounded-lg transition"
+            style={{ display: "block", color: T.muted, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", padding: "8px 12px 6px", background: "transparent", border: "none", cursor: "pointer" }}>
+            {label}
+          </button>
+          {items.map((s) => {
+            const sActive = view === s.id;
+            const sLocked = !canAccess(plan, s.id);
+            return (
+              <button key={s.id} onClick={() => { setView(s.id); setOpen(false); }}
+                className="flex items-center gap-2 w-full text-left rounded-lg transition"
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                style={{ padding: "9px 12px", fontSize: 14, background: "transparent", border: "none", cursor: "pointer",
+                         color: sActive ? T.text : sLocked ? T.muted + "88" : T.muted, fontWeight: sActive ? 600 : 500 }}>
+                <span style={{ flex: 1 }}>{s.label}</span>
+                {sLocked && <Lock size={11} style={{ color: T.muted, opacity: 0.5 }} />}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 function Sidebar({ view, setView, profile, plan, setPlan }) {
   const T = useT();
   // Taxonomie consolidée : 9 piliers (+ Couple conditionnel). Budget est fusionné
@@ -684,9 +741,9 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
 
         // Mode réduit : icône seule. Les groupes naviguent vers leur page principale.
         if (collapsed) {
-          if (it.id === "patrimoine")  return <IconOnly key="patrimoine"  Icon={Icon} active={patriActive} label="Patrimoine"  onClick={() => setView("patrimoine")} />;
-          if (it.id === "simulations") return <IconOnly key="simulations" Icon={Icon} active={simActive}   label="Simulations" onClick={() => setView("interets")} />;
-          if (it.id === "outils")      return <IconOnly key="outils"      Icon={Icon} active={toolActive}  label="Outils"      onClick={() => setView("outils")} />;
+          if (it.id === "patrimoine")  return <CollapsedGroup key="patrimoine"  Icon={Icon} label="Patrimoine"  active={patriActive} items={PATRIMOINE} view={view} setView={setView} plan={plan} onHeaderClick={() => setView("patrimoine")} />;
+          if (it.id === "simulations") return <CollapsedGroup key="simulations" Icon={Icon} label="Simulations" active={simActive}   items={SIMS}       view={view} setView={setView} plan={plan} onHeaderClick={() => setView("interets")} />;
+          if (it.id === "outils")      return <CollapsedGroup key="outils"      Icon={Icon} label="Outils"      active={toolActive}  items={TOOLS}      view={view} setView={setView} plan={plan} onHeaderClick={() => setView("outils")} />;
           return <IconOnly key={it.id} Icon={Icon} active={view === it.id} label={it.label} onClick={() => setView(it.id)} />;
         }
 

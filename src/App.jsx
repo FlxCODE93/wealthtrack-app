@@ -44,10 +44,15 @@ import {
   creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
-import { useLocalStorage, clearLocalAppData, wipeCloudData } from "./storage.js";
+import {
+  useLocalStorage, clearLocalAppData, wipeCloudData,
+  getCoupleLink, createCoupleLink, acceptCoupleLink, declineCoupleLink,
+  unlinkCouple, fetchPartnerShare,
+} from "./storage.js";
+import { coupleLinkState } from "./couple.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
-import { TX, HISTO, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
+import { TX, HISTO, DEFAULT_PATRIMOINE } from "./seedData.js";
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
@@ -3522,13 +3527,37 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
 /* ------------------------------------------------------------------ */
 /*  FEATURE 1: MODE COUPLE / FAMILLE                                   */
 /* ------------------------------------------------------------------ */
-function Couple({ transactions, simParams, patrimoine, profile }) {
+function Couple({ transactions, simParams, patrimoine, profile, userId, userEmail }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
-  const [partnerId, setPartnerId] = useState(null);
   const [goalTarget, setGoalTarget] = useState(500000);
   const [sharedMonthly, setSharedMonthly] = useState(1000);
+
+  // Lien de couple (chargé du cloud à l'ouverture).
+  const [link, setLink] = useState(null);
+  const [partnerShare, setPartnerShare] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const linkState = coupleLinkState(link, userId, userEmail);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const l = await getCoupleLink();
+    setLink(l);
+    if (l && l.status === "accepted") {
+      const partnerId = l.requester_id === userId ? l.partner_id : l.requester_id;
+      setPartnerShare(await fetchPartnerShare(partnerId));
+    } else {
+      setPartnerShare(null);
+    }
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { reload(); }, [reload]);
 
   const myNetWorth = useMemo(() => {
     const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
@@ -3536,18 +3565,13 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
     return a - p;
   }, [patrimoine]);
 
-  const partner = TEST_PROFILES.find((p) => p.id === partnerId);
+  const partner = partnerShare; // { firstName, netWorth, monthly } | null
 
-  const partnerNetWorth = useMemo(() => {
-    if (!partner) return 0;
-    const a = partner.patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    const p = partner.patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    return a - p;
-  }, [partner]);
+  const partnerNetWorth = partner ? (Number(partner.netWorth) || 0) : 0;
 
   const combinedNW = myNetWorth + partnerNetWorth;
   const myMonthly = simParams.monthly;
-  const partnerMonthly = partner ? partner.simParams.monthly : 0;
+  const partnerMonthly = partner ? (Number(partner.monthly) || 0) : 0;
   const totalMonthly = myMonthly + partnerMonthly + sharedMonthly;
   const RATE = RATE_A;
 
@@ -3582,6 +3606,24 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
   }).filter((m) => m.target >= combinedNW * 0.4 || m.status === "done");
 
   const myName = profile.firstName || "Moi";
+  const partnerName = partner?.firstName || "Partenaire";
+
+  const handleInvite = async () => {
+    setErr(""); setBusy(true);
+    const res = await createCoupleLink(inviteEmail);
+    setBusy(false);
+    if (res.error) { setErr("Échec de l'invitation. Réessayez."); return; }
+    setInviteEmail("");
+    reload();
+  };
+  const handleUnlink = async () => {
+    if (!link) return;
+    if (!window.confirm("Délier votre compte de votre partenaire ?")) return;
+    setBusy(true);
+    await unlinkCouple(link.id);
+    setBusy(false);
+    reload();
+  };
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -3593,32 +3635,75 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Users size={18} style={{ color: T.blue }} />
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Choisir un partenaire</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Partenaire</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {TEST_PROFILES.map((p) => (
-            <button key={p.id} onClick={() => setPartnerId(partnerId === p.id ? null : p.id)}
-              className="flex items-center gap-3 p-4 rounded-xl text-left transition"
-              style={{ border: `1px solid ${partnerId === p.id ? T.blue : T.border}`, background: partnerId === p.id ? "rgba(59,130,246,0.1)" : "rgba(255,255,255,0.02)" }}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
-                {p.profile.firstName[0]}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-sm truncate" style={{ color: T.text }}>{p.profile.firstName}</div>
-                <div className="text-xs truncate" style={{ color: T.muted }}>{p.label}</div>
-              </div>
-              {partnerId === p.id && <Check size={14} className="ml-auto shrink-0" style={{ color: T.blue }} />}
+
+        {loading && <p className="text-sm" style={{ color: T.muted }}>Chargement…</p>}
+
+        {!loading && linkState === "none" && (
+          <div>
+            <p className="text-sm mb-3" style={{ color: T.muted }}>
+              Invitez votre partenaire par e-mail. Vos patrimoines ne seront partagés qu'après son acceptation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input type="email" value={inviteEmail} placeholder="email@partenaire.fr" style={{ ...inputStyle, flex: 1 }}
+                onChange={(e) => setInviteEmail(e.target.value)} />
+              <button onClick={handleInvite} disabled={busy || !inviteEmail.trim()}
+                className="px-5 py-2.5 rounded-xl font-semibold text-sm shrink-0"
+                style={{ background: T.blue, color: "#fff", cursor: busy ? "not-allowed" : "pointer", opacity: busy || !inviteEmail.trim() ? 0.6 : 1 }}>
+                Inviter
+              </button>
+            </div>
+            {err && <div className="text-sm mt-2" style={{ color: T.red }}>{err}</div>}
+          </div>
+        )}
+
+        {!loading && linkState === "pending_outgoing" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.muted }}>
+              En attente de l'acceptation de <strong style={{ color: T.text }}>{link.partner_email}</strong>.
+            </p>
+            <button onClick={handleUnlink} disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+              Annuler
             </button>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {!loading && linkState === "declined" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.muted }}>Invitation refusée.</p>
+            <button onClick={handleUnlink} disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+              Supprimer
+            </button>
+          </div>
+        )}
+
+        {!loading && linkState === "accepted" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.text }}>
+              Lié à <strong>{partnerName}</strong>.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={reload} disabled={busy}
+                className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+                Rafraîchir
+              </button>
+              <button onClick={handleUnlink} disabled={busy}
+                className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.red}44`, color: T.red, cursor: "pointer" }}>
+                Délier
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card>
         <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>PATRIMOINES COMBINÉS</div>
         <div className="space-y-2 mb-5">
           <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{myName}</span><span className="font-bold" style={{ color: T.cyan }}>{eur(myNetWorth)}</span></div>
-          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{partner.profile.firstName}</span><span className="font-bold" style={{ color: T.green }}>{eur(partnerNetWorth)}</span></div>}
+          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{partnerName}</span><span className="font-bold" style={{ color: T.green }}>{eur(partnerNetWorth)}</span></div>}
           <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
             <span className="font-semibold" style={{ color: T.text }}>Total combiné</span>
             <span className="text-2xl font-bold" style={{ color: T.blue }}>{eur(combinedNW)}</span>

@@ -134,6 +134,93 @@ export async function wipeCloudData() {
   try { await supabase.from("user_data").delete().eq("user_id", activeUserId); } catch { /* hors-ligne : ignoré */ }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   MODE COUPLE — liaison de comptes + lecture du blob partagé.
+   Toutes les opérations passent par la RLS (cf. supabase/schema.sql).
+   ════════════════════════════════════════════════════════════════════ */
+
+const COUPLE_SHARE_KEY = "wt_couple_share";
+
+/** Récupère le lien de couple courant (requester, partenaire, ou pending par email). */
+export async function getCoupleLink() {
+  if (!supabase || !activeUserId) return null;
+  const { data, error } = await supabase
+    .from("couple_links")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  if (error || !data || !data.length) return null;
+  return data[0];
+}
+
+/** Crée une invitation `pending` vers l'email du partenaire. */
+export async function createCoupleLink(partnerEmail) {
+  if (!supabase || !activeUserId) return { error: "offline" };
+  const email = String(partnerEmail || "").trim().toLowerCase();
+  if (!email) return { error: "email_vide" };
+  const { data, error } = await supabase
+    .from("couple_links")
+    .insert({ requester_id: activeUserId, partner_email: email, status: "pending" })
+    .select()
+    .single();
+  if (error) return { error: error.message };
+  return { link: data };
+}
+
+/** Le partenaire accepte : pose partner_id = lui-même, status = accepted. */
+export async function acceptCoupleLink(id) {
+  if (!supabase || !activeUserId) return { error: "offline" };
+  const { data, error } = await supabase
+    .from("couple_links")
+    .update({ partner_id: activeUserId, status: "accepted", updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) return { error: error.message };
+  return { link: data };
+}
+
+/** Le partenaire refuse l'invitation. */
+export async function declineCoupleLink(id) {
+  if (!supabase || !activeUserId) return { error: "offline" };
+  const { error } = await supabase
+    .from("couple_links")
+    .update({ status: "declined", updated_at: new Date().toISOString() })
+    .eq("id", id);
+  return error ? { error: error.message } : { ok: true };
+}
+
+/** Délie le couple (suppression de la ligne ; coupe l'accès RLS immédiatement). */
+export async function unlinkCouple(id) {
+  if (!supabase || !activeUserId) return { error: "offline" };
+  const { error } = await supabase.from("couple_links").delete().eq("id", id);
+  return error ? { error: error.message } : { ok: true };
+}
+
+/** Lit le blob de partage du partenaire (RLS : autorisé seulement si lien accepté). */
+export async function fetchPartnerShare(partnerId) {
+  if (!supabase || !partnerId) return null;
+  const { data, error } = await supabase
+    .from("user_data")
+    .select("value")
+    .eq("user_id", partnerId)
+    .eq("key", COUPLE_SHARE_KEY)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.value || null;
+}
+
+/** Publie / met à jour mon blob de partage (totaux only). Best-effort. */
+export async function upsertMyShare(share) {
+  if (!supabase || !activeUserId) return;
+  try {
+    await supabase.from("user_data").upsert(
+      { user_id: activeUserId, key: COUPLE_SHARE_KEY, value: share, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,key" }
+    );
+  } catch { /* hors-ligne : ignoré */ }
+}
+
 // Filet de sécurité : pousse les écritures en attente avant de quitter la page.
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", flushPendingCloudWrites);

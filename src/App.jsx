@@ -8011,25 +8011,25 @@ export default function App() {
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} coupleLinked={coupleLinked} />
-      {coupleLinkSt === "pending_incoming" && coupleLink && (
-        <div role="alert" className="flex items-center justify-between gap-3 flex-wrap"
-          style={{ margin: "0 16px 12px", padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.1)", border: `1px solid ${(C && C.blue) || "#5b8def"}44` }}>
-          <span style={{ fontSize: 14, color: "#e5e7eb" }}>
-            <strong>Votre partenaire</strong> souhaite lier vos comptes pour partager vos patrimoines.
-          </span>
-          <div className="flex gap-2 shrink-0">
-            <button onClick={async () => { await acceptCoupleLink(coupleLink.id); refreshCoupleLink(); setView("couple"); }}
-              style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#5b8def", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-              Accepter
-            </button>
-            <button onClick={async () => { await declineCoupleLink(coupleLink.id); refreshCoupleLink(); }}
-              style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-              Refuser
-            </button>
-          </div>
-        </div>
-      )}
       <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
+        {coupleLinkSt === "pending_incoming" && coupleLink && (
+          <div role="alert" className="flex items-center justify-between gap-3 flex-wrap"
+            style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.1)", border: `1px solid ${(C && C.blue) || "#5b8def"}44` }}>
+            <span style={{ fontSize: 14, color: "#e5e7eb" }}>
+              <strong>Votre partenaire</strong> souhaite lier vos comptes pour partager vos patrimoines.
+            </span>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={async () => { await acceptCoupleLink(coupleLink.id); refreshCoupleLink(); setView("couple"); }}
+                style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#5b8def", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Accepter
+              </button>
+              <button onClick={async () => { await declineCoupleLink(coupleLink.id); refreshCoupleLink(); }}
+                style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                Refuser
+              </button>
+            </div>
+          </div>
+        )}
         {/* Barre haut mobile : logo + déconnexion (sidebar absente sur mobile) */}
         <div className="md:hidden" style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>

@@ -789,13 +789,13 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-2.5">
-          <button onClick={onLogin} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
+          <button onClick={onLogin} className="hidden sm:inline-flex text-sm font-semibold px-4 py-2 rounded-full transition-all"
             style={{ background: "transparent", border: `1px solid ${T.blue}`, color: T.blue }}
             onMouseEnter={(e) => { e.currentTarget.style.background = `${T.blue}14`; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
             Se connecter
           </button>
-          <button onClick={onStart} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
+          <button onClick={onStart} className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all"
             style={{ background: T.blue, border: `1px solid ${T.blue}`, color: "#fff" }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.filter = "brightness(1.08)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.filter = ""; }}>

@@ -17,9 +17,12 @@ export function coupleLinkState(link, userId, email) {
   const targetsMyEmail = normEmail(link.partner_email) === myEmail;
 
   if (link.status === "accepted") {
-    return isRequester || isPartnerById ? "accepted" : "none";
+    // partner_id est normalement résolu à l'acceptation ; on tolère aussi le
+    // match par email par robustesse (cohérent avec la branche pending).
+    return isRequester || isPartnerById || targetsMyEmail ? "accepted" : "none";
   }
   if (link.status === "declined") {
+    // Volontaire : seul le requester voit l'état refusé (il peut ré-inviter).
     return isRequester ? "declined" : "none";
   }
   // pending

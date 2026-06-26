@@ -34,6 +34,11 @@ describe("coupleLinkState", () => {
     expect(coupleLinkState(asPart, ME, MY_EMAIL)).toBe("accepted");
   });
 
+  it("'accepted' par match email si partner_id pas encore résolu", () => {
+    const link = { status: "accepted", requester_id: OTHER, partner_id: null, partner_email: MY_EMAIL };
+    expect(coupleLinkState(link, ME, MY_EMAIL)).toBe("accepted");
+  });
+
   it("'declined' quand le requester voit son lien refusé", () => {
     const link = { status: "declined", requester_id: ME, partner_id: null, partner_email: PARTNER_EMAIL };
     expect(coupleLinkState(link, ME, MY_EMAIL)).toBe("declined");

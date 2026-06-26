@@ -204,7 +204,7 @@ const PLANS = {
 };
 
 const PLAN_ACCESS = {
-  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "frais", "parrainage", "outils", "interets", "marches"],
+  free:   ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "objectifs", "parrainage", "outils", "interets", "marches"],
   pro:    ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "objectifs", "plans", "frais", "parrainage", "outils", "interets", "marches"],
   couple: ["dashboard", "finances", "credits", "patrimoine", "profil", "pricing", "simulations", "fi", "immobilier", "crypto", "fiscalite", "couple", "objectifs", "plans", "frais", "parrainage", "outils", "interets", "marches"],
 };
@@ -349,7 +349,7 @@ function PricingPage({ plan, setPlan }) {
         "Patrimoine (consultation)",
         "Simulation ETF basique",
       ],
-      locked: ["Indépendance Financière", "Fiscalité patrimoniale", "Crypto", "Immobilier", "Simulations avancées", "Assistant financier", "Mode Couple"],
+      locked: ["Mes frais", "Indépendance Financière", "Fiscalité patrimoniale", "Crypto", "Immobilier", "Simulations avancées", "Assistant financier", "Mode Couple"],
       cta: "Plan actuel",
     },
     {
@@ -8104,7 +8104,7 @@ export default function App() {
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
         {view === "fi"           && <Suspense fallback={null}>{canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "frais"        && <Suspense fallback={null}><Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} /></Suspense>}
+        {view === "frais"        && <Suspense fallback={null}>{canAccess(plan, "frais") ? <Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} /> : <PaywallBanner feature="frais" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "crypto"       && <Suspense fallback={null}>{canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "fiscalite"    && <Suspense fallback={null}>{canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
 

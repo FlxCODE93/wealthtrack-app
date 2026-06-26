@@ -52,7 +52,7 @@ import {
 import { coupleLinkState, shareFromPatrimoine } from "./couple.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
-import { TX, HISTO, DEFAULT_PATRIMOINE } from "./seedData.js";
+import { TX, HISTO, DEFAULT_PATRIMOINE, EMPTY_PATRIMOINE } from "./seedData.js";
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
@@ -7708,11 +7708,11 @@ export default function App() {
     }
   }, [hydratePlanFromDb]);
 
-  const [transactions, setTransactions] = useLocalStorage("wt_transactions", TX);
-  const [histo,      setHisto]      = useLocalStorage("wt_histo", HISTO);
+  const [transactions, setTransactions] = useLocalStorage("wt_transactions", []);
+  const [histo,      setHisto]      = useLocalStorage("wt_histo", []);
   const [profile,    setProfile]    = useLocalStorage("wt_profile", { firstName: "", lastName: "", age: 32, email: "", coupleMode: false, country: "", knowledge: "", goal: "", wealthBracket: "" });
   const [simParams,  setSimParams]  = useLocalStorage("wt_simParams", { monthly: 500, initial: 10000, price: 200000, horizon: 20 });
-  const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", DEFAULT_PATRIMOINE);
+  const [patrimoine, setPatrimoine] = useLocalStorage("wt_patrimoine", EMPTY_PATRIMOINE);
   const [credits,    setCredits]    = useLocalStorage("wt_credits", []);
   const [cryptoSyncApp] = useLocalStorage("wt_crypto_sync", null);
   // Patrimoine enrichi : crédits en passifs + cryptoactifs synchro injectés en actifs.

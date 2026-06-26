@@ -405,3 +405,17 @@ export const DEFAULT_PATRIMOINE = {
     { m: "Avr 2026", v: 126500 }, { m: "Mai 2026", v: 127250 }, { m: "Jun 2026", v: 142500 },
   ],
 };
+
+export const EMPTY_PATRIMOINE = {
+  actifs: [
+    { id: "liquidites",     label: "Épargne liquide",   color: "#0369a1", items: [] },
+    { id: "investissements", label: "Investissements",  color: "#22d3ee", items: [] },
+    { id: "immobilier",     label: "Immobilier",        color: "#2f9bff", items: [] },
+    { id: "autres",         label: "Autres actifs",     color: "#f5a623", items: [] },
+  ],
+  passifs: [
+    { id: "creditImmo",    label: "Crédit immobilier",  color: "#ff5a5f", items: [] },
+    { id: "autresDettes",  label: "Autres dettes",      color: "#ff8c42", items: [] },
+  ],
+  historique: [],
+};

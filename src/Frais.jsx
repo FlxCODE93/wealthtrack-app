@@ -422,7 +422,8 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
                       return (
                         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", minWidth: 180 }}>
                           <div style={{ color: T.muted, fontSize: 12, marginBottom: 6 }}>Dans {yr} an{yr > 1 ? "s" : ""}</div>
-                          <div style={{ color: T.text, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", marginBottom: 12 }}>{eur(avec)}</div>
+                          <div style={{ color: T.text, fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em", marginBottom: 10 }}>{eur(avec)}</div>
+                          <div style={{ borderTop: `1px solid ${T.border}`, marginBottom: 10 }} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                               <span style={{ display: "flex", alignItems: "center", gap: 6, color: T.muted, fontSize: 13 }}>

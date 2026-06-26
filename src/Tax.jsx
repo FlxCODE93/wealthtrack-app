@@ -133,7 +133,7 @@ const RuleItem = ({ kind, children }) => {
 export default function Tax() {
   const T = useT();
   const INPUT = { width: "100%", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" };
-  const LBL   = { display: "block", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
+  const LBL   = { display: "block", color: T.muted, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 };
 
   /* ── Crypto state ── */
   const [lots,    setLots]   = useLocalStorage("wt_tax_lots",  []);
@@ -145,6 +145,7 @@ export default function Tax() {
   const [lotForm,  setLotForm]  = useState(EMPTY_LOT);
   const [sellForm, setSellForm] = useState(EMPTY_SELL);
   const [prices,  setPrices]   = useState({});
+  const [priceError, setPriceError] = useState(false);
 
   /* ── Envelope nav ── */
   const [envelope, setEnvelope] = useState("crypto");
@@ -166,13 +167,14 @@ export default function Tax() {
     if (!syms.length) return;
     const ids = syms.map(s => COIN_ID[s] || s.toLowerCase()).join(",");
     fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=eur`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(data => {
         const out = {};
         syms.forEach(sym => { const v = data[COIN_ID[sym] || sym.toLowerCase()]?.eur; if (v) out[sym] = v; });
         setPrices(out);
+        setPriceError(false);
       })
-      .catch(() => {});
+      .catch(() => setPriceError(true));
   }, [lots, sells]);
 
   /* ── Fermeture des modals à l'Échap ── */
@@ -305,6 +307,7 @@ export default function Tax() {
     { id: "pea_cto", label: "PEA & CTO",       icon: <Landmark size={14} /> },
     { id: "av",      label: "Assurance-Vie",   icon: <Shield size={14} /> },
     { id: "immo",    label: "Immobilier",      icon: <Home size={14} /> },
+    { id: "epargne", label: "PER & Épargne salariale", icon: <Briefcase size={14} /> },
   ];
 
   const calcInput = (style = {}) => ({ ...INPUT, ...style });
@@ -389,8 +392,16 @@ export default function Tax() {
             ))}
           </div>
 
+          {/* Prix live indisponibles : le harvesting ne peut pas être estimé */}
+          {priceError && (lots.length > 0 || sells.length > 0) && (
+            <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "12px 16px", color: "#fca5a5", fontSize: 13 }}>
+              <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+              Prix du marché indisponibles (API hors-ligne) — l'estimation du tax-loss harvesting est masquée pour éviter des chiffres erronés.
+            </div>
+          )}
+
           {/* Tax-loss harvesting */}
-          {harvestOps.length > 0 && netGain > 0 && (
+          {!priceError && harvestOps.length > 0 && netGain > 0 && (
             <div style={{ background: "rgba(200,136,58,0.08)", border: `1px solid rgba(200,136,58,0.25)`, borderRadius: 14, padding: "16px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <TrendingDown size={16} style={{ color: T.amber }} />
@@ -1237,6 +1248,57 @@ export default function Tax() {
                 Enregistrer la vente
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ PER & ÉPARGNE SALARIALE (informatif) ════════════════════════ */}
+      {envelope === "epargne" && (
+        <div className="flex flex-col gap-5">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+            {[
+              { label: "PER — entrée",     value: "Déductible", sub: "Plafond 10 % revenus pro", color: T.green },
+              { label: "PER — sortie",      value: "IR + PFU",   sub: "Versements au barème, gains PFU 30 %", color: T.amber },
+              { label: "PEE — gains",       value: "17,2 %",     sub: "Exonéré d'IR, PS uniquement (5 ans)", color: T.cyan },
+              { label: "Abondement",        value: "Exonéré IR", sub: "Dans la limite légale", color: T.green },
+            ].map(c => (
+              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+                <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
+                <div style={{ color: c.color, fontSize: 22, fontWeight: 800 }}>{c.value}</div>
+                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 22px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Briefcase size={16} style={{ color: T.blue }} />
+              <h2 style={{ color: T.text, fontSize: 16, fontWeight: 800, margin: 0 }}>PER — Plan d'Épargne Retraite</h2>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, color: T.muted, fontSize: 13, lineHeight: 1.7 }}>
+              <li><strong style={{ color: T.text }}>À l'entrée</strong> : versements déductibles du revenu imposable, plafonnés à 10 % des revenus professionnels (ou 10 % du PASS si plus favorable). Gain = votre TMI × versement.</li>
+              <li><strong style={{ color: T.text }}>À la sortie en capital</strong> : la part <em>versements</em> est imposée au barème de l'IR (sans PS) ; la part <em>plus-values</em> au PFU 30 %.</li>
+              <li><strong style={{ color: T.text }}>Sortie en rente</strong> : imposée selon le régime des rentes viagères à titre gratuit (RVTG).</li>
+              <li><strong style={{ color: T.text }}>Déblocage anticipé</strong> : achat de la résidence principale ou accidents de la vie (invalidité, décès du conjoint, surendettement…).</li>
+              <li style={{ color: T.amber }}>Astuce : la déduction à l'entrée est d'autant plus intéressante que votre TMI est élevée aujourd'hui et plus basse à la retraite.</li>
+            </ul>
+          </div>
+
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 22px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Gift size={16} style={{ color: T.green }} />
+              <h2 style={{ color: T.text, fontSize: 16, fontWeight: 800, margin: 0 }}>PEE / PERCO — Épargne salariale</h2>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, color: T.muted, fontSize: 13, lineHeight: 1.7 }}>
+              <li><strong style={{ color: T.text }}>Versements</strong> volontaires non déductibles, mais l'<strong style={{ color: T.text }}>abondement employeur</strong> et l'intéressement/participation placés sont exonérés d'impôt sur le revenu (dans les plafonds légaux).</li>
+              <li><strong style={{ color: T.text }}>Plus-values</strong> exonérées d'IR à la sortie, soumises uniquement aux prélèvements sociaux à <strong style={{ color: T.text }}>17,2 %</strong>.</li>
+              <li><strong style={{ color: T.text }}>Blocage 5 ans</strong> (PEE) ou jusqu'à la retraite (PERCO), avec cas de déblocage anticipé : mariage/PACS, naissance du 3ᵉ enfant, achat RP, fin de contrat, etc.</li>
+            </ul>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(91,141,239,0.08)", border: `1px solid ${T.blue}33`, borderRadius: 12, padding: "12px 16px", color: T.muted, fontSize: 12 }}>
+            <Info size={14} style={{ color: T.blue, flexShrink: 0, marginTop: 2 }} />
+            <span>Informations générales à jour des règles {CURRENT_YEAR}. Aucun calculateur ici — les montants dépendent de votre TMI et de plafonds individuels. Vérifiez votre disponibilité d'épargne retraite sur votre avis d'imposition (« Plafond épargne retraite »).</span>
           </div>
         </div>
       )}

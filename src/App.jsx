@@ -1,14 +1,14 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { C, glow, ASSET } from "./theme.js";
 import { useT, ThemeOverrideContext } from "./ThemeProvider.jsx";
 import InfoTooltip from "./InfoTooltip.jsx";
-import TransactionImportTab from "./TransactionImportTab.jsx";
-import Plans   from "./Plans.jsx";
-import Crypto  from "./Crypto.jsx";
-import Tax     from "./Tax.jsx";
-import FI      from "./FI.jsx";
-import Frais   from "./Frais.jsx";
+const TransactionImportTab = lazy(() => import("./TransactionImportTab.jsx"));
+const Plans   = lazy(() => import("./Plans.jsx"));
+const Crypto  = lazy(() => import("./Crypto.jsx"));
+const Tax     = lazy(() => import("./Tax.jsx"));
+const FI      = lazy(() => import("./FI.jsx"));
+const Frais   = lazy(() => import("./Frais.jsx"));
 import {
   ExpandableChart,
 } from "./ChartComponents.jsx";
@@ -33,7 +33,7 @@ import {
 import {
   RATE_A, RATE_C, RATE_DISCLAIMER, RATE_GOLD,
   SAVINGS_RATE_CRITICAL, SAVINGS_RATE_TARGET, RATE_SCENARIOS,
-  IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment,
+  IMMO_DOWN_FRAC, IMMO_NOTARY_FRAC, IMMO_LOAN_RATE, IMMO_LOAN_YEARS, loanPayment, loanRemaining,
   fv, fvMonthly, fvDetailedSeries, fvBandSeries, immoDetailedSeries,
   loanFromPayment,
   repayVsInvest, breakevenInvestRate, repayVsInvestSeries, monthlyPaymentFromRemaining,
@@ -44,10 +44,15 @@ import {
   creditRevolvingStuck, creditProjectedRestant,
 } from "./finance.js";
 import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, useCelebrationToast, CONFETTI_COLORS, prefersReducedMotion, ScrollProgressBar } from "./lib/motion.jsx";
-import { useLocalStorage, clearLocalAppData } from "./storage.js";
+import {
+  useLocalStorage, clearLocalAppData, wipeCloudData,
+  getCoupleLink, createCoupleLink, acceptCoupleLink, declineCoupleLink,
+  unlinkCouple, fetchPartnerShare, upsertMyShare,
+} from "./storage.js";
+import { coupleLinkState, shareFromPatrimoine } from "./couple.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
-import { TX, HISTO, TEST_PROFILES, DEFAULT_PATRIMOINE } from "./seedData.js";
+import { TX, HISTO, DEFAULT_PATRIMOINE } from "./seedData.js";
 import { MSCI_HISTORY, BTC_HISTORY, ETH_HISTORY } from "./marketHistory.js";
 import { calculateHealthScore, getScoreBadge } from "./healthScore.js";
 import { supabase } from "./supabaseClient.js";
@@ -624,7 +629,7 @@ function CollapsedGroup({ Icon, label, active, items, view, setView, plan, onHea
   );
 }
 
-function Sidebar({ view, setView, profile, plan, setPlan }) {
+function Sidebar({ view, setView, profile, plan, setPlan, coupleLinked }) {
   const T = useT();
   // Taxonomie consolidée : 9 piliers (+ Couple conditionnel). Budget est fusionné
   // dans le Tableau de bord ; Crédits/Crypto sous Patrimoine ; Immobilier/FIRE
@@ -636,7 +641,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "outils",      label: "Outils",             icon: Wrench },
     { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
-    ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
+    ...((profile?.coupleMode && plan === "couple") || coupleLinked ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "pricing",     label: "Tarifs",             icon: Crown },
     { id: "parrainage",  label: "Premium offert",     icon: Gift },
   ];
@@ -1173,8 +1178,8 @@ function MonthlyCalendar({ transactions = [] }) {
           <div className="flex flex-col overflow-y-auto wt-no-scrollbar" style={{ maxHeight: 380 }}>
             {listTx.length === 0
               ? <p className="text-sm" style={{ color: T.muted }}>Aucune transaction ce mois-ci.</p>
-              : listTx.map((t, i) => (
-                <div key={i} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+              : listTx.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
                   <Pastille t={t} size={30} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate" style={{ color: T.text }}>{t.label}</div>
@@ -1828,6 +1833,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
   const [mainTab, setMainTab]  = useState("transactions");
   const [filter, setFilter]    = useState("tout");
   const [showAdd, setShowAdd]  = useState(false);
+  const [txError, setTxError]  = useState("");
   const [editId, setEditId]    = useState(null);
   const [editBuf, setEditBuf]  = useState({});
   const [newTx, setNewTx]      = useState({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
@@ -1872,7 +1878,9 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
 
   const handleAdd = () => {
     const amount = parseFloat(newTx.amount);
-    if (!newTx.label.trim() || !amount) return;
+    if (!newTx.label.trim()) { setTxError("Indiquez un libellé."); return; }
+    if (!amount)             { setTxError("Indiquez un montant différent de 0."); return; }
+    setTxError("");
     const signed = newTx.type === "revenu" ? Math.abs(amount) : -Math.abs(amount);
     onAdd?.({ ...newTx, amount: signed, id: Date.now(), date: new Date().toISOString().slice(0, 10), source: "manual" });
     setNewTx({ label: "", cat: "Alimentation", type: "depense_variable", amount: "", recurring: false });
@@ -1971,6 +1979,12 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
             <button onClick={() => setShowAdd(false)} className="px-4 py-2.5 rounded-xl text-sm"
               style={{ border: `1px solid ${T.border}`, color: T.muted }}>Annuler</button>
           </div>
+          {txError && (
+            <div role="alert" className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg text-sm"
+              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+              <AlertCircle size={14} /> {txError}
+            </div>
+          )}
         </Card>
       )}
 
@@ -2127,12 +2141,12 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                             </span>
                           )}
                           <div className="flex gap-1 ml-auto">
-                            <button onClick={() => startEdit(t)}
-                              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.muted }}>
+                            <button onClick={() => startEdit(t)} aria-label="Modifier la transaction"
+                              style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 7, padding: "8px 10px", minHeight: 36, minWidth: 36, cursor: "pointer", color: T.muted, display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <Pencil size={12} />
                             </button>
                             <button onClick={() => onDelete?.(t.id)} aria-label="Supprimer la transaction"
-                              style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T.red }}>
+                              style={{ background: "none", border: "1px solid rgba(255,90,95,0.3)", borderRadius: 7, padding: "8px 10px", minHeight: 36, minWidth: 36, cursor: "pointer", color: T.red, display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <Trash2 size={12} />
                             </button>
                           </div>
@@ -2169,6 +2183,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
                     <span style={{ color: T.muted, fontSize: 12 }}>/</span>
                     <NumInput
                       placeholder="illimité"
+                      min={0}
                       value={budgets?.[cat] || 0}
                       onChange={n => setBudgets(b => ({ ...b, [cat]: n }))}
                       style={{ width: 90, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.04)", color: T.text, fontSize: 13, outline: "none" }}
@@ -3512,13 +3527,37 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
 /* ------------------------------------------------------------------ */
 /*  FEATURE 1: MODE COUPLE / FAMILLE                                   */
 /* ------------------------------------------------------------------ */
-function Couple({ transactions, simParams, patrimoine, profile }) {
+function Couple({ transactions, simParams, patrimoine, profile, userId, userEmail }) {
   const T = useT();
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
-  const [partnerId, setPartnerId] = useState(null);
   const [goalTarget, setGoalTarget] = useState(500000);
   const [sharedMonthly, setSharedMonthly] = useState(1000);
+
+  // Lien de couple (chargé du cloud à l'ouverture).
+  const [link, setLink] = useState(null);
+  const [partnerShare, setPartnerShare] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const linkState = coupleLinkState(link, userId, userEmail);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const l = await getCoupleLink();
+    setLink(l);
+    if (l && l.status === "accepted") {
+      const partnerId = l.requester_id === userId ? l.partner_id : l.requester_id;
+      setPartnerShare(await fetchPartnerShare(partnerId));
+    } else {
+      setPartnerShare(null);
+    }
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { reload(); }, [reload]);
 
   const myNetWorth = useMemo(() => {
     const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
@@ -3526,18 +3565,13 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
     return a - p;
   }, [patrimoine]);
 
-  const partner = TEST_PROFILES.find((p) => p.id === partnerId);
+  const partner = partnerShare; // { firstName, netWorth, monthly } | null
 
-  const partnerNetWorth = useMemo(() => {
-    if (!partner) return 0;
-    const a = partner.patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    const p = partner.patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    return a - p;
-  }, [partner]);
+  const partnerNetWorth = partner ? (Number(partner.netWorth) || 0) : 0;
 
   const combinedNW = myNetWorth + partnerNetWorth;
   const myMonthly = simParams.monthly;
-  const partnerMonthly = partner ? partner.simParams.monthly : 0;
+  const partnerMonthly = partner ? (Number(partner.monthly) || 0) : 0;
   const totalMonthly = myMonthly + partnerMonthly + sharedMonthly;
   const RATE = RATE_A;
 
@@ -3572,6 +3606,24 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
   }).filter((m) => m.target >= combinedNW * 0.4 || m.status === "done");
 
   const myName = profile.firstName || "Moi";
+  const partnerName = partner?.firstName || "Partenaire";
+
+  const handleInvite = async () => {
+    setErr(""); setBusy(true);
+    const res = await createCoupleLink(inviteEmail);
+    setBusy(false);
+    if (res.error) { setErr("Échec de l'invitation. Réessayez."); return; }
+    setInviteEmail("");
+    reload();
+  };
+  const handleUnlink = async () => {
+    if (!link) return;
+    if (!window.confirm("Délier votre compte de votre partenaire ?")) return;
+    setBusy(true);
+    await unlinkCouple(link.id);
+    setBusy(false);
+    reload();
+  };
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -3583,32 +3635,75 @@ function Couple({ transactions, simParams, patrimoine, profile }) {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Users size={18} style={{ color: T.blue }} />
-          <h2 className="text-xl font-bold" style={{ color: T.text }}>Choisir un partenaire</h2>
+          <h2 className="text-xl font-bold" style={{ color: T.text }}>Partenaire</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {TEST_PROFILES.map((p) => (
-            <button key={p.id} onClick={() => setPartnerId(partnerId === p.id ? null : p.id)}
-              className="flex items-center gap-3 p-4 rounded-xl text-left transition"
-              style={{ border: `1px solid ${partnerId === p.id ? T.blue : T.border}`, background: partnerId === p.id ? "rgba(59,130,246,0.1)" : "rgba(255,255,255,0.02)" }}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(91,141,239,0.15)", color: T.blue }}>
-                {p.profile.firstName[0]}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-sm truncate" style={{ color: T.text }}>{p.profile.firstName}</div>
-                <div className="text-xs truncate" style={{ color: T.muted }}>{p.label}</div>
-              </div>
-              {partnerId === p.id && <Check size={14} className="ml-auto shrink-0" style={{ color: T.blue }} />}
+
+        {loading && <p className="text-sm" style={{ color: T.muted }}>Chargement…</p>}
+
+        {!loading && linkState === "none" && (
+          <div>
+            <p className="text-sm mb-3" style={{ color: T.muted }}>
+              Invitez votre partenaire par e-mail. Vos patrimoines ne seront partagés qu'après son acceptation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input type="email" value={inviteEmail} placeholder="email@partenaire.fr" style={{ ...inputStyle, flex: 1 }}
+                onChange={(e) => setInviteEmail(e.target.value)} />
+              <button onClick={handleInvite} disabled={busy || !inviteEmail.trim()}
+                className="px-5 py-2.5 rounded-xl font-semibold text-sm shrink-0"
+                style={{ background: T.blue, color: "#fff", cursor: busy ? "not-allowed" : "pointer", opacity: busy || !inviteEmail.trim() ? 0.6 : 1 }}>
+                Inviter
+              </button>
+            </div>
+            {err && <div className="text-sm mt-2" style={{ color: T.red }}>{err}</div>}
+          </div>
+        )}
+
+        {!loading && linkState === "pending_outgoing" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.muted }}>
+              En attente de l'acceptation de <strong style={{ color: T.text }}>{link.partner_email}</strong>.
+            </p>
+            <button onClick={handleUnlink} disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+              Annuler
             </button>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {!loading && linkState === "declined" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.muted }}>Invitation refusée.</p>
+            <button onClick={handleUnlink} disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+              Supprimer
+            </button>
+          </div>
+        )}
+
+        {!loading && linkState === "accepted" && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: T.text }}>
+              Lié à <strong>{partnerName}</strong>.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={reload} disabled={busy}
+                className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer" }}>
+                Rafraîchir
+              </button>
+              <button onClick={handleUnlink} disabled={busy}
+                className="px-4 py-2 rounded-xl text-sm shrink-0" style={{ border: `1px solid ${T.red}44`, color: T.red, cursor: "pointer" }}>
+                Délier
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card>
         <div className="text-xs font-semibold mb-4" style={{ color: T.muted, letterSpacing: 1 }}>PATRIMOINES COMBINÉS</div>
         <div className="space-y-2 mb-5">
           <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{myName}</span><span className="font-bold" style={{ color: T.cyan }}>{eur(myNetWorth)}</span></div>
-          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{partner.profile.firstName}</span><span className="font-bold" style={{ color: T.green }}>{eur(partnerNetWorth)}</span></div>}
+          {partner && <div className="flex justify-between"><span className="text-sm" style={{ color: T.muted }}>{partnerName}</span><span className="font-bold" style={{ color: T.green }}>{eur(partnerNetWorth)}</span></div>}
           <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
             <span className="font-semibold" style={{ color: T.text }}>Total combiné</span>
             <span className="text-2xl font-bold" style={{ color: T.blue }}>{eur(combinedNW)}</span>
@@ -4677,9 +4772,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
 
   const ownershipSeries = useMemo(() => Array.from({ length: duration + 1 }, (_, y) => {
     const propValue = Math.round(price * Math.pow(1 + appreciation / 100, y));
-    const paid = mensualite * y * 12;
-    const principalPaid = Math.max(0, paid - (credit * monthlyRate * n * y / n));
-    const remaining = Math.max(0, credit - principalPaid);
+    // Capital restant dû réel (amortissement convexe) — pas une droite.
+    const remaining = loanRemaining(credit, rate / 100, duration, y * 12);
     const equity = propValue - remaining;
     const renterFV = Math.round(fv(0, investMonthly, RATE_A, y));
     return { year: 2026 + y, propValue, "Propriété nette": Math.max(0, equity), "Patrimoine locataire": renterFV };
@@ -5777,6 +5871,28 @@ function Profil({ profile, setProfile, onInject, setTransactions, plan = "free",
         </div>
           );
         })()}
+
+        {/* Réinitialisation des données (local + cloud) */}
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <div className="font-medium text-sm" style={{ color: T.text }}>Réinitialiser mes données</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>
+              Efface définitivement transactions, patrimoine, objectifs et réglages — sur cet appareil et dans le cloud.
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!window.confirm("Réinitialiser TOUTES vos données (transactions, patrimoine, objectifs…) ?\n\nCette action est irréversible.")) return;
+              await wipeCloudData();
+              clearLocalAppData();
+              window.location.reload();
+            }}
+            className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171", cursor: "pointer" }}
+          >
+            <Trash2 size={14} className="inline mr-1.5" />Réinitialiser
+          </button>
+        </div>
       </Card>
 
 
@@ -7077,7 +7193,7 @@ function ObjectifsView({ goals, setGoals, totals }) {
         {goals.map(g => {
           const pct      = Math.min(100, g.target > 0 ? (g.saved / g.target) * 100 : 0);
           const months   = monthsLeft(g);
-          const done     = g.saved >= g.target;
+          const done     = g.target > 0 && g.saved >= g.target;
           const dateEst  = months != null && !done
             ? (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); })()
             : null;
@@ -7609,6 +7725,38 @@ export default function App() {
       ],
     };
   }, [patrimoine, credits, cryptoSyncApp]);
+
+  // Couple / Famille — utilisateur courant + état du lien
+  const [currentUser, setCurrentUser] = useState(null); // { id, email }
+  const [coupleLink, setCoupleLink] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!supabase) return;
+      const { data } = await supabase.auth.getSession();
+      const u = data?.session?.user;
+      if (alive && u) setCurrentUser({ id: u.id, email: u.email });
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const refreshCoupleLink = useCallback(async () => {
+    setCoupleLink(await getCoupleLink());
+  }, []);
+  useEffect(() => { if (currentUser) refreshCoupleLink(); }, [currentUser, refreshCoupleLink]);
+
+  const coupleLinkSt = coupleLinkState(coupleLink, currentUser?.id, currentUser?.email);
+  const coupleLinked = coupleLinkSt === "accepted";
+
+  // Publie automatiquement mon blob de partage quand mes données changent (si lié)
+  useEffect(() => {
+    if (!supabase || !currentUser) return;
+    if (coupleLinkSt === "none") return;
+    const share = shareFromPatrimoine(patrimoineDerived, profile, simParams.monthly);
+    upsertMyShare(share);
+  }, [coupleLinkSt, currentUser, patrimoineDerived, profile, simParams.monthly]);
+
   // Nouvelles features
   const [budgets,    setBudgets]    = useLocalStorage("wt_budgets", {});
   const [goals,      setGoals]      = useLocalStorage("wt_goals", []);
@@ -7681,8 +7829,8 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    if (view === "couple" && !profile.coupleMode) setView("dashboard");
-  }, [profile.coupleMode]);
+    if (view === "couple" && !profile.coupleMode && !coupleLinked) setView("dashboard");
+  }, [profile.coupleMode, coupleLinked]);
 
   // Popup essai gratuit : une fois par mois si plan Gratuit
   useEffect(() => {
@@ -7862,8 +8010,26 @@ export default function App() {
         />
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
-      <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
+      <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} coupleLinked={coupleLinked} />
       <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
+        {coupleLinkSt === "pending_incoming" && coupleLink && (
+          <div role="alert" className="flex items-center justify-between gap-3 flex-wrap"
+            style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.1)", border: `1px solid ${(C && C.blue) || "#5b8def"}44` }}>
+            <span style={{ fontSize: 14, color: "#e5e7eb" }}>
+              <strong>Votre partenaire</strong> souhaite lier vos comptes pour partager vos patrimoines.
+            </span>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={async () => { await acceptCoupleLink(coupleLink.id); refreshCoupleLink(); setView("couple"); }}
+                style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#5b8def", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Accepter
+              </button>
+              <button onClick={async () => { await declineCoupleLink(coupleLink.id); refreshCoupleLink(); }}
+                style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                Refuser
+              </button>
+            </div>
+          </div>
+        )}
         {/* Barre haut mobile : logo + déconnexion (sidebar absente sur mobile) */}
         <div className="md:hidden" style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
@@ -7900,7 +8066,7 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "patrimoine", "simulations", "outils", "plans", "objectifs", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
+          {["dashboard", "patrimoine", "simulations", "outils", "plans", "objectifs", ...((profile.coupleMode && plan === "couple") || coupleLinked ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Budget", patrimoine: "Patrimoine", simulations: "Simul.", outils: "Outils", plans: "Plan", objectifs: "Objectifs", couple: "Couple", pricing: "Tarifs", parrainage: "Premium", profil: "Profil" }[v]}
             </Pill>
@@ -7916,7 +8082,7 @@ export default function App() {
         {view === "parrainage"   && <ReferralPage profile={profile} />}
         {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
         {view === "interets"     && <CompoundCalc setView={setView} />}
-        {view === "marches"      && <Crypto setView={setView} marketsOnly />}
+        {view === "marches"      && <Suspense fallback={null}><Crypto setView={setView} marketsOnly /></Suspense>}
         {view === "dashboard"    && <ThemeOverrideContext.Provider value={C_BUDGET}><Dashboard totals={totals} baseTotals={baseTotals} monthAdj={monthAdj} onAdjust={setPillarAdj} setAiObjective={setAiObjective} breakdown={breakdown} patrimoine={patrimoineDerived} simParams={simParams} setView={setView} histo={histo} transactions={transactions} plan={plan} profile={profile} credits={credits} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} /></ThemeOverrideContext.Provider>}
         {view === "finances"     && <Finances totals={totals} tx={transactions} setView={setView}
             onAdd={(tx) => setTransactions(prev => [...prev, tx])}
@@ -7930,20 +8096,22 @@ export default function App() {
         {view === "credits"      && <Credits credits={credits} setCredits={setCredits} monthlyIncome={incomeRef} incomeIsSmoothed={incomeIsSmoothed} setView={setView} />}
         {view === "patrimoine"   && <Patrimoine patrimoine={patrimoineDerived} setPatrimoine={setPatrimoine} onConnectBank={() => setShowBankConnect(true)} setView={setView} />}
         {view === "profil"       && <Profil profile={profile} setProfile={setProfile} onInject={injectProfile} setTransactions={setTransactions} plan={plan} setView={setView} />}
-        {view === "importer"     && <TransactionImportTab onImport={handleImport} onBack={() => setView("finances")} />}
-        {view === "plans"        && (canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "importer"     && <Suspense fallback={null}><TransactionImportTab onImport={handleImport} onBack={() => setView("finances")} /></Suspense>}
+        {view === "plans"        && <Suspense fallback={null}>{canAccess(plan, "plans")     ? <Plans totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} profile={profile} credits={credits} objective={aiObjective} /> : <PaywallBanner feature="plans" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "portefeuille" && <Portefeuille />}
 
         {/* Vues Premium */}
         {view === "simulations"  && (canAccess(plan, "simulations") ? <Simulations totals={totals} simParams={simParams} setSimParams={setSimParams} age={profile.age} transactions={transactions} setView={setView} /> : <PaywallBanner feature="simulations" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fi"           && (canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "fi"           && <Suspense fallback={null}>{canAccess(plan, "fi")          ? <FI patrimoine={patrimoineDerived} totals={totals} simParams={simParams} profile={profile} setView={setView} /> : <PaywallBanner feature="fi" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
         {view === "immobilier"   && (canAccess(plan, "immobilier")  ? <Immobilier totals={totals} simParams={simParams} patrimoine={patrimoineDerived} transactions={transactions} setView={setView} /> : <PaywallBanner feature="immobilier" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "frais"        && <Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} />}
-        {view === "crypto"       && (canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />)}
-        {view === "fiscalite"    && (canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "frais"        && <Suspense fallback={null}><Frais invested={investedCapital} investItems={((patrimoineDerived?.actifs || []).find(c => c.id === "investissements")?.items || []).filter(i => (i.value || 0) > 0)} setView={setView} /></Suspense>}
+        {view === "crypto"       && <Suspense fallback={null}>{canAccess(plan, "crypto")      ? <Crypto setView={setView} /> : <PaywallBanner feature="crypto" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
+        {view === "fiscalite"    && <Suspense fallback={null}>{canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
 
         {/* Vues Pro */}
-        {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "couple"       && ((canAccess(plan, "couple") || coupleLinked)
+            ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} userId={currentUser?.id} userEmail={currentUser?.email} />
+            : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
       </main>
 
       {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}

@@ -104,7 +104,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
           <p style={{ fontSize: 13, color: T.muted, margin: "8px 0 0 0" }}>Choisissez un mot de passe sécurisé</p>
         </div>
         <form onSubmit={handleSetNewPassword} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+          <div className="wt-input-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
             <Lock size={16} style={{ color: T.muted, flexShrink: 0 }} />
             <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Nouveau mot de passe" required minLength={6}
@@ -169,7 +169,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 6 }}>
               Email
             </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+            <div className="wt-input-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
               <Mail size={16} style={{ color: T.muted, flexShrink: 0 }} />
               <input
                 type="email"
@@ -194,7 +194,7 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 6 }}>
               Mot de passe
             </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
+            <div className="wt-input-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg }}>
               <Lock size={16} style={{ color: T.muted, flexShrink: 0 }} />
               <input
                 type="password"

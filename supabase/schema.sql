@@ -109,3 +109,104 @@ drop policy if exists "avatars_delete_own" on storage.objects;
 create policy "avatars_delete_own"
   on storage.objects for delete
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- ════════════════════════════════════════════════════════════════════
+-- LIENS DE COUPLE — partage patrimonial entre 2 comptes.
+--
+-- Flux : l'acheteur (plan Couple) insère une ligne `pending` avec l'email
+-- du partenaire. Le partenaire se découvre via son email JWT et accepte
+-- (pose partner_id = lui-même, status = accepted). Aucun mot de passe
+-- d'autrui, aucune énumération d'emails.
+-- ════════════════════════════════════════════════════════════════════
+create table if not exists public.couple_links (
+  id            uuid        primary key default gen_random_uuid(),
+  requester_id  uuid        not null references auth.users (id) on delete cascade,
+  partner_email text        not null,
+  partner_id    uuid        references auth.users (id) on delete cascade,
+  status        text        not null default 'pending',  -- pending | accepted | declined
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+alter table public.couple_links enable row level security;
+
+-- Un seul couple actif par utilisateur (côté requester ET côté partenaire).
+create unique index if not exists couple_links_requester_active
+  on public.couple_links (requester_id) where status in ('pending', 'accepted');
+create unique index if not exists couple_links_partner_active
+  on public.couple_links (partner_id) where status = 'accepted';
+
+-- SELECT : requester, partenaire résolu, OU destinataire en attente (par email JWT).
+drop policy if exists "couple_links_select" on public.couple_links;
+create policy "couple_links_select"
+  on public.couple_links for select
+  using (auth.uid() = requester_id
+      or auth.uid() = partner_id
+      or (auth.jwt() ->> 'email') = partner_email);
+
+-- INSERT : on ne crée un lien que pour soi-même comme requester.
+drop policy if exists "couple_links_insert" on public.couple_links;
+create policy "couple_links_insert"
+  on public.couple_links for insert
+  with check (auth.uid() = requester_id);
+
+-- UPDATE : accepter/refuser (destinataire) ou annuler (requester).
+-- SÉCURITÉ : le requester NE PEUT PAS se résoudre lui-même un partenaire
+-- (sinon il poserait partner_id = victime + status = accepted et lirait le
+-- blob de la victime). Seul le destinataire — identifié par son email JWT —
+-- peut poser partner_id = lui-même. Les colonnes requester_id / partner_email
+-- sont immuables (trigger ci-dessous), la RLS ne pouvant comparer OLD/NEW.
+drop policy if exists "couple_links_update" on public.couple_links;
+create policy "couple_links_update"
+  on public.couple_links for update
+  using (auth.uid() = requester_id
+      or auth.uid() = partner_id
+      or (auth.jwt() ->> 'email') = partner_email)
+  with check (
+    -- le requester ne peut que laisser le lien non résolu (annuler via DELETE)
+    (auth.uid() = requester_id and partner_id is null and status in ('pending', 'declined'))
+    -- le destinataire se résout LUI-MÊME (partner_id = soi) et seulement vers son email
+    or (auth.uid() = partner_id and (auth.jwt() ->> 'email') = partner_email
+        and status in ('accepted', 'declined'))
+  );
+
+-- requester_id et partner_email sont immuables après création (intégrité :
+-- empêche de ré-router un lien existant vers une autre victime).
+create or replace function public.couple_links_guard()
+  returns trigger language plpgsql as $$
+begin
+  if new.requester_id is distinct from old.requester_id
+     or new.partner_email is distinct from old.partner_email then
+    raise exception 'requester_id et partner_email sont immuables';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists couple_links_guard_update on public.couple_links;
+create trigger couple_links_guard_update
+  before update on public.couple_links
+  for each row execute function public.couple_links_guard();
+
+-- DELETE (délier) : l'un ou l'autre membre.
+drop policy if exists "couple_links_delete" on public.couple_links;
+create policy "couple_links_delete"
+  on public.couple_links for delete
+  using (auth.uid() = requester_id or auth.uid() = partner_id);
+
+-- ── Lecture croisée du blob de partage ──────────────────────────────
+-- Un partenaire accepté peut lire UNIQUEMENT la clé `wt_couple_share`
+-- de l'autre. Toute autre clé reste protégée par user_data_select_own.
+drop policy if exists "user_data_select_partner" on public.user_data;
+create policy "user_data_select_partner"
+  on public.user_data for select
+  using (
+    key = 'wt_couple_share'
+    and exists (
+      select 1 from public.couple_links cl
+      where cl.status = 'accepted'
+        and ((cl.requester_id = auth.uid() and cl.partner_id = user_data.user_id)
+          or (cl.partner_id   = auth.uid() and cl.requester_id = user_data.user_id))
+    )
+  );

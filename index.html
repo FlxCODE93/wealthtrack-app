@@ -110,13 +110,15 @@
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
       ::selection { background: rgba(106,63,251,0.30); }
+      .wt-input-row { transition: border-color 0.15s; }
+      .wt-input-row:focus-within { border-color: #3b82f6 !important; }
 
       /* Grain / bruit subtil sur fond sombre — texture premium discrète */
       body::before {
         content: "";
         position: fixed;
         inset: 0;
-        z-index: 9999;
+        z-index: 100;
         pointer-events: none;
         opacity: 0.035;
         mix-blend-mode: overlay;

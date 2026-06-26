@@ -47,9 +47,9 @@ import { gsap, useGSAP, usePrevious, AnimatedNumber, GrowthValue, celebrate, use
 import {
   useLocalStorage, clearLocalAppData, wipeCloudData,
   getCoupleLink, createCoupleLink, acceptCoupleLink, declineCoupleLink,
-  unlinkCouple, fetchPartnerShare,
+  unlinkCouple, fetchPartnerShare, upsertMyShare,
 } from "./storage.js";
-import { coupleLinkState } from "./couple.js";
+import { coupleLinkState, shareFromPatrimoine } from "./couple.js";
 import { API_URL } from "./config.js";
 import { authHeader } from "./supabaseClient.js";
 import { TX, HISTO, DEFAULT_PATRIMOINE } from "./seedData.js";
@@ -629,7 +629,7 @@ function CollapsedGroup({ Icon, label, active, items, view, setView, plan, onHea
   );
 }
 
-function Sidebar({ view, setView, profile, plan, setPlan }) {
+function Sidebar({ view, setView, profile, plan, setPlan, coupleLinked }) {
   const T = useT();
   // Taxonomie consolidée : 9 piliers (+ Couple conditionnel). Budget est fusionné
   // dans le Tableau de bord ; Crédits/Crypto sous Patrimoine ; Immobilier/FIRE
@@ -641,7 +641,7 @@ function Sidebar({ view, setView, profile, plan, setPlan }) {
     { id: "outils",      label: "Outils",             icon: Wrench },
     { id: "plans",       label: "Plan d'action",      icon: Star },
     { id: "objectifs",   label: "Objectifs",          icon: Target },
-    ...(profile?.coupleMode && plan === "couple" ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
+    ...((profile?.coupleMode && plan === "couple") || coupleLinked ? [{ id: "couple", label: "Couple / Famille", icon: Users }] : []),
     { id: "pricing",     label: "Tarifs",             icon: Crown },
     { id: "parrainage",  label: "Premium offert",     icon: Gift },
   ];
@@ -7725,6 +7725,38 @@ export default function App() {
       ],
     };
   }, [patrimoine, credits, cryptoSyncApp]);
+
+  // Couple / Famille — utilisateur courant + état du lien
+  const [currentUser, setCurrentUser] = useState(null); // { id, email }
+  const [coupleLink, setCoupleLink] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!supabase) return;
+      const { data } = await supabase.auth.getSession();
+      const u = data?.session?.user;
+      if (alive && u) setCurrentUser({ id: u.id, email: u.email });
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const refreshCoupleLink = useCallback(async () => {
+    setCoupleLink(await getCoupleLink());
+  }, []);
+  useEffect(() => { if (currentUser) refreshCoupleLink(); }, [currentUser, refreshCoupleLink]);
+
+  const coupleLinkSt = coupleLinkState(coupleLink, currentUser?.id, currentUser?.email);
+  const coupleLinked = coupleLinkSt === "accepted";
+
+  // Publie automatiquement mon blob de partage quand mes données changent (si lié)
+  useEffect(() => {
+    if (!supabase || !currentUser) return;
+    if (coupleLinkSt === "none") return;
+    const share = shareFromPatrimoine(patrimoineDerived, profile, simParams.monthly);
+    upsertMyShare(share);
+  }, [coupleLinkSt, currentUser, patrimoineDerived, profile, simParams.monthly]);
+
   // Nouvelles features
   const [budgets,    setBudgets]    = useLocalStorage("wt_budgets", {});
   const [goals,      setGoals]      = useLocalStorage("wt_goals", []);
@@ -7797,8 +7829,8 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    if (view === "couple" && !profile.coupleMode) setView("dashboard");
-  }, [profile.coupleMode]);
+    if (view === "couple" && !profile.coupleMode && !coupleLinked) setView("dashboard");
+  }, [profile.coupleMode, coupleLinked]);
 
   // Popup essai gratuit : une fois par mois si plan Gratuit
   useEffect(() => {
@@ -7978,7 +8010,25 @@ export default function App() {
         />
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
-      <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} />
+      <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} coupleLinked={coupleLinked} />
+      {coupleLinkSt === "pending_incoming" && coupleLink && (
+        <div role="alert" className="flex items-center justify-between gap-3 flex-wrap"
+          style={{ margin: "0 16px 12px", padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.1)", border: `1px solid ${(C && C.blue) || "#5b8def"}44` }}>
+          <span style={{ fontSize: 14, color: "#e5e7eb" }}>
+            <strong>Votre partenaire</strong> souhaite lier vos comptes pour partager vos patrimoines.
+          </span>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={async () => { await acceptCoupleLink(coupleLink.id); refreshCoupleLink(); setView("couple"); }}
+              style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#5b8def", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              Accepter
+            </button>
+            <button onClick={async () => { await declineCoupleLink(coupleLink.id); refreshCoupleLink(); }}
+              style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#9ca3af", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+              Refuser
+            </button>
+          </div>
+        </div>
+      )}
       <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
         {/* Barre haut mobile : logo + déconnexion (sidebar absente sur mobile) */}
         <div className="md:hidden" style={{ marginBottom: 24 }}>
@@ -8016,7 +8066,7 @@ export default function App() {
 
         {/* nav mobile */}
         <div className="flex md:hidden gap-2 mb-6 overflow-x-auto pb-1">
-          {["dashboard", "patrimoine", "simulations", "outils", "plans", "objectifs", ...(profile.coupleMode && plan === "couple" ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
+          {["dashboard", "patrimoine", "simulations", "outils", "plans", "objectifs", ...((profile.coupleMode && plan === "couple") || coupleLinked ? ["couple"] : []), "pricing", "parrainage", "profil"].map((v) => (
             <Pill key={v} active={view === v} onClick={() => setView(v)}>
               {{ dashboard: "Budget", patrimoine: "Patrimoine", simulations: "Simul.", outils: "Outils", plans: "Plan", objectifs: "Objectifs", couple: "Couple", pricing: "Tarifs", parrainage: "Premium", profil: "Profil" }[v]}
             </Pill>
@@ -8059,7 +8109,9 @@ export default function App() {
         {view === "fiscalite"    && <Suspense fallback={null}>{canAccess(plan, "fiscalite")   ? <Tax />    : <PaywallBanner feature="fiscalite" plan={plan} onUpgrade={() => setView("pricing")} />}</Suspense>}
 
         {/* Vues Pro */}
-        {view === "couple"       && (canAccess(plan, "couple")      ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} /> : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        {view === "couple"       && ((canAccess(plan, "couple") || coupleLinked)
+            ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} userId={currentUser?.id} userEmail={currentUser?.email} />
+            : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
       </main>
 
       {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}

@@ -180,12 +180,13 @@ export async function acceptCoupleLink(id) {
   return { link: data };
 }
 
-/** Le partenaire refuse l'invitation. */
+/** Le partenaire refuse l'invitation (se résout lui-même comme partner_id,
+   requis par la policy RLS qui interdit au requester de toucher partner_id). */
 export async function declineCoupleLink(id) {
   if (!supabase || !activeUserId) return { error: "offline" };
   const { error } = await supabase
     .from("couple_links")
-    .update({ status: "declined", updated_at: new Date().toISOString() })
+    .update({ partner_id: activeUserId, status: "declined", updated_at: new Date().toISOString() })
     .eq("id", id);
   return error ? { error: error.message } : { ok: true };
 }

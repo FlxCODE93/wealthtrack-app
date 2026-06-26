@@ -151,15 +151,43 @@ create policy "couple_links_insert"
   on public.couple_links for insert
   with check (auth.uid() = requester_id);
 
--- UPDATE : accepter/refuser (partenaire) ou annuler (requester).
+-- UPDATE : accepter/refuser (destinataire) ou annuler (requester).
+-- SÉCURITÉ : le requester NE PEUT PAS se résoudre lui-même un partenaire
+-- (sinon il poserait partner_id = victime + status = accepted et lirait le
+-- blob de la victime). Seul le destinataire — identifié par son email JWT —
+-- peut poser partner_id = lui-même. Les colonnes requester_id / partner_email
+-- sont immuables (trigger ci-dessous), la RLS ne pouvant comparer OLD/NEW.
 drop policy if exists "couple_links_update" on public.couple_links;
 create policy "couple_links_update"
   on public.couple_links for update
   using (auth.uid() = requester_id
       or auth.uid() = partner_id
       or (auth.jwt() ->> 'email') = partner_email)
-  with check (auth.uid() = requester_id
-      or auth.uid() = partner_id);
+  with check (
+    -- le requester ne peut que laisser le lien non résolu (annuler via DELETE)
+    (auth.uid() = requester_id and partner_id is null and status in ('pending', 'declined'))
+    -- le destinataire se résout LUI-MÊME (partner_id = soi) et seulement vers son email
+    or (auth.uid() = partner_id and (auth.jwt() ->> 'email') = partner_email
+        and status in ('accepted', 'declined'))
+  );
+
+-- requester_id et partner_email sont immuables après création (intégrité :
+-- empêche de ré-router un lien existant vers une autre victime).
+create or replace function public.couple_links_guard()
+  returns trigger language plpgsql as $$
+begin
+  if new.requester_id is distinct from old.requester_id
+     or new.partner_email is distinct from old.partner_email then
+    raise exception 'requester_id et partner_email sont immuables';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists couple_links_guard_update on public.couple_links;
+create trigger couple_links_guard_update
+  before update on public.couple_links
+  for each row execute function public.couple_links_guard();
 
 -- DELETE (délier) : l'un ou l'autre membre.
 drop policy if exists "couple_links_delete" on public.couple_links;

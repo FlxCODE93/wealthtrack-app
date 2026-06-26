@@ -261,9 +261,14 @@ function PaywallBanner({ feature, plan, onUpgrade }) {
       hook: "Trois feuilles de route concrètes, construites à partir de votre situation réelle.",
       bullets: ["Plans personnalisés — épargne, investissement, acquisition immobilière", "Étapes chiffrées avec impact estimé sur votre trajectoire patrimoniale", "Suivi de votre progression, étape par étape"],
     },
+    frais: {
+      title: "Mes frais",
+      hook: "Les frais invisibles sont le premier ennemi de votre capital sur le long terme.",
+      bullets: ["Mesurez le manque à gagner réel causé par vos TER sur 10, 20 et 30 ans", "Comparez PEA, assurance-vie, PER et CTO — frais inclus — sur un même horizon", "Identifiez les enveloppes qui plombent votre rendement et les alternatives moins chères"],
+    },
   };
   const details = FEATURE_DETAILS[feature] || { title: feature, hook: "Fonctionnalité Pro.", bullets: [] };
-  const needed = ["simulations","fi","immobilier","crypto","fiscalite","plans"].includes(feature) ? "pro" : "couple";
+  const needed = ["simulations","fi","immobilier","crypto","fiscalite","plans","frais"].includes(feature) ? "pro" : "couple";
   const P = PLANS[needed];
   const price = needed === "pro" ? "7,99 €" : "9,99 €";
   return (

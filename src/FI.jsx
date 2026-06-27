@@ -697,40 +697,6 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
           )}
         </div>
 
-        {/* Détail du taux calculé depuis le patrimoine */}
-        {rateIsSynced && appBlendedReturn && (
-          <div style={{
-            marginTop: 20, padding: "14px 18px",
-            background: "rgba(99,102,241,0.07)", border: `1px solid rgba(99,102,241,0.2)`,
-            borderRadius: 14,
-          }}>
-            <div style={{ color: T.blue, fontSize: 11, fontWeight: 700, marginBottom: 10, letterSpacing: 0.6, textTransform: "uppercase" }}>
-              Détail du calcul · rendement {effectiveReturn.toFixed(1)} % pondéré depuis votre patrimoine
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 24px" }}>
-              {appBlendedReturn.breakdown.map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: 6, fontSize: 11, color: T.muted, alignItems: "center" }}>
-                  <span>{item.label}</span>
-                  <span style={{ color: T.muted, opacity: 0.5 }}>·</span>
-                  <span style={{ color: T.muted }}>{eur(item.value)}</span>
-                  <span style={{ color: T.muted, opacity: 0.5 }}>·</span>
-                  <span style={{ color: item.rate >= 7 ? T.green : item.rate >= 3 ? T.blue : T.muted, fontWeight: 700 }}>
-                    {item.rate} %
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid rgba(255,255,255,0.06)`, display: "flex", justifyContent: "space-between", fontSize: 11, color: T.text, fontWeight: 700 }}>
-              <span style={{ color: T.muted }}>Moyenne pondérée par les montants</span>
-              <span style={{ color: T.blue }}>{effectiveReturn.toFixed(1)} %</span>
-            </div>
-            {appBlendedReturn.breakdown.some(item => item.rate === RATE_CRYPTO_FI_PRUDENT * 100) && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid rgba(255,255,255,0.06)`, fontSize: 10, color: T.muted, lineHeight: 1.5 }}>
-                <AlertTriangle size={11} style={{ color: T.amber, display: "inline", verticalAlign: "-2px", marginRight: 4 }} aria-hidden="true" />Vos positions crypto sont comptées ici à {(RATE_CRYPTO_FI_PRUDENT * 100).toFixed(0)} %/an, une hypothèse volontairement prudente pour une projection de revenu retraite — bien en-deçà des performances historiques du Bitcoin ou de l'Ethereum (voir l'onglet Crypto), qui sont beaucoup trop volatiles pour servir de base à une planification financière fiable.
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Et si tout était en ETF World ? ── */}
         {fiYearETF && (

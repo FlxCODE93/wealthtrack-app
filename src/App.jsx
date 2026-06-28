@@ -2690,7 +2690,32 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
               <CartesianGrid stroke={chartTip.contentStyle?.border?.replace?.(/\s.*/, "") || "#334155"} vertical={false} />
               <XAxis dataKey="year" tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} />
               <YAxis tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} axisLine={false} width={48} />
-              <Tooltip {...chartTip} formatter={(v, n) => [eur(v), n === "capital" ? "Or (net)" : n === "apports" ? "Apports cumulés" : n]} />
+              <Tooltip content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload ?? {};
+                const capital = d.capital ?? 0;
+                const apports = d.apports ?? 0;
+                const gains   = Math.max(0, capital - apports);
+                const row = (c, l, v) => (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 7, color: T.muted }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: c, flexShrink: 0 }} />{l}
+                    </span>
+                    <span style={{ color: T.text, fontWeight: 700 }}>{eur(v)}</span>
+                  </div>
+                );
+                const y = label - SIM_START_YEAR;
+                return (
+                  <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", minWidth: 210, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+                    <div style={{ fontSize: 12, color: T.muted }}>{y <= 0 ? "Aujourd'hui" : `Dans ${y} an${y > 1 ? "s" : ""}`}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(capital)}</div>
+                    <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+                      {row(T.green, "Intérêts", gains)}
+                      {row(T.blue, "Versements", apports)}
+                    </div>
+                  </div>
+                );
+              }} />
               <Area type="monotone" dataKey="apports" name="Apports cumulés" stroke="#3b82f6" strokeWidth={1.5} fill="none" />
               <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
             </AreaChart>

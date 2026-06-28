@@ -783,8 +783,13 @@ export default function Landing({ onStart, onLogin = onStart }) {
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-16 py-4"
         style={{ background: "transparent", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="rounded-xl p-1.5 sm:p-2" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>
-            <BarChart3 size={14} color="#fff" />
+          <div className="rounded-xl p-1.5 sm:p-2 flex items-center justify-center" style={{ background: "linear-gradient(150deg, rgba(91,141,239,0.20) 0%, rgba(139,92,246,0.10) 100%)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 20px -8px rgba(91,141,239,0.55)" }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <defs><linearGradient id="wtLogoFillNav" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.30" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+              <path d="M6 4.5 L6 18 L19.5 18" stroke="rgba(255,255,255,0.28)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5 L19.5 18 Z" fill="url(#wtLogoFillNav)" />
+              <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5" stroke="#3b82f6" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
           </div>
           <span className="text-sm sm:text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
@@ -1239,8 +1244,13 @@ export default function Landing({ onStart, onLogin = onStart }) {
             {/* Logo + accroche */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>
-                  <BarChart3 size={14} color="#fff" />
+                <div className="rounded-lg p-1.5 flex items-center justify-center" style={{ background: "linear-gradient(150deg, rgba(91,141,239,0.20) 0%, rgba(139,92,246,0.10) 100%)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 20px -8px rgba(91,141,239,0.55)" }}>
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <defs><linearGradient id="wtLogoFillFt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.30" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+                    <path d="M6 4.5 L6 18 L19.5 18" stroke="rgba(255,255,255,0.28)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5 L19.5 18 Z" fill="url(#wtLogoFillFt)" />
+                    <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5" stroke="#3b82f6" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
                 </div>
                 <span className="font-bold text-sm" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
               </div>

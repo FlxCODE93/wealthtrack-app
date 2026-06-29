@@ -519,56 +519,6 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
         <p style={{ color: T.muted }}>Règle des 4 % · Intérêts composés · Votre date de liberté</p>
       </div>
 
-      {/* ── Bandeau de synchronisation ── */}
-      {hasAppData && (
-        <div style={{
-          background: syncMode ? "rgba(34,199,154,0.07)" : "rgba(255,255,255,0.03)",
-          border: `1px solid ${syncMode ? T.green + "44" : T.border}`,
-          borderRadius: 14, padding: "14px 20px",
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: syncMode ? T.green + "22" : "rgba(255,255,255,0.05)",
-              border: `1px solid ${syncMode ? T.green + "44" : T.border}`,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <RefreshCw size={16} style={{ color: syncMode ? T.green : T.muted }} />
-            </div>
-            <div>
-              <div style={{ color: syncMode ? T.green : T.text, fontWeight: 700, fontSize: 13 }}>
-                {syncMode ? "Données synchronisées depuis WealthTrack" : "Mode simulation manuelle"}
-              </div>
-              {syncMode && (
-                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>
-                  Patrimoine net : <b style={{ color: T.text }}>{eur(appNetWorth)}</b>
-                  {appAge && <> · Âge : <b style={{ color: T.text }}>{appAge} ans</b></>}
-                  {appMonthly != null && <> · Épargne : <b style={{ color: T.text }}>{eur(appMonthly)}/mois</b></>}
-                  {appAnnualExpenses != null && <> · Dépenses : <b style={{ color: T.text }}>{eur(appAnnualExpenses)}/an</b></>}
-                </div>
-              )}
-              {!syncMode && (
-                <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>
-                  Les données du Patrimoine, Profil et Budget ne sont pas utilisées.
-                </div>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => setSyncMode(v => !v)}
-            style={{
-              padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
-              background: syncMode ? "rgba(255,255,255,0.06)" : T.green + "22",
-              border: `1px solid ${syncMode ? T.border : T.green + "66"}`,
-              color: syncMode ? T.muted : T.green,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {syncMode ? "Passer en simulation" : "Synchroniser mes données"}
-          </button>
-        </div>
-      )}
 
       {/* ── HERO : ring + stats ── */}
       <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: "28px 32px" }}>
@@ -746,23 +696,6 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
       </div>
 
       {/* ── Pension de retraite ── */}
-      {!showPensionCard && fiYearNoPension && (
-        <div style={{
-          background: "rgba(34,199,154,0.06)", border: `1px solid ${T.green}33`,
-          borderRadius: 14, padding: "14px 20px",
-          display: "flex", alignItems: "center", gap: 14,
-        }}>
-          <span style={{ fontSize: 22 }}>🎉</span>
-          <div>
-            <div style={{ color: T.green, fontWeight: 700, fontSize: 13 }}>
-              Indépendance financière avant l'âge de retraite légal ({retirementAge} ans)
-            </div>
-            <div style={{ color: T.muted, fontSize: 11, marginTop: 3 }}>
-              Vous atteignez l'IF à <b style={{ color: T.text }}>{fiYearNoPension.age} ans</b> — la pension d'État n'est pas nécessaire dans votre calcul.
-            </div>
-          </div>
-        </div>
-      )}
       {showPensionCard && <div style={{
         background: T.panel, border: `1px solid ${T.border}`,
         borderRadius: 20, padding: "24px 28px",

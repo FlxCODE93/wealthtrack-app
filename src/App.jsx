@@ -2588,15 +2588,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
                 cursor: "pointer",
               }}>
               {t.label}
-              {hasHistoChart && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Historique ${t.label}`}
-                  onClick={(e) => { e.stopPropagation(); showCryptoTip(e, t.id); }}
-                  style={{ fontSize: 13, opacity: 0.7, cursor: "pointer", padding: "0 2px" }}
-                >ℹ</span>
-              )}
             </button>
           );
         })}

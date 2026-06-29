@@ -2644,7 +2644,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             { label: "Performance", value: (orTotalVerse > 0 ? (orGain / orTotalVerse * 100) : 0).toFixed(0) + " %", color: orGain >= 0 ? T.green : T.red },
           ]}
           detailedData={orSeries} lineColor="#f59e0b" chartKey="or" showBand={true}
-          note="Rendement historique annualisé ajusté EUR sur 50 ans ≈ 6,5 %/an (source : goldmarket.fr). Frais de stockage/assurance estimés à 0,5 %/an déduits. Valeur refuge sans dividende ni loyer. Non un conseil en investissement."
+          note="Rendement historique annualisé ajusté EUR sur 50 ans ≈ 6,5 %/an (source : goldmarket.fr). Frais de stockage/assurance estimés à 0,5 %/an déduits."
         />
         <div style={{ borderRadius: 12, padding: 14, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", gap: 10, alignItems: "flex-start" }}>
           <Info size={15} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />

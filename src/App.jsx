@@ -5567,21 +5567,17 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 {monthlyChange >= 0 ? "+" : ""}{fmt(monthlyChange)} ce mois
               </div>
             </div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {HIST_RANGES.map(r => (
-                <button key={r.label} onClick={() => setHistRange(r.label)} style={{
-                  padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
-                  background: histRange === r.label ? T.blue : "transparent",
-                  color: histRange === r.label ? "#fff" : T.muted,
-                  border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
-                  transition: "all .15s ease",
-                }}>{r.label}</button>
-              ))}
-            </div>
+            <select value={histRange} onChange={e => setHistRange(e.target.value)} style={{
+              background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`,
+              color: T.text, borderRadius: 8, padding: "6px 12px", fontSize: 13,
+              fontWeight: 600, cursor: "pointer", outline: "none",
+            }}>
+              {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
+            </select>
           </div>
 
           {/* ── Chart ── */}
-          <div style={{ height: 210, padding: "0 12px 0 0" }}>
+          <div style={{ height: 210, padding: "0 12px 16px 0" }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartHist} margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
                 <defs>
@@ -5603,7 +5599,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <div style={{ borderTop: `1px solid ${T.border}` }} />
 
           {/* ── Tabs Actifs / Passifs / Répartition ── */}
-          <div style={{ padding: "0 28px" }}>
+          <div style={{ padding: "12px 28px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${T.border}` }}>
               <div style={{ display: "flex" }}>
                 {["actifs", "passifs", "répartition"].map(tab => (

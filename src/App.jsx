@@ -570,49 +570,35 @@ function PricingPage({ plan, setPlan }) {
       </div>
 
       {/* Garanties sécurité */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(91,141,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Fingerprint size={18} style={{ color: T.blue }} />
+      <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+        {[
+          { Icon: Fingerprint, color: T.blue,    title: "Connexion biométrique",     body: "Face ID / empreinte digitale, disponible sur tous les plans dès l'activation." },
+          { Icon: Gift,        color: T.green,   title: "Essai gratuit 7 jours",     body: "Sur Pro et Couple. Pré-autorisation carte requise, débit à J+7 sauf annulation." },
+          { Icon: ShieldCheck, color: "#a855f7", title: "Partage de compte vérifié", body: "Mode Couple chiffré de bout en bout, architecture vérifiée par audit indépendant." },
+        ].map(({ Icon, color, title, body }, i) => (
+          <div key={title} style={{ flex: 1, minWidth: 180, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Icon size={14} style={{ color, flexShrink: 0 }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{title}</span>
+            </div>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, margin: 0 }}>{body}</p>
           </div>
-          <div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Connexion biométrique</div>
-            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Face ID / empreinte digitale, disponible sur tous les plans dès l'activation.</div>
-          </div>
-        </div>
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Gift size={18} style={{ color: T.green }} />
-          </div>
-          <div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
-            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Sur Pro et Couple. Carte bancaire requise pour l'activation (pré-autorisation), débit automatique à l'issue des 7 jours sauf annulation.</div>
-          </div>
-        </div>
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <ShieldCheck size={18} style={{ color: "#a855f7" }} />
-          </div>
-          <div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Partage de compte vérifié</div>
-            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>En mode Couple, l'accès partagé est chiffré de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant.</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* FAQ */}
-      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: "28px 32px" }}>
-        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Questions fréquentes</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Questions fréquentes</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           {[
             { q: "Mes données sont-elles en sécurité ?", r: "Par défaut, toutes vos données restent locales sur votre appareil et ne sont transmises à aucun serveur tiers." },
             { q: "Puis-je annuler à tout moment ?", r: "Oui. Aucun engagement, annulation en un clic. Vous conservez vos données locales." },
             { q: "Le plan Gratuit est-il vraiment gratuit ?", r: "Oui, pour toujours. Les fonctionnalités de base restent accessibles sans limite de durée." },
-            { q: "Comment fonctionne l'essai gratuit ?", r: "Activez Pro ou Couple gratuitement pendant 7 jours en renseignant votre carte bancaire (pré-autorisation, aucun débit immédiat). Passé ce délai, l'abonnement démarre automatiquement sauf annulation. Si vous ne l'activez pas, un rappel s'affiche une fois par mois pour vous le proposer." },
-            { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant — vos données restent privées." },
+            { q: "Comment fonctionne l'essai gratuit ?", r: "Activez Pro ou Couple gratuitement pendant 7 jours (pré-autorisation carte, aucun débit immédiat). L'abonnement démarre automatiquement à J+7 sauf annulation." },
+            { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit indépendant — vos données restent privées." },
           ].map(({ q, r }) => (
-            <div key={q} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 14 }}>
-              <div style={{ color: T.text, fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{q}</div>
+            <div key={q} style={{ borderBottom: `1px solid ${T.border}`, padding: "14px 0" }}>
+              <div style={{ color: T.text, fontWeight: 600, fontSize: 13, marginBottom: 5 }}>{q}</div>
               <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{r}</div>
             </div>
           ))}

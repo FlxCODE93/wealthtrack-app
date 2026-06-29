@@ -660,20 +660,6 @@ export default function Crypto({ setView, marketsOnly = false }) {
               </div>
             ))}
           </div>
-          {best && worst && best.id !== worst.id && (
-            <div style={{ display: "flex", gap: 24, marginTop: 16, paddingTop: 14, borderTop: `1px solid rgba(255,255,255,0.05)`, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: T.muted, display: "flex", alignItems: "center", gap: 6 }}>
-                <Trophy size={11} style={{ color: T.green }} />
-                <span style={{ color: T.text, fontWeight: 600 }}>{best.symbol}</span>
-                <span style={{ color: T.green, fontWeight: 700 }}>{pct(best.gainPct)}</span>
-              </span>
-              <span style={{ fontSize: 12, color: T.muted, display: "flex", alignItems: "center", gap: 6 }}>
-                <TrendingDown size={11} style={{ color: T.red }} />
-                <span style={{ color: T.text, fontWeight: 600 }}>{worst.symbol}</span>
-                <span style={{ color: T.red, fontWeight: 700 }}>{pct(worst.gainPct)}</span>
-              </span>
-            </div>
-          )}
         </div>
       )}
 

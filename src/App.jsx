@@ -570,35 +570,49 @@ function PricingPage({ plan, setPlan }) {
       </div>
 
       {/* Garanties sécurité */}
-      <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
-        {[
-          { Icon: Fingerprint, color: T.blue,    title: "Connexion biométrique",     body: "Face ID / empreinte digitale, disponible sur tous les plans dès l'activation." },
-          { Icon: Gift,        color: T.green,   title: "Essai gratuit 7 jours",     body: "Sur Pro et Couple. Pré-autorisation carte requise, débit à J+7 sauf annulation." },
-          { Icon: ShieldCheck, color: "#a855f7", title: "Partage de compte vérifié", body: "Mode Couple chiffré de bout en bout, architecture vérifiée par audit indépendant." },
-        ].map(({ Icon, color, title, body }, i) => (
-          <div key={title} style={{ flex: 1, minWidth: 180, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <Icon size={14} style={{ color, flexShrink: 0 }} />
-              <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{title}</span>
-            </div>
-            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, margin: 0 }}>{body}</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(91,141,239,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Fingerprint size={18} style={{ color: T.blue }} />
           </div>
-        ))}
+          <div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Connexion biométrique</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Face ID / empreinte digitale, disponible sur tous les plans dès l'activation.</div>
+          </div>
+        </div>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Gift size={18} style={{ color: T.green }} />
+          </div>
+          <div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Essai gratuit 7 jours</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>Sur Pro et Couple. Carte bancaire requise pour l'activation (pré-autorisation), débit automatique à l'issue des 7 jours sauf annulation.</div>
+          </div>
+        </div>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ShieldCheck size={18} style={{ color: "#a855f7" }} />
+          </div>
+          <div>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Partage de compte vérifié</div>
+            <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.5 }}>En mode Couple, l'accès partagé est chiffré de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant.</div>
+          </div>
+        </div>
       </div>
 
       {/* FAQ */}
-      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
-        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Questions fréquentes</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, padding: "28px 32px" }}>
+        <h2 style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Questions fréquentes</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {[
             { q: "Mes données sont-elles en sécurité ?", r: "Par défaut, toutes vos données restent locales sur votre appareil et ne sont transmises à aucun serveur tiers." },
             { q: "Puis-je annuler à tout moment ?", r: "Oui. Aucun engagement, annulation en un clic. Vous conservez vos données locales." },
             { q: "Le plan Gratuit est-il vraiment gratuit ?", r: "Oui, pour toujours. Les fonctionnalités de base restent accessibles sans limite de durée." },
-            { q: "Comment fonctionne l'essai gratuit ?", r: "Activez Pro ou Couple gratuitement pendant 7 jours (pré-autorisation carte, aucun débit immédiat). L'abonnement démarre automatiquement à J+7 sauf annulation." },
-            { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit indépendant — vos données restent privées." },
+            { q: "Comment fonctionne l'essai gratuit ?", r: "Activez Pro ou Couple gratuitement pendant 7 jours en renseignant votre carte bancaire (pré-autorisation, aucun débit immédiat). Passé ce délai, l'abonnement démarre automatiquement sauf annulation. Si vous ne l'activez pas, un rappel s'affiche une fois par mois pour vous le proposer." },
+            { q: "Comment fonctionne le partage de compte en mode Couple ?", r: "La connexion entre les deux comptes est chiffrée de bout en bout et son architecture est vérifiée par un audit de sécurité indépendant — vos données restent privées." },
           ].map(({ q, r }) => (
-            <div key={q} style={{ borderBottom: `1px solid ${T.border}`, padding: "14px 0" }}>
-              <div style={{ color: T.text, fontWeight: 600, fontSize: 13, marginBottom: 5 }}>{q}</div>
+            <div key={q} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 14 }}>
+              <div style={{ color: T.text, fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{q}</div>
               <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{r}</div>
             </div>
           ))}
@@ -5261,8 +5275,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [assetSearch, setAssetSearch] = useState("");
   const [sortKey, setSortKey] = useState("value");
   const [sortDir, setSortDir] = useState(-1);
-  const [rowMenu, setRowMenu] = useState(null); // { key, side, catId, itemIdx }
-  const [editRowModal, setEditRowModal] = useState(null); // { side, catId, itemIdx, label, value }
   const HIST_RANGES = [
     { label: "1J", months: 1 }, { label: "1S", months: 1 }, { label: "1M", months: 1 },
     { label: "3M", months: 3 }, { label: "6M", months: 6 },
@@ -5324,7 +5336,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
 
   const flatActifs = useMemo(() => effectiveActifs.flatMap(cat =>
-    (cat.items || []).map((item, itemIdx) => ({
+    (cat.items || []).map(item => ({
       ...item,
       catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
       initials: (cat.label || "").slice(0, 2).toUpperCase(),
@@ -5332,18 +5344,16 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       pl: item.costBasis > 0 ? item.value - item.costBasis : null,
       plPct: item.costBasis > 0 ? ((item.value - item.costBasis) / item.costBasis) * 100 : null,
       isDerived: cat.id === "credits-derived", isSync: !!cat.isSync,
-      itemIdx,
     }))
   ), [effectiveActifs, totalActifs]);
 
   const flatPassifs = useMemo(() => (patrimoine.passifs || []).flatMap(cat =>
-    (cat.items || []).map((item, itemIdx) => ({
+    (cat.items || []).map(item => ({
       ...item,
       catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
       initials: (cat.label || "").slice(0, 2).toUpperCase(),
       allocPct: totalPassifs > 0 ? (item.value / totalPassifs) * 100 : 0,
       pl: null, plPct: null, isDerived: false, isSync: false,
-      itemIdx,
     }))
   ), [patrimoine.passifs, totalPassifs]);
 
@@ -5548,266 +5558,88 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </button>
       </div>
 
-      {/* Bloc unifié Patrimoine */}
+      {/* Évolution + Performance côte à côte (façon Finary) */}
       {hasData && (
-        <>
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 440px" }}>
-
-            {/* ── Gauche : header + graphe ── */}
-            <div style={{ borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column" }}>
-              <div style={{ padding: "20px 24px 10px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ color: T.muted, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>Patrimoine net</span>
-                    <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
-                      icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
-                      label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
-                  </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmt(netWorth)}</div>
-                  <div style={{ marginTop: 4, fontSize: 12, color: monthlyChange >= 0 ? T.green : T.red, display: "flex", alignItems: "center", gap: 3 }}>
-                    {monthlyChange >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    {monthlyChange >= 0 ? "+" : ""}{fmt(monthlyChange)} ce mois
-                  </div>
-                </div>
-                <select value={histRange} onChange={e => setHistRange(e.target.value)} style={{
-                  background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`,
-                  color: T.text, borderRadius: 8, padding: "5px 10px", fontSize: 12,
-                  fontWeight: 600, cursor: "pointer", outline: "none",
-                }}>
-                  {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1, minHeight: 120, padding: "0 8px 12px 0" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartHist} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                    <defs>
-                      <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={T.blue} stopOpacity={0.22} />
-                        <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} horizontal={false} />
-                    <XAxis dataKey="m" stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} minTickGap={histMonths > 12 ? 55 : 38} axisLine={false} tickLine={false} />
-                    <YAxis stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={38} domain={["auto", "auto"]} />
-                    <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-                    <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2} fill="url(#gradNW)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold" style={{ color: T.text }}>Patrimoine net</h2>
+                <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
+                  icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
+                  label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
               </div>
             </div>
-
-            {/* ── Droite : donut répartition ── */}
-            <div style={{ padding: "20px 20px 16px", display: "flex", flexDirection: "column" }}>
-              <span style={{ color: T.muted, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>Répartition</span>
-              <div style={{ height: 140, position: "relative", flexShrink: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={allSlices} dataKey="value" nameKey="name"
-                      innerRadius="52%" outerRadius="78%" paddingAngle={3} cornerRadius={6}
-                      stroke="none" startAngle={90} endAngle={-270}
-                      activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                      onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                      {allSlices.map((s, i) => (
-                        <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42} style={{ transition: "opacity 0.2s" }} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                  {activeSlice != null && allSlices[activeSlice] ? (
-                    <>
-                      <span style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>{allSlices[activeSlice].name}</span>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
-                      <span style={{ fontSize: 11, color: T.muted }}>{pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>Total</span>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8, overflowY: "auto" }}>
-                {allSlices.map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "4px 6px", borderRadius: 7,
-                    background: activeSlice === i ? `${s.color}12` : "transparent", transition: "background .15s", cursor: "default" }}
-                    onMouseEnter={() => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                      <span style={{ color: T.text, fontSize: 12, fontWeight: 500 }}>{s.name}</span>
-                    </div>
-                    <span style={{ color: T.muted, fontSize: 12, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                  </div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {HIST_RANGES.map(r => (
+                <button key={r.label} onClick={() => setHistRange(r.label)}
+                  style={{
+                    padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
+                    background: histRange === r.label ? T.blue : "transparent",
+                    color: histRange === r.label ? "#fff" : T.muted,
+                    border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
+                    transition: "all .15s ease",
+                  }}>{r.label}</button>
+              ))}
+            </div>
+          </div>
+          <ExpandableChart height={280} title="Patrimoine net"
+            controls={
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {HIST_RANGES.map(r => (
+                  <button key={r.label} onClick={() => setHistRange(r.label)}
+                    style={{
+                      padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
+                      background: histRange === r.label ? T.blue : "transparent",
+                      color: histRange === r.label ? "#fff" : T.muted,
+                      border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
+                      transition: "all .15s ease",
+                    }}>{r.label}</button>
                 ))}
               </div>
-            </div>
-
-          </div>
+            }
+          >
+            <AreaChart data={chartHist}>
+              <defs>
+                <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={T.blue} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
+              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histMonths > 12 ? 55 : 38} />
+              <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
+                tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
+              <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+              <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2.5}
+                fill="url(#gradNW)" dot={false} />
+            </AreaChart>
+          </ExpandableChart>
         </Card>
 
-        {/* ── Bloc Actifs / Passifs ── */}
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-
-          {/* ── Tabs ── */}
-          <div style={{ padding: "0 28px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ display: "flex" }}>
-                {["actifs", "passifs"].map(tab => (
-                  <button key={tab} onClick={() => setPatTab(tab)} style={{
-                    padding: "14px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer",
-                    background: "none", border: "none",
-                    color: patTab === tab ? T.text : T.muted,
-                    borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
-                    marginBottom: -1, transition: "all .15s",
-                  }}>
-                    {tab === "actifs" ? "Actifs" : "Passifs"}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
-                  Catégories
-                  <button onClick={() => setGroupByType(g => !g)} style={{
-                    width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-                    background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
-                  }}>
-                    <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
-                  </button>
-                </label>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
-                  <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
-                    style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
-                </div>
-              </div>
+        {/* Performance — déplacée à côté du graphe (façon Finary) */}
+        <Card className="flex flex-col">
+          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Performance</h2>
+          <p className="text-sm mb-5" style={{ color: T.muted }}>
+            Performance depuis le {chartHist[0]?.m || "—"} : {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+          </p>
+          <div className="flex flex-col justify-center flex-1 gap-2">
+            <div className="text-4xl font-bold" style={{ color: growthTotalPct >= 0 ? T.green : T.red }}>
+              {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+            </div>
+            <div className="flex items-center gap-1.5 text-sm flex-wrap">
+              {growthTotalAbs >= 0
+                ? <ArrowUpRight size={15} style={{ color: T.green }} />
+                : <ArrowDownRight size={15} style={{ color: T.red }} />}
+              <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
+                {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
+              </span>
+              <span style={{ color: T.muted }}>sur la période</span>
             </div>
           </div>
-
-          {/* ── Contenu tab ── */}
-          <div style={{ padding: "0 28px 28px" }}>
-            {editMode ? (
-              <div style={{ marginTop: 16 }}>
-                {patTab === "actifs"
-                  ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))
-                  : (patrimoine.passifs || []).map(cat => renderCategory(cat, "passifs"))}
-              </div>
-            ) : (() => {
-              const isPassif = patTab === "passifs";
-              const rawItems = isPassif ? flatPassifs : flatActifs;
-              const totalVal = isPassif ? totalPassifs : totalActifs;
-              let items = rawItems.filter(r => !assetSearch ||
-                (r.label || "").toLowerCase().includes(assetSearch.toLowerCase()) ||
-                (r.catLabel || "").toLowerCase().includes(assetSearch.toLowerCase()));
-              items = [...items].sort((a, b) => {
-                const va = typeof a[sortKey] === "string" ? a[sortKey] : (a[sortKey] ?? 0);
-                const vb = typeof b[sortKey] === "string" ? b[sortKey] : (b[sortKey] ?? 0);
-                return typeof va === "string" ? sortDir * va.localeCompare(vb) : sortDir * (va - vb);
-              });
-              const rows = groupByType
-                ? [...new Set(items.map(i => i.catId))].flatMap(catId => {
-                    const grp = items.filter(i => i.catId === catId);
-                    return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
-                  })
-                : items;
-              const COL = "2.5fr 1.2fr 0.9fr 1fr 32px";
-              const SortBtn = ({ k, label }) => (
-                <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
-                    color: sortKey === k ? T.text : T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
-                    display: "flex", alignItems: "center", gap: 3 }}>
-                  {label} <span style={{ opacity: sortKey === k ? 1 : 0.35 }}>{sortKey === k && sortDir === 1 ? "↑" : "↓"}</span>
-                </button>
-              );
-              return (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", paddingBottom: 10, marginTop: 16, borderBottom: `1px solid ${T.border}` }}>
-                    <SortBtn k="label" label="Nom" />
-                    <SortBtn k="catLabel" label="Type" />
-                    <SortBtn k="allocPct" label="Répartition" />
-                    <SortBtn k="value" label="Valeur" />
-                    <span />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "12px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
-                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
-                      Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
-                    </span>
-                    <span /><span />
-                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
-                    <span />
-                  </div>
-                  {rows.map((row, i) => row.isGroupHeader ? (
-                    <div key={"gh" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0 6px", borderBottom: `1px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 4, background: row.catColor, flexShrink: 0 }} />
-                      {row.catLabel} <span style={{ fontWeight: 400 }}>· {row.count} · {fmt(row.catTotal)}</span>
-                    </div>
-                  ) : (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                        {(() => { const logo = getBankLogo(row.label, row.catLabel); return (
-                          <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                            {logo
-                              ? <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.innerHTML = `<span style="font-size:11px;font-weight:800;color:${row.catColor}">${row.initials}</span>`; }} />
-                              : <span style={{ fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</span>}
-                          </div>
-                        ); })()}
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
-                          <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
-                        </div>
-                      </div>
-                      <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 8, background: `${row.catColor}18`, color: row.catColor, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                        {(() => { const r2=11,sw=3,circ=2*Math.PI*r2,dash=Math.min(100,row.allocPct)/100*circ; return (
-                          <svg width={28} height={28} style={{ transform:"rotate(-90deg)", flexShrink:0 }}>
-                            <circle cx={14} cy={14} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw}/>
-                            <circle cx={14} cy={14} r={r2} fill="none" stroke={row.catColor} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeLinecap="round"/>
-                          </svg>
-                        ); })()}
-                        <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
-                        {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
-                      </div>
-                      {!row.isDerived && !row.isSync ? (() => {
-                        const menuKey = `${isPassif ? "passifs" : "actifs"}-${row.catId}-${row.itemIdx}`;
-                        const isOpen = rowMenu?.key === menuKey;
-                        return (
-                          <div style={{ position: "relative" }}>
-                            <button onClick={e => { e.stopPropagation(); setRowMenu(isOpen ? null : { key: menuKey, side: isPassif ? "passifs" : "actifs", catId: row.catId, itemIdx: row.itemIdx, label: row.label, value: row.value }); }}
-                              style={{ background: isOpen ? "rgba(255,255,255,0.08)" : "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: "4px 6px", lineHeight: 1, borderRadius: 6, transition: "background .15s" }}>
-                              ···
-                            </button>
-                            {isOpen && (
-                              <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50, background: "#1e2a3a", border: `1px solid ${T.border}`, borderRadius: 10, padding: "6px 0", minWidth: 140, boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }}
-                                onClick={e => e.stopPropagation()}>
-                                <button onClick={() => { setEditRowModal({ side: rowMenu.side, catId: rowMenu.catId, itemIdx: rowMenu.itemIdx, label: rowMenu.label, value: rowMenu.value }); setRowMenu(null); }}
-                                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", color: T.text, fontSize: 13, fontWeight: 600, textAlign: "left" }}
-                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
-                                  onMouseLeave={e => e.currentTarget.style.background = "none"}>
-                                  ✏️ Modifier
-                                </button>
-                                <button onClick={() => { deleteItem(rowMenu.side, rowMenu.catId, rowMenu.itemIdx); setRowMenu(null); }}
-                                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", color: T.red, fontSize: 13, fontWeight: 600, textAlign: "left" }}
-                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.08)"}
-                                  onMouseLeave={e => e.currentTarget.style.background = "none"}>
-                                  🗑 Supprimer
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })() : <span />}
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
-          </div>
         </Card>
-        </>
+        </div>
       )}
 
       {/* Accès rapides aux composantes du patrimoine */}
@@ -5862,51 +5694,211 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       )}
 
+      {/* Finary-style table Actifs / Passifs + Donut */}
+      {hasData && (
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <Card className="lg:col-span-3">
+        {/* Tabs + controls */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 0, borderBottom: `2px solid ${T.border}` }}>
+            {["actifs", "passifs"].map(tab => (
+              <button key={tab} onClick={() => setPatTab(tab)} style={{
+                padding: "6px 22px 10px", fontWeight: 700, fontSize: 15, cursor: "pointer",
+                background: "none", border: "none",
+                color: patTab === tab ? T.text : T.muted,
+                borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
+                marginBottom: -2, transition: "all .15s",
+              }}>{tab === "actifs" ? "Actifs" : "Passifs"}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
+              Grouper par type
+              <button onClick={() => setGroupByType(g => !g)} style={{
+                width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
+              }}>
+                <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
+              </button>
+            </label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
+              <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
+                style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
+            </div>
+          </div>
+        </div>
+
+        {editMode ? (
+          <div>
+            {patTab === "actifs"
+              ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))
+              : (patrimoine.passifs || []).map(cat => renderCategory(cat, "passifs"))}
+          </div>
+        ) : (() => {
+          const isPassif = patTab === "passifs";
+          const rawItems = isPassif ? flatPassifs : flatActifs;
+          const totalVal = isPassif ? totalPassifs : totalActifs;
+          let items = rawItems.filter(r => !assetSearch ||
+            (r.label || "").toLowerCase().includes(assetSearch.toLowerCase()) ||
+            (r.catLabel || "").toLowerCase().includes(assetSearch.toLowerCase()));
+          items = [...items].sort((a, b) => {
+            const va = typeof a[sortKey] === "string" ? a[sortKey] : (a[sortKey] ?? 0);
+            const vb = typeof b[sortKey] === "string" ? b[sortKey] : (b[sortKey] ?? 0);
+            return typeof va === "string" ? sortDir * va.localeCompare(vb) : sortDir * (va - vb);
+          });
+          const rows = groupByType
+            ? [...new Set(items.map(i => i.catId))].flatMap(catId => {
+                const grp = items.filter(i => i.catId === catId);
+                return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
+              })
+            : items;
+          const totalPL = items.reduce((s, i) => s + (i.pl ?? 0), 0);
+          const knownBasis = items.reduce((s, i) => s + (i.costBasis > 0 ? i.costBasis : 0), 0);
+          const totalPLPct = knownBasis > 0 ? (totalPL / knownBasis) * 100 : null;
+          const COL = "2.5fr 1.2fr 0.9fr 1fr 1fr 32px";
+          const SortBtn = ({ k, label }) => (
+            <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+                color: sortKey === k ? T.text : T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                display: "flex", alignItems: "center", gap: 3 }}>
+              {label} <span style={{ opacity: sortKey === k ? 1 : 0.35 }}>{sortKey === k && sortDir === 1 ? "↑" : "↓"}</span>
+            </button>
+          );
+          return (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", paddingBottom: 10, borderBottom: `1px solid ${T.border}` }}>
+                <SortBtn k="label" label="Nom" />
+                <SortBtn k="catLabel" label="Type" />
+                <SortBtn k="allocPct" label="Répartition" />
+                <SortBtn k="value" label="Valeur" />
+                <SortBtn k="pl" label="P&L" />
+                <span />
+              </div>
+              {/* Total row */}
+              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "12px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
+                  Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
+                </span>
+                <span /><span />
+                <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
+                <div style={{ textAlign: "right" }}>
+                  {totalPLPct != null && <>
+                    <div style={{ fontWeight: 700, color: totalPL >= 0 ? T.green : T.red, fontSize: 14 }}>{totalPL >= 0 ? "+" : ""}{fmt(totalPL)}</div>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: totalPL >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: totalPL >= 0 ? T.green : T.red }}>
+                      {totalPL >= 0 ? "▲" : "▼"} {Math.abs(totalPLPct).toFixed(2)}%
+                    </span>
+                  </>}
+                </div>
+                <span />
+              </div>
+              {rows.map((row, i) => row.isGroupHeader ? (
+                <div key={"gh" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0 6px", borderBottom: `1px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 4, background: row.catColor, flexShrink: 0 }} />
+                  {row.catLabel} <span style={{ fontWeight: 400 }}>· {row.count} · {fmt(row.catTotal)}</span>
+                </div>
+              ) : (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    {(() => { const logo = getBankLogo(row.label, row.catLabel); return (
+                      <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                        {logo
+                          ? <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.innerHTML = `<span style="font-size:11px;font-weight:800;color:${row.catColor}">${row.initials}</span>`; }} />
+                          : <span style={{ fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</span>}
+                      </div>
+                    ); })()}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
+                      <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
+                    </div>
+                  </div>
+                  <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 8, background: `${row.catColor}18`, color: row.catColor, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    {(() => { const r2=11,sw=3,circ=2*Math.PI*r2,dash=Math.min(100,row.allocPct)/100*circ; return (
+                      <svg width={28} height={28} style={{ transform:"rotate(-90deg)", flexShrink:0 }}>
+                        <circle cx={14} cy={14} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw}/>
+                        <circle cx={14} cy={14} r={r2} fill="none" stroke={row.catColor} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeLinecap="round"/>
+                      </svg>
+                    ); })()}
+                    <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
+                    {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    {row.pl != null && <>
+                      <div style={{ fontWeight: 700, color: row.pl >= 0 ? T.green : T.red, fontSize: 14 }}>{row.pl >= 0 ? "+" : ""}{fmt(row.pl)}</div>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: row.pl >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: row.pl >= 0 ? T.green : T.red }}>
+                        {row.pl >= 0 ? "▲" : "▼"} {Math.abs(row.plPct ?? 0).toFixed(2)}%
+                      </span>
+                    </>}
+                  </div>
+                  {!row.isDerived && !row.isSync
+                    ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>
+                    : <span />}
+                </div>
+              ))}
+            </>
+          );
+        })()}
+      </Card>
+
+      {/* Donut Répartition */}
+      <Card className="flex flex-col">
+        <div className="mb-2 text-center">
+          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Répartition</h2>
+          <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+        </div>
+        <ExpandableChart height={330} title="Répartition du patrimoine"
+          overlay={
+            activeSlice != null && allSlices[activeSlice] ? (
+              <>
+                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
+                <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
+                <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                  {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
+                <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
+              </>
+            )
+          }
+          legend={
+            <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+              {allSlices.map((s, i) => (
+                <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                  {s.name}
+                  <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                </span>
+              ))}
+            </div>
+          }
+        >
+          <PieChart>
+            <Pie data={allSlices} dataKey="value" nameKey="name"
+              innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+              stroke="none" startAngle={90} endAngle={-270}
+              activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+              onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+              {allSlices.map((s, i) => (
+                <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                  style={{ transition: "opacity 0.2s" }} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ExpandableChart>
+      </Card>
+      </div>
+      )}
 
       {showComplete && (
         <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} onManualAdd={addManual} />
       )}
-
-      {/* Click-outside ferme le menu contextuel */}
-      {rowMenu && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setRowMenu(null)} />
-      )}
-
-      {/* Modal édition ligne */}
-      {editRowModal && (() => {
-        const m = editRowModal;
-        return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onClick={() => setEditRowModal(null)}>
-            <div style={{ background: "#1a2235", border: `1px solid ${T.border}`, borderRadius: 16, padding: "28px 28px 24px", minWidth: 340, boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
-              onClick={e => e.stopPropagation()}>
-              <h3 style={{ color: T.text, fontWeight: 800, fontSize: 16, marginBottom: 20 }}>Modifier</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div>
-                  <label style={{ color: T.muted, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Nom</label>
-                  <input value={m.label} onChange={e => setEditRowModal(prev => ({ ...prev, label: e.target.value }))}
-                    style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
-                </div>
-                <div>
-                  <label style={{ color: T.muted, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Valeur (€)</label>
-                  <input type="number" value={m.value} onChange={e => setEditRowModal(prev => ({ ...prev, value: Number(e.target.value) }))}
-                    style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-                <button onClick={() => setEditRowModal(null)}
-                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
-                  Annuler
-                </button>
-                <button onClick={() => { updateItem(m.side, m.catId, m.itemIdx, { label: m.label, value: m.value }); setEditRowModal(null); }}
-                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -6443,49 +6435,52 @@ function ReferralPage({ profile }) {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       {/* Hero */}
-      <div>
-        <h1 style={{ color: T.text, fontSize: 28, fontWeight: 800, lineHeight: 1.2 }}>Invitez vos proches,</h1>
-        <h1 style={{ color: T.blue, fontSize: 28, fontWeight: 800, lineHeight: 1.2, marginBottom: 24 }}>obtenez du Pro gratuitement !</h1>
+      <div className="rounded-3xl p-6 sm:p-8" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+        <h1 className="text-2xl sm:text-3xl font-black leading-tight" style={{ color: T.text }}>Invitez vos proches,</h1>
+        <h1 className="text-2xl sm:text-3xl font-black leading-tight mb-5" style={{ color: T.blue }}>obtenez du Pro gratuitement !</h1>
+        <div className="text-xs font-bold mb-5" style={{ color: T.amber, letterSpacing: 0.6 }}>COMMENT ÇA MARCHE ?</div>
 
-        <div style={{ marginBottom: 6, fontSize: 11, color: T.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>Votre lien de parrainage</div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div style={{ fontSize: 14, color: T.text, paddingBottom: 8, borderBottom: `1px solid ${T.border}`, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</div>
-          <button onClick={() => copy(link, "link")} style={{ minHeight: 40, padding: "9px 20px", borderRadius: 999, background: T.blue, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-            {copied === "link" ? <Check size={15} /> : <Copy size={15} />} {copied === "link" ? "Copié !" : "Copier"}
+        <div className="text-xs mb-2" style={{ color: T.muted }}>Votre lien de parrainage</div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <div className="text-sm font-medium truncate flex-1 min-w-0" style={{ color: T.text, paddingBottom: 8, borderBottom: `1px solid ${T.border}` }}>{link}</div>
+          <button onClick={() => copy(link, "link")} className="inline-flex items-center justify-center gap-2 shrink-0"
+            style={{ minHeight: 44, padding: "10px 20px", borderRadius: 999, background: T.blue, color: "#fff", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            {copied === "link" ? <Check size={16} /> : <Copy size={16} />} {copied === "link" ? "Copié !" : "Copier"}
           </button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 13, color: T.muted }}>
-          Code : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1 }}>{code}</span>
-          <button onClick={() => copy(code, "code")} style={{ background: "none", border: "none", color: copied === "code" ? T.green : T.muted, cursor: "pointer", padding: 4, display: "inline-flex" }}>
-            {copied === "code" ? <Check size={13} /> : <Copy size={13} />}
+        <div className="flex items-center gap-2 text-sm" style={{ color: T.muted }}>
+          Code de parrainage : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1 }}>{code}</span>
+          <button onClick={() => copy(code, "code")} aria-label="Copier le code"
+            style={{ background: "none", border: "none", color: copied === "code" ? T.green : T.muted, cursor: "pointer", padding: 4, display: "inline-flex" }}>
+            {copied === "code" ? <Check size={14} /> : <Copy size={14} />}
           </button>
         </div>
       </div>
 
-      {/* 3 colonnes — sans fond */}
-      <div style={{ display: "flex", borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
-        {cards.map((c, i) => {
+      {/* 3 colonnes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cards.map((c) => {
           const Icon = c.icon;
           return (
-            <div key={c.title} style={{ flex: 1, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <Icon size={15} style={{ color: T.blue, flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{c.title}</span>
+            <div key={c.title} className="rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <span className="rounded-lg p-2 shrink-0" style={{ background: `${T.blue}1a` }}><Icon size={16} style={{ color: T.blue }} /></span>
+                <span className="font-bold text-sm" style={{ color: T.text }}>{c.title}</span>
               </div>
-              <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: 0 }}>{c.body}</p>
+              <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{c.body}</p>
             </div>
           );
         })}
       </div>
 
       {/* Récompenses */}
-      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Vos récompenses</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, color: T.muted, fontSize: 13 }}>
-          <Gift size={20} style={{ color: T.muted, flexShrink: 0 }} />
-          Aucune récompense pour l'instant — partagez votre lien pour gagner des mois de Pro.
+      <div>
+        <h2 className="text-xl font-bold mb-3" style={{ color: T.text }}>Vos récompenses</h2>
+        <div className="rounded-2xl p-8 text-center" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+          <Gift size={28} style={{ color: T.muted, margin: "0 auto 10px" }} />
+          <div className="text-sm" style={{ color: T.muted }}>Aucune récompense pour l'instant. Partagez votre lien pour commencer à gagner des mois de Pro.</div>
         </div>
       </div>
     </div>

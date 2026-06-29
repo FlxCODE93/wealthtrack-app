@@ -3393,7 +3393,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               <ComposedChart data={augmentedData}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
                 <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
+                <YAxis stroke={T.muted} tick={{ fontSize: 12 }} domain={['dataMin', 'auto']}
                   tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
                 <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
                 <Area type="monotone" dataKey="apports" name="Apports cumulés"

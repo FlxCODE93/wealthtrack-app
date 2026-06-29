@@ -5224,6 +5224,11 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
   const [showComplete, setShowComplete] = useState(false);
+  const [patTab, setPatTab] = useState("actifs");
+  const [groupByType, setGroupByType] = useState(false);
+  const [assetSearch, setAssetSearch] = useState("");
+  const [sortKey, setSortKey] = useState("value");
+  const [sortDir, setSortDir] = useState(-1);
   const HIST_RANGES = [
     { label: "1J", months: 1 }, { label: "1S", months: 1 }, { label: "1M", months: 1 },
     { label: "3M", months: 3 }, { label: "6M", months: 6 },
@@ -5283,6 +5288,28 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     "credits-derived": "#ec4899", // rose
   };
   const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
+
+  const flatActifs = useMemo(() => effectiveActifs.flatMap(cat =>
+    (cat.items || []).map(item => ({
+      ...item,
+      catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
+      initials: (cat.label || "").slice(0, 2).toUpperCase(),
+      allocPct: totalActifs > 0 ? (item.value / totalActifs) * 100 : 0,
+      pl: item.costBasis > 0 ? item.value - item.costBasis : null,
+      plPct: item.costBasis > 0 ? ((item.value - item.costBasis) / item.costBasis) * 100 : null,
+      isDerived: cat.id === "credits-derived", isSync: !!cat.isSync,
+    }))
+  ), [effectiveActifs, totalActifs]);
+
+  const flatPassifs = useMemo(() => (patrimoine.passifs || []).flatMap(cat =>
+    (cat.items || []).map(item => ({
+      ...item,
+      catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
+      initials: (cat.label || "").slice(0, 2).toUpperCase(),
+      allocPct: totalPassifs > 0 ? (item.value / totalPassifs) * 100 : 0,
+      pl: null, plPct: null, isDerived: false, isSync: false,
+    }))
+  ), [patrimoine.passifs, totalPassifs]);
 
   const allSlices = [
     ...effectiveActifs.map((c) => ({ name: c.label, value: (c.items || []).reduce((s, i) => s + (i.value || 0), 0), color: catColor(c) })),
@@ -5621,81 +5648,204 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       )}
 
-      {/* Bloc unique — Actifs + Passifs (gauche) & Répartition (droite) */}
+      {/* Finary-style table Actifs / Passifs + Donut */}
       {hasData && (
-      <Card>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-8 items-start">
-          {/* Colonne gauche : détail Actifs puis Passifs */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xl font-bold" style={{ color: T.text }}>Actifs</h2>
-              <Badge tone="green" label={fmt(totalActifs)} />
-            </div>
-            {effectiveActifs.map((cat) => renderCategory(cat, "actifs"))}
-
-            <div className="flex items-center gap-2 mt-8 mb-3">
-              <h2 className="text-xl font-bold" style={{ color: T.text }}>Passifs</h2>
-              <Badge tone="red" label={fmt(totalPassifs)} />
-            </div>
-            {patrimoine.passifs.length > 0
-              ? patrimoine.passifs.map((cat) => renderCategory(cat, "passifs"))
-              : <p className="text-sm" style={{ color: T.muted }}>Aucun passif enregistré.</p>}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <Card className="lg:col-span-3">
+        {/* Tabs + controls */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 0, borderBottom: `2px solid ${T.border}` }}>
+            {["actifs", "passifs"].map(tab => (
+              <button key={tab} onClick={() => setPatTab(tab)} style={{
+                padding: "6px 22px 10px", fontWeight: 700, fontSize: 15, cursor: "pointer",
+                background: "none", border: "none",
+                color: patTab === tab ? T.text : T.muted,
+                borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
+                marginBottom: -2, transition: "all .15s",
+              }}>{tab === "actifs" ? "Actifs" : "Passifs"}</button>
+            ))}
           </div>
-
-          {/* Colonne droite : donut Répartition */}
-          <div className="lg:pl-8 lg:border-l lg:self-center" style={{ borderColor: T.border }}>
-            <div className="mb-2 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <h2 className="text-xl font-bold" style={{ color: T.text }}>Répartition</h2>
-                <Badge tone="neutral" label={`${allSlices.length} catégories`} />
-              </div>
-              <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
+              Grouper par type
+              <button onClick={() => setGroupByType(g => !g)} style={{
+                width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
+              }}>
+                <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
+              </button>
+            </label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
+              <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
+                style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
             </div>
-            <ExpandableChart height={330} title="Répartition du patrimoine"
-              overlay={
-                activeSlice != null && allSlices[activeSlice] ? (
-                  <>
-                    <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
-                    <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
-                    <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                      {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
-                    <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
-                  </>
-                )
-              }
-              legend={
-                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
-                  {allSlices.map((s, i) => (
-                    <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                      {s.name}
-                      <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                    </span>
-                  ))}
-                </div>
-              }
-            >
-              <PieChart>
-                <Pie data={allSlices} dataKey="value" nameKey="name"
-                  innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-                  stroke="none" startAngle={90} endAngle={-270}
-                  activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                  onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                  {allSlices.map((s, i) => (
-                    <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
-                      style={{ transition: "opacity 0.2s" }} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ExpandableChart>
           </div>
         </div>
+
+        {editMode ? (
+          <div>
+            {patTab === "actifs"
+              ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))
+              : (patrimoine.passifs || []).map(cat => renderCategory(cat, "passifs"))}
+          </div>
+        ) : (() => {
+          const isPassif = patTab === "passifs";
+          const rawItems = isPassif ? flatPassifs : flatActifs;
+          const totalVal = isPassif ? totalPassifs : totalActifs;
+          let items = rawItems.filter(r => !assetSearch ||
+            (r.label || "").toLowerCase().includes(assetSearch.toLowerCase()) ||
+            (r.catLabel || "").toLowerCase().includes(assetSearch.toLowerCase()));
+          items = [...items].sort((a, b) => {
+            const va = typeof a[sortKey] === "string" ? a[sortKey] : (a[sortKey] ?? 0);
+            const vb = typeof b[sortKey] === "string" ? b[sortKey] : (b[sortKey] ?? 0);
+            return typeof va === "string" ? sortDir * va.localeCompare(vb) : sortDir * (va - vb);
+          });
+          const rows = groupByType
+            ? [...new Set(items.map(i => i.catId))].flatMap(catId => {
+                const grp = items.filter(i => i.catId === catId);
+                return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
+              })
+            : items;
+          const totalPL = items.reduce((s, i) => s + (i.pl ?? 0), 0);
+          const knownBasis = items.reduce((s, i) => s + (i.costBasis > 0 ? i.costBasis : 0), 0);
+          const totalPLPct = knownBasis > 0 ? (totalPL / knownBasis) * 100 : null;
+          const COL = "2.5fr 1.2fr 0.9fr 0.6fr 1fr 1fr 32px";
+          const SortBtn = ({ k, label }) => (
+            <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+                color: sortKey === k ? T.text : T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                display: "flex", alignItems: "center", gap: 3 }}>
+              {label} <span style={{ opacity: sortKey === k ? 1 : 0.35 }}>{sortKey === k && sortDir === 1 ? "↑" : "↓"}</span>
+            </button>
+          );
+          return (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", paddingBottom: 10, borderBottom: `1px solid ${T.border}` }}>
+                <SortBtn k="label" label="Nom" />
+                <SortBtn k="catLabel" label="Type" />
+                <SortBtn k="allocPct" label="Répartition" />
+                <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>Déten.</span>
+                <SortBtn k="value" label="Valeur" />
+                <SortBtn k="pl" label="P&L" />
+                <span />
+              </div>
+              {/* Total row */}
+              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "12px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
+                  Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
+                </span>
+                <span /><span /><span />
+                <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
+                <div style={{ textAlign: "right" }}>
+                  {totalPLPct != null && <>
+                    <div style={{ fontWeight: 700, color: totalPL >= 0 ? T.green : T.red, fontSize: 14 }}>{totalPL >= 0 ? "+" : ""}{fmt(totalPL)}</div>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: totalPL >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: totalPL >= 0 ? T.green : T.red }}>
+                      {totalPL >= 0 ? "▲" : "▼"} {Math.abs(totalPLPct).toFixed(2)}%
+                    </span>
+                  </>}
+                </div>
+                <span />
+              </div>
+              {rows.map((row, i) => row.isGroupHeader ? (
+                <div key={"gh" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0 6px", borderBottom: `1px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 4, background: row.catColor, flexShrink: 0 }} />
+                  {row.catLabel} <span style={{ fontWeight: 400 }}>· {row.count} · {fmt(row.catTotal)}</span>
+                </div>
+              ) : (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
+                      <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
+                    </div>
+                  </div>
+                  <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 8, background: `${row.catColor}18`, color: row.catColor, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    {(() => { const r2=11,sw=3,circ=2*Math.PI*r2,dash=Math.min(100,row.allocPct)/100*circ; return (
+                      <svg width={28} height={28} style={{ transform:"rotate(-90deg)", flexShrink:0 }}>
+                        <circle cx={14} cy={14} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw}/>
+                        <circle cx={14} cy={14} r={r2} fill="none" stroke={row.catColor} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeLinecap="round"/>
+                      </svg>
+                    ); })()}
+                    <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
+                  </div>
+                  <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: T.muted, fontSize: 11, fontWeight: 700 }}>
+                    {row.detention != null && row.detention !== 100 ? `${row.detention}%` : "PF"}
+                  </span>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
+                    {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    {row.pl != null && <>
+                      <div style={{ fontWeight: 700, color: row.pl >= 0 ? T.green : T.red, fontSize: 14 }}>{row.pl >= 0 ? "+" : ""}{fmt(row.pl)}</div>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: row.pl >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: row.pl >= 0 ? T.green : T.red }}>
+                        {row.pl >= 0 ? "▲" : "▼"} {Math.abs(row.plPct ?? 0).toFixed(2)}%
+                      </span>
+                    </>}
+                  </div>
+                  {!row.isDerived && !row.isSync
+                    ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>
+                    : <span />}
+                </div>
+              ))}
+            </>
+          );
+        })()}
       </Card>
+
+      {/* Donut Répartition */}
+      <Card className="flex flex-col">
+        <div className="mb-2 text-center">
+          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Répartition</h2>
+          <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+        </div>
+        <ExpandableChart height={330} title="Répartition du patrimoine"
+          overlay={
+            activeSlice != null && allSlices[activeSlice] ? (
+              <>
+                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
+                <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
+                <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                  {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
+                <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
+              </>
+            )
+          }
+          legend={
+            <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+              {allSlices.map((s, i) => (
+                <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                  {s.name}
+                  <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                </span>
+              ))}
+            </div>
+          }
+        >
+          <PieChart>
+            <Pie data={allSlices} dataKey="value" nameKey="name"
+              innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+              stroke="none" startAngle={90} endAngle={-270}
+              activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+              onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+              {allSlices.map((s, i) => (
+                <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                  style={{ transition: "opacity 0.2s" }} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ExpandableChart>
+      </Card>
+      </div>
       )}
 
       {showComplete && (

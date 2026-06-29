@@ -2679,15 +2679,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           title="Bitcoin"
           rate="rendement annualisé moyen · 10 ans" accent={ASSET.btc}
           lineColor={ASSET.btc} chartKey="BTC" logScale showBand={false}
-          warning={{
-            title: "Actif hautement spéculatif — points de vigilance",
-            points: [
-              "Drawdowns historiques significatifs (−80 % en 2018, −77 % en 2022) avec une récupération de 2 à 3 ans",
-              "Cadre réglementaire en évolution — risque juridique selon les juridictions",
-              "Exposition typique observée : 5 à 10 % du portefeuille global",
-            ],
-
-          }}
           stats={[
             { label: "Capital projeté",    value: eur(sim.BTC.cap),                       color: ASSET.btc },
             { label: "Apports totaux",     value: eur(sim.apports),                       color: T.text },
@@ -2705,15 +2696,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           title="Ethereum"
           rate="rendement annualisé moyen · 8 ans" accent={ASSET.eth}
           lineColor={ASSET.eth} chartKey="ETH" logScale showBand={false}
-          warning={{
-            title: "Actif hautement spéculatif — points de vigilance",
-            points: [
-              "Drawdowns historiques importants (−85 % en 2018, −81 % en 2022), recul historique limité à 8 ans",
-              "Risque technologique : protocole en développement actif, exposition à la concurrence",
-              "Exposition typique observée : 2 à 5 % du portefeuille global",
-            ],
-
-          }}
           stats={[
             { label: "Capital projeté",  value: eur(sim.ETH.cap),                       color: ASSET.eth },
             { label: "Apports totaux",   value: eur(sim.apports),                       color: T.text },

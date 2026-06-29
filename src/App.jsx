@@ -3359,7 +3359,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       </div>
 
       {/* Graphe */}
-      <ExpandableChart height={340} title={title}>
+      <ExpandableChart height={420} title={title}>
         {logScale ? (
           <ComposedChart data={logData}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />

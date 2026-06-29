@@ -3387,55 +3387,29 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
           )}
           <ExpandableChart height={360} title={title}>
             {logScale ? (
-              <ComposedChart data={logData}>
-                <defs>
-                  <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.green} stopOpacity={0.45} />
-                    <stop offset="100%" stopColor={T.green} stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={logData}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
                 <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
                 <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
                   tickFormatter={logFmt} width={64} />
                 <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-                {hasBand && (
-                  <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
-                    stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
-                )}
-                <Area type="monotone" dataKey="logCapital" name="Capital total"
-                  stroke={T.green} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
+                <Line type="monotone" dataKey="logCapital" name="Capital total"
+                  stroke={lineColor} strokeWidth={2.5} dot={false} />
                 <Line type="monotone" dataKey="logApports" name="Apports cumulés"
-                  stroke={T.blue} strokeWidth={1.5} dot={false} />
-              </ComposedChart>
+                  stroke={T.blue} strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+              </LineChart>
             ) : (
-              <ComposedChart data={augmentedData}>
-                <defs>
-                  <linearGradient id={`gA${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.blue} stopOpacity={0.12} />
-                    <stop offset="100%" stopColor={T.blue} stopOpacity={0.04} />
-                  </linearGradient>
-                  <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.green} stopOpacity={0.52} />
-                    <stop offset="100%" stopColor={T.green} stopOpacity={0.12} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={augmentedData}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
                 <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
                 <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                   tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
                 <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-                {hasBand && (
-                  <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
-                    stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
-                )}
-                <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
-                  stroke={T.blue} strokeWidth={1.5}
-                  fill={`url(#gA${chartKey})`} />
-                <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
-                  stroke={T.green} strokeWidth={2.5}
-                  fill={`url(#gG${chartKey})`} />
-              </ComposedChart>
+                <Line type="monotone" dataKey="capital" name="Capital total"
+                  stroke={lineColor} strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="apports" name="Apports cumulés"
+                  stroke={T.blue} strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+              </LineChart>
             )}
           </ExpandableChart>
 

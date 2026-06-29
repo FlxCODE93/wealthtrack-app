@@ -644,47 +644,36 @@ export default function Crypto({ setView, marketsOnly = false }) {
         </div>
       )}
 
-      {/* Summary cards */}
+      {/* Summary — bande horizontale */}
       {!marketsOnly && (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Valeur totale", value: fmtCtx(totalValue), color: T.text, Icon: Wallet },
-          { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${fmtCtx(totalGain)}`, color: totalGain >= 0 ? T.green : T.red, Icon: totalGain >= 0 ? TrendingUp : TrendingDown },
-          { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? T.green : T.red, Icon: Percent },
-          { label: "Positions", value: `${holdings.length}`, color: T.blue, Icon: Layers },
-        ].map((kpi) => (
-          <div key={kpi.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
-            <div className="flex items-start justify-between" style={{ marginBottom: 6 }}>
-              <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
-                {kpi.label}
-              </span>
-              <kpi.Icon size={16} style={{ color: kpi.color, opacity: 0.65, flexShrink: 0 }} />
-            </div>
-            <div style={{ color: kpi.color, fontSize: 22, fontWeight: 800 }}>{kpi.value}</div>
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 28px" }}>
+          <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
+            {[
+              { label: "Valeur totale", value: fmtCtx(totalValue), color: T.text },
+              { label: "P&L total", value: `${totalGain >= 0 ? "+" : ""}${fmtCtx(totalGain)}`, color: totalGain >= 0 ? T.green : T.red },
+              { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? T.green : T.red },
+              { label: "Positions", value: `${holdings.length}`, color: T.blue },
+            ].map(({ label, value, color }, i) => (
+              <div key={i} style={{ flex: 1, minWidth: 100, padding: "0 24px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+                <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>{label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      )}
-
-      {/* Best / Worst */}
-      {!marketsOnly && best && worst && best.id !== worst.id && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { label: "Meilleure perf.", Icon: Trophy, h: best },
-            { label: "Moins bonne perf.", Icon: TrendingDown, h: worst },
-          ].map(({ label, Icon, h }) => (
-            <div key={label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 16px" }}>
-              <div style={{ color: T.muted, fontSize: 11, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                <Icon size={11} />{label}
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="font-semibold text-sm" style={{ color: T.text }}>{h.symbol} — {h.name}</div>
-                <div style={{ color: h.gainPct >= 0 ? T.green : T.red, fontWeight: 700, fontSize: 14 }}>
-                  {pct(h.gainPct)}
-                </div>
-              </div>
+          {best && worst && best.id !== worst.id && (
+            <div style={{ display: "flex", gap: 24, marginTop: 16, paddingTop: 14, borderTop: `1px solid rgba(255,255,255,0.05)`, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: T.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                <Trophy size={11} style={{ color: T.green }} />
+                <span style={{ color: T.text, fontWeight: 600 }}>{best.symbol}</span>
+                <span style={{ color: T.green, fontWeight: 700 }}>{pct(best.gainPct)}</span>
+              </span>
+              <span style={{ fontSize: 12, color: T.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                <TrendingDown size={11} style={{ color: T.red }} />
+                <span style={{ color: T.text, fontWeight: 600 }}>{worst.symbol}</span>
+                <span style={{ color: T.red, fontWeight: 700 }}>{pct(worst.gainPct)}</span>
+              </span>
             </div>
-          ))}
+          )}
         </div>
       )}
 

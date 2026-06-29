@@ -5552,60 +5552,109 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       {hasData && (
         <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px" }}>
 
-          {/* ── Header : valeur nette + select ── */}
-          <div style={{ padding: "24px 28px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{ color: T.muted, fontWeight: 700, fontSize: 13, letterSpacing: "0.03em", textTransform: "uppercase" }}>Patrimoine net</span>
-                <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
-                  icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
-                  label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
+            {/* ── Gauche : header + graphe ── */}
+            <div style={{ borderRight: `1px solid ${T.border}` }}>
+              <div style={{ padding: "20px 24px 10px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ color: T.muted, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase" }}>Patrimoine net</span>
+                    <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
+                      icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
+                      label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmt(netWorth)}</div>
+                  <div style={{ marginTop: 4, fontSize: 12, color: monthlyChange >= 0 ? T.green : T.red, display: "flex", alignItems: "center", gap: 3 }}>
+                    {monthlyChange >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    {monthlyChange >= 0 ? "+" : ""}{fmt(monthlyChange)} ce mois
+                  </div>
+                </div>
+                <select value={histRange} onChange={e => setHistRange(e.target.value)} style={{
+                  background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`,
+                  color: T.text, borderRadius: 8, padding: "5px 10px", fontSize: 12,
+                  fontWeight: 600, cursor: "pointer", outline: "none",
+                }}>
+                  {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
+                </select>
               </div>
-              <div style={{ fontSize: 38, fontWeight: 800, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmt(netWorth)}</div>
-              <div style={{ marginTop: 6, fontSize: 13, color: monthlyChange >= 0 ? T.green : T.red, display: "flex", alignItems: "center", gap: 3 }}>
-                {monthlyChange >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                {monthlyChange >= 0 ? "+" : ""}{fmt(monthlyChange)} ce mois
+              <div style={{ height: 180, padding: "0 8px 16px 0" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartHist} margin={{ top: 0, right: 16, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={T.blue} stopOpacity={0.22} />
+                        <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} horizontal={false} />
+                    <XAxis dataKey="m" stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} minTickGap={histMonths > 12 ? 55 : 38} axisLine={false} tickLine={false} />
+                    <YAxis stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={38} />
+                    <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+                    <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2} fill="url(#gradNW)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
-            <select value={histRange} onChange={e => setHistRange(e.target.value)} style={{
-              background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`,
-              color: T.text, borderRadius: 8, padding: "6px 12px", fontSize: 13,
-              fontWeight: 600, cursor: "pointer", outline: "none",
-            }}>
-              {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
-            </select>
-          </div>
 
-          {/* ── Chart ── */}
-          <div style={{ height: 210, padding: "0 12px 20px 0" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartHist} margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.blue} stopOpacity={0.22} />
-                    <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} horizontal={false} />
-                <XAxis dataKey="m" stroke="transparent" tick={{ fontSize: 11, fill: T.muted }} minTickGap={histMonths > 12 ? 55 : 38} axisLine={false} tickLine={false} />
-                <YAxis stroke="transparent" tick={{ fontSize: 11, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={42} />
-                <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-                <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2.5} fill="url(#gradNW)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+            {/* ── Droite : donut répartition ── */}
+            <div style={{ padding: "20px 20px 16px", display: "flex", flexDirection: "column" }}>
+              <span style={{ color: T.muted, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>Répartition</span>
+              <div style={{ height: 160, position: "relative", flexShrink: 0 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={allSlices} dataKey="value" nameKey="name"
+                      innerRadius="52%" outerRadius="78%" paddingAngle={3} cornerRadius={6}
+                      stroke="none" startAngle={90} endAngle={-270}
+                      activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                      onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                      {allSlices.map((s, i) => (
+                        <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42} style={{ transition: "opacity 0.2s" }} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                  {activeSlice != null && allSlices[activeSlice] ? (
+                    <>
+                      <span style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>{allSlices[activeSlice].name}</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
+                      <span style={{ fontSize: 11, color: T.muted }}>{pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>Total</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8, overflowY: "auto" }}>
+                {allSlices.map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "4px 6px", borderRadius: 7,
+                    background: activeSlice === i ? `${s.color}12` : "transparent", transition: "background .15s", cursor: "default" }}
+                    onMouseEnter={() => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                      <span style={{ color: T.text, fontSize: 12, fontWeight: 500 }}>{s.name}</span>
+                    </div>
+                    <span style={{ color: T.muted, fontSize: 12, fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
+          </div>
         </Card>
 
-        {/* ── Bloc Actifs / Passifs / Répartition ── */}
+        {/* ── Bloc Actifs / Passifs ── */}
         <Card style={{ padding: 0, overflow: "hidden" }}>
 
           {/* ── Tabs ── */}
           <div style={{ padding: "0 28px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${T.border}` }}>
               <div style={{ display: "flex" }}>
-                {["actifs", "passifs", "répartition"].map(tab => (
+                {["actifs", "passifs"].map(tab => (
                   <button key={tab} onClick={() => setPatTab(tab)} style={{
                     padding: "14px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer",
                     background: "none", border: "none",
@@ -5613,89 +5662,32 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
                     marginBottom: -1, transition: "all .15s",
                   }}>
-                    {tab === "actifs" ? "Actifs" : tab === "passifs" ? "Passifs" : "Répartition"}
+                    {tab === "actifs" ? "Actifs" : "Passifs"}
                   </button>
                 ))}
               </div>
-              {patTab !== "répartition" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
-                    Catégories
-                    <button onClick={() => setGroupByType(g => !g)} style={{
-                      width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-                      background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
-                    }}>
-                      <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
-                    </button>
-                  </label>
-                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                    <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
-                    <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
-                      style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
-                  </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
+                  Catégories
+                  <button onClick={() => setGroupByType(g => !g)} style={{
+                    width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                    background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
+                  }}>
+                    <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
+                  </button>
+                </label>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
+                  <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
+                    style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
           {/* ── Contenu tab ── */}
           <div style={{ padding: "0 28px 28px" }}>
-            {patTab === "répartition" ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center", paddingTop: 24 }}>
-                {/* Donut */}
-                <div style={{ height: 300, position: "relative" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={allSlices} dataKey="value" nameKey="name"
-                        innerRadius="58%" outerRadius="82%" paddingAngle={3} cornerRadius={7}
-                        stroke="none" startAngle={90} endAngle={-270}
-                        activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                        onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                        {allSlices.map((s, i) => (
-                          <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42} style={{ transition: "opacity 0.2s" }} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Centre overlay */}
-                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                    {activeSlice != null && allSlices[activeSlice] ? (
-                      <>
-                        <span style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{allSlices[activeSlice].name}</span>
-                        <span style={{ fontSize: 22, fontWeight: 800, color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
-                        <span style={{ fontSize: 12, color: T.muted }}>{pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</span>
-                        <span style={{ fontSize: 22, fontWeight: 800, color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Légende détaillée */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {allSlices.map((s, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                      padding: "8px 12px", borderRadius: 10,
-                      background: activeSlice === i ? `${s.color}12` : "transparent",
-                      transition: "background .15s",
-                      cursor: "default",
-                    }}
-                      onMouseEnter={() => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
-                        <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{s.name}</span>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{fmt(s.value)}</span>
-                        <span style={{ color: T.muted, fontSize: 12, marginLeft: 8 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : editMode ? (
+            {editMode ? (
               <div style={{ marginTop: 16 }}>
                 {patTab === "actifs"
                   ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))

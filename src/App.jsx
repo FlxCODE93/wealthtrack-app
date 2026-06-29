@@ -2633,12 +2633,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           detailedData={orSeries} lineColor="#f59e0b" chartKey="or" showBand={true}
           note="Rendement historique annualisé ajusté EUR sur 50 ans ≈ 6,5 %/an (source : goldmarket.fr). Frais de stockage/assurance estimés à 0,5 %/an déduits."
         />
-        <div style={{ borderRadius: 12, padding: 14, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <Info size={15} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
-          <p className="text-sm" style={{ color: T.muted, lineHeight: 1.6 }}>
-            L'or est une <span style={{ color: T.text, fontWeight: 600 }}>valeur refuge</span> peu corrélée aux actions : il protège en période de crise mais ne verse aucun revenu (ni dividende, ni loyer). Les <span style={{ color: T.text, fontWeight: 600 }}>frais de stockage</span> (coffre, assurance) sont estimés à 0,5 %/an. Hypothèse indicative, non un conseil en investissement.
-          </p>
-        </div>
       </>}
 
       {/* ── TAB: IMMO ── */}
@@ -3365,11 +3359,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
       </div>
 
       {/* Graphe */}
-      {logScale && (
-        <div>
-          <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
-        </div>
-      )}
       <ExpandableChart height={340} title={title}>
         {logScale ? (
           <ComposedChart data={logData}>

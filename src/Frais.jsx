@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import NumInput from "./NumInput.jsx";
 import { useT } from "./ThemeProvider.jsx";
+import { AnimatedNumber } from "./lib/motion.jsx";
 import { useLocalStorage } from "./storage.js";
 import { Field } from "./ui.jsx";
 import { fv, RATE_ETF_WORLD } from "./finance.js";
@@ -399,7 +400,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
             <div>
               <div style={{ color: T.muted, fontSize: 13, marginBottom: 4 }}>Manque à gagner</div>
               <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 36, letterSpacing: "-0.02em", lineHeight: 1 }}>
-                − {eur(impactData.perte)}
+                − <AnimatedNumber value={impactData.perte} formatter={(n) => eur(n)} duration={0.8} />
               </div>
               <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>après {horizon} ans · {impactData.pct} % de capital en moins</div>
             </div>

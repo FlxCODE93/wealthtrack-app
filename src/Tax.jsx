@@ -8,6 +8,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, User,
 } from "lucide-react";
 import { eur } from "./theme.js";
+import { AnimatedNumber } from "./lib/motion.jsx";
 import { useT } from "./ThemeProvider.jsx";
 import { SEUIL_EXONERATION_CESSION, pmcaSummary } from "./finance.js";
 import { TAX } from "./taxRates.js";
@@ -369,24 +370,27 @@ export default function Tax() {
           {/* Cartes résumé */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
             {[
-              { label: "Gains réalisés",    value: eur(Math.max(0, netGain)), color: T.green, icon: TrendingUp },
-              { label: "Pertes réalisées",  value: eur(Math.min(0, netGain)), color: T.red,   icon: TrendingDown },
-              { label: "Gain net",          value: eur(netGain),     color: netGain >= 0 ? T.green : T.red, icon: netGain >= 0 ? TrendingUp : TrendingDown },
+              { label: "Gains réalisés",    rawValue: Math.max(0, netGain), value: eur(Math.max(0, netGain)), color: T.green, icon: TrendingUp },
+              { label: "Pertes réalisées",  rawValue: Math.min(0, netGain), value: eur(Math.min(0, netGain)), color: T.red,   icon: TrendingDown },
+              { label: "Gain net",          rawValue: netGain, value: eur(netGain), color: netGain >= 0 ? T.green : T.red, icon: netGain >= 0 ? TrendingUp : TrendingDown },
               {
                 label: "Impôt estimé 30 %",
+                rawValue: isExonere ? 0 : estimTax,
                 value: isExonere ? "0 €" : eur(estimTax),
                 color: isExonere ? T.green : T.amber,
                 icon: Percent,
                 sub: isExonere ? `Exonéré — seuil de cession ${SEUIL_EXONERATION_CESSION} €/an non atteint` : null,
               },
-              ...(harvestSave > 0 && netGain > 0 && !isExonere ? [{ label: "Économie harvesting", value: eur(harvestSave), color: T.amber, icon: Zap }] : []),
+              ...(harvestSave > 0 && netGain > 0 && !isExonere ? [{ label: "Économie harvesting", rawValue: harvestSave, value: eur(harvestSave), color: T.amber, icon: Zap }] : []),
             ].map(c => (
               <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
                 <div className="flex items-start justify-between">
                   <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>{c.label}</div>
                   <c.icon size={16} style={{ color: c.color, opacity: 0.65 }} />
                 </div>
-                <div style={{ color: c.color, fontSize: 22, fontWeight: 800, marginTop: 6 }}>{c.value}</div>
+                <div style={{ color: c.color, fontSize: 22, fontWeight: 800, marginTop: 6 }}>
+                  {c.rawValue != null ? <AnimatedNumber value={c.rawValue} formatter={(n) => eur(n)} duration={0.7} /> : c.value}
+                </div>
                 {c.sub && <div style={{ color: T.muted, fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>{c.sub}</div>}
               </div>
             ))}

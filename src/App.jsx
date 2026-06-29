@@ -2363,8 +2363,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   const setPrice = (v) => setSimParams((p) => ({ ...p, price: v }));
   const setHorizon = (v) => setSimParams((p) => ({ ...p, horizon: v }));
   const [activeTab, setActiveTab] = useState("etf");
-  const [orRate, setOrRate] = useState(+(RATE_GOLD * 100).toFixed(1));
-  const [orStorageFee, setOrStorageFee] = useState(0.5);
   const [cryptoTip, setCryptoTip] = useState(null);
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveData, setLiveData] = useState(null);
@@ -2451,7 +2449,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
   }, [monthly, initial, price, horizon, immoSeries]);
 
   // Or — simulation dans onglet Simulations
-  const orNetRate = useMemo(() => Math.max(-0.05, (orRate - orStorageFee) / 100), [orRate, orStorageFee]);
+  const orNetRate = RATE_GOLD - 0.005; // net après frais stockage forfaitaires 0,5 %/an
   const orScenario = useMemo(() => ({ pess: Math.max(-0.05, orNetRate - 0.03), base: orNetRate, opt: orNetRate + 0.04 }), [orNetRate]);
   const orSeries = useMemo(() => fvBandSeries(initial, monthly, orScenario, horizon, SIM_START_YEAR), [initial, monthly, orScenario, horizon]);
   const orCapFinal = useMemo(() => Math.round(fv(initial, monthly, orNetRate, horizon)), [initial, monthly, orNetRate, horizon]);
@@ -2487,7 +2485,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
     return [
       mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
       mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Modéré",      capAt(0.10),                        apports),
-      mk("Or",         "or",       "5 %",        "#f59e0b",    "Modéré",      capAt(0.05),                        apports),
+      mk("Or",         "or",       "6,5 %",      "#f59e0b",    "Modéré",      capAt(RATE_GOLD),                   apports),
       mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Spéculatif",  capAt(0.10),                        apports),
       mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Spéculatif",  capAt(0.065),                       apports),
     ];
@@ -2635,116 +2633,23 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
       {/* ── TAB: OR ── */}
       {activeTab === "or" && <>
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <div style={{ borderRadius: 10, padding: "6px 8px", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
-              <Coins size={18} style={{ color: "#f59e0b" }} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold" style={{ color: T.text }}>Or — Métaux précieux</h2>
-              <p className="text-xs" style={{ color: T.muted }}>Valeur refuge · rendement net des frais de stockage</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm" style={{ color: T.muted }}>Rendement annuel estimé</span>
-                <span className="font-bold" style={{ color: "#f59e0b" }}>{orRate.toFixed(1).replace(".", ",")} %</span>
-              </div>
-              <input type="range" min={0} max={12} step={0.1} value={orRate}
-                onChange={(e) => setOrRate(+e.target.value)}
-                className="w-full" style={{ accentColor: "#f59e0b" }} />
-              <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
-                <span>0 %</span><span>6 %</span><span>12 %</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm" style={{ color: T.muted }}>Frais de stockage / an</span>
-                <span className="font-bold" style={{ color: T.muted }}>{orStorageFee.toFixed(1).replace(".", ",")} %</span>
-              </div>
-              <input type="range" min={0} max={2} step={0.1} value={orStorageFee}
-                onChange={(e) => setOrStorageFee(+e.target.value)}
-                className="w-full" style={{ accentColor: T.muted }} />
-              <div className="flex justify-between text-xs mt-1" style={{ color: T.muted }}>
-                <span>0 %</span><span>1 %</span><span>2 %</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}>
-            Rendement net retenu : <strong>{(orNetRate * 100).toFixed(2).replace(".", ",")} %/an</strong>
-            &nbsp;(taux brut − frais de stockage)
-          </div>
-        </Card>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
+        <ScenarioCard
+          title="Or — Métaux précieux"
+          rate={`net ${((orNetRate) * 100).toFixed(1).replace(".", ",")} %/an (frais stockage 0,5 % déduits)`}
+          accent="#f59e0b"
+          stats={[
             { label: `Capital à ${SIM_START_YEAR + horizon}`, value: eur(orCapFinal), color: "#f59e0b" },
-            { label: "Apports cumulés", value: eur(orTotalVerse), color: T.muted },
+            { label: "Apports cumulés", value: eur(orTotalVerse), color: T.text },
             { label: "Plus-value estimée", value: eur(orGain), color: orGain >= 0 ? T.green : T.red },
             { label: "Performance", value: (orTotalVerse > 0 ? (orGain / orTotalVerse * 100) : 0).toFixed(0) + " %", color: orGain >= 0 ? T.green : T.red },
-          ].map((s) => (
-            <Card key={s.label} className="flex-1">
-              <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
-              <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
-            </Card>
-          ))}
-        </div>
-        <Card>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={16} style={{ color: "#f59e0b" }} />
-            <h2 className="text-lg font-bold" style={{ color: T.text }}>Projection de l'or</h2>
-          </div>
-          <p className="text-xs mb-4" style={{ color: T.muted }}>Trajectoire au rendement net retenu. Paramètres communs (capital, mensuel, horizon) partagés avec les autres actifs.</p>
-          <ExpandableChart height={280} title="Projection de l'or">
-            <AreaChart data={orSeries} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-              <defs>
-                <linearGradient id="goldFillSim" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.04} />
-                </linearGradient>
-                <linearGradient id="goldBandSim" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={chartTip.contentStyle?.border?.replace?.(/\s.*/, "") || "#334155"} vertical={false} />
-              <XAxis dataKey="year" tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} />
-              <YAxis tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} tick={{ fill: T.muted, fontSize: 12 }} tickLine={false} axisLine={false} width={48} />
-              <Tooltip content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0]?.payload ?? {};
-                const capital = d.capital ?? 0;
-                const apports = d.apports ?? 0;
-                const gains   = Math.max(0, capital - apports);
-                const row = (c, l, v) => (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 7, color: T.muted }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: c, flexShrink: 0 }} />{l}
-                    </span>
-                    <span style={{ color: T.text, fontWeight: 700 }}>{eur(v)}</span>
-                  </div>
-                );
-                const y = label - SIM_START_YEAR;
-                return (
-                  <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", minWidth: 210, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
-                    <div style={{ fontSize: 12, color: T.muted }}>{y <= 0 ? "Aujourd'hui" : `Dans ${y} an${y > 1 ? "s" : ""}`}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>{eur(capital)}</div>
-                    <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-                      {row(T.green, "Intérêts", gains)}
-                      {row(T.blue, "Versements", apports)}
-                    </div>
-                  </div>
-                );
-              }} />
-              <Area type="monotone" dataKey="apports" name="Apports cumulés" stroke="#3b82f6" strokeWidth={1.5} fill="none" />
-              <Area type="monotone" dataKey="capital" stroke="#d97706" strokeWidth={2.5} fill="url(#goldFillSim)" />
-            </AreaChart>
-          </ExpandableChart>
-        </Card>
+          ]}
+          detailedData={orSeries} lineColor="#f59e0b" chartKey="or" showBand={true}
+          note="Rendement historique annualisé ajusté EUR sur 50 ans ≈ 6,5 %/an (source : goldmarket.fr). Frais de stockage/assurance estimés à 0,5 %/an déduits. Valeur refuge sans dividende ni loyer. Non un conseil en investissement."
+        />
         <div style={{ borderRadius: 12, padding: 14, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", gap: 10, alignItems: "flex-start" }}>
           <Info size={15} style={{ color: "#f59e0b", flexShrink: 0, marginTop: 2 }} />
           <p className="text-sm" style={{ color: T.muted, lineHeight: 1.6 }}>
-            L'or est une <span style={{ color: T.text, fontWeight: 600 }}>valeur refuge</span> peu corrélée aux actions : il protège en période de crise mais ne verse aucun revenu (ni dividende, ni loyer). Les <span style={{ color: T.text, fontWeight: 600 }}>frais de stockage</span> (coffre, assurance) réduisent le rendement net. Hypothèse indicative, non un conseil en investissement.
+            L'or est une <span style={{ color: T.text, fontWeight: 600 }}>valeur refuge</span> peu corrélée aux actions : il protège en période de crise mais ne verse aucun revenu (ni dividende, ni loyer). Les <span style={{ color: T.text, fontWeight: 600 }}>frais de stockage</span> (coffre, assurance) sont estimés à 0,5 %/an. Hypothèse indicative, non un conseil en investissement.
           </p>
         </div>
       </>}

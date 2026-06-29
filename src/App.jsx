@@ -6063,19 +6063,17 @@ function ObjectifsView({ goals, setGoals, totals }) {
               </div>
 
               {/* Métriques */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Reste à épargner</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>{eur(Math.max(0, g.target - g.saved))}</div>
-                </div>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Versement mensuel</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: g.color }}>{eur(g.monthly)}</div>
-                </div>
-                <div style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 2 }}>Temps restant</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: done ? T.green : T.text }}>{done ? "Atteint ✓" : formatMonths(months)}</div>
-                </div>
+              <div style={{ display: "flex", gap: 0, borderTop: `1px solid rgba(255,255,255,0.04)`, paddingTop: 10, marginTop: 4 }}>
+                {[
+                  { label: "Reste", value: eur(Math.max(0, g.target - g.saved)), color: T.text },
+                  { label: "Mensuel", value: eur(g.monthly), color: g.color },
+                  { label: "Délai", value: done ? "Atteint ✓" : formatMonths(months), color: done ? T.green : T.text },
+                ].map(({ label, value, color }, i) => (
+                  <div key={i} style={{ flex: 1, ...(i > 0 ? { borderLeft: `1px solid rgba(255,255,255,0.04)`, paddingLeft: 12, marginLeft: 12 } : {}) }}>
+                    <div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 3 }}>{label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color }}>{value}</div>
+                  </div>
+                ))}
               </div>
             </Card>
           );

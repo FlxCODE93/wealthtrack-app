@@ -3394,7 +3394,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                   tickFormatter={logFmt} width={64} />
                 <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
                 <Area type="monotone" dataKey="logCapital" name="Capital total"
-                  stroke={lineColor} strokeWidth={2.5} fill="none" dot={false} />
+                  stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
                 <Line type="monotone" dataKey="logApports" name="Apports cumulés"
                   stroke={T.blue} strokeWidth={1.5} dot={false} />
               </ComposedChart>
@@ -3408,7 +3408,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <Area type="monotone" dataKey="apports" name="Apports cumulés"
                   stroke={T.blue} strokeWidth={1.5} fill="none" dot={false} />
                 <Area type="monotone" dataKey="capital" name="Capital total"
-                  stroke={lineColor} strokeWidth={2.5} fill="none" dot={false} />
+                  stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
               </ComposedChart>
             )}
           </ExpandableChart>

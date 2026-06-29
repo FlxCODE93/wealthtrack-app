@@ -895,62 +895,48 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
       </div>
 
       {/* ── Motivation ── */}
-      <div style={{
-        background: `linear-gradient(135deg, ${motiv.color}12 0%, transparent 100%)`,
-        border: `1px solid ${motiv.color}33`,
-        borderRadius: 20, padding: "24px 28px",
-        display: "flex", gap: 20, alignItems: "flex-start",
-      }}>
-        <div style={{ width: 48, height: 48, borderRadius: 14, background: motiv.color + "22", border: `1px solid ${motiv.color}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {savings >= fiTarget
-            ? <Check size={22} style={{ color: motiv.color }} />
-            : yearsLeft != null && yearsLeft <= 3
-              ? <Zap size={22} style={{ color: motiv.color }} />
-              : <TrendingUp size={22} style={{ color: motiv.color }} />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: motiv.color, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>{motiv.headline}</div>
-          <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{motiv.sub}</div>
-          {fiYearBase && yearsLeft > 0 && fiDateBase && (
-            <div style={{ marginTop: 12, position: "relative", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <div ref={fireConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
-              <div ref={fireRingRef} style={{ position: "absolute", inset: -8, borderRadius: 12, border: `2px solid ${T.green}`, opacity: 0, pointerEvents: "none" }} />
-              <span ref={fireDateRef} style={{ fontSize: 13, color: T.text, display: "inline-block" }}>
-                À ce rythme, votre date de liberté est le <span style={{ color: T.green, fontWeight: 700 }}>1er {MOIS_FR[fiDateBase.getMonth()]} {fiDateBase.getFullYear()}</span>.
-                Vous aurez <span style={{ color: T.green, fontWeight: 700 }}>{Math.floor(age + fiMonthsBase / 12)} ans</span>.
+      <div style={{ borderLeft: `3px solid ${motiv.color}`, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ color: motiv.color, fontWeight: 800, fontSize: 18 }}>{motiv.headline}</div>
+        <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{motiv.sub}</div>
+        {fiYearBase && yearsLeft > 0 && fiDateBase && (
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div ref={fireConfettiRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }} />
+            <div ref={fireRingRef} style={{ position: "absolute", inset: -8, borderRadius: 12, border: `2px solid ${T.green}`, opacity: 0, pointerEvents: "none" }} />
+            <span ref={fireDateRef} style={{ fontSize: 13, color: T.text, display: "inline-block" }}>
+              À ce rythme, votre date de liberté est le <span style={{ color: T.green, fontWeight: 700 }}>1er {MOIS_FR[fiDateBase.getMonth()]} {fiDateBase.getFullYear()}</span>.
+              Vous aurez <span style={{ color: T.green, fontWeight: 700 }}>{Math.floor(age + fiMonthsBase / 12)} ans</span>.
+            </span>
+            {fireGain && fireGain.months > 0 && (
+              <span ref={fireBadgeRef} style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 800,
+                background: fireGain.positive ? "rgba(0,200,150,0.14)" : "rgba(240,168,72,0.14)",
+                border: `1px solid ${(fireGain.positive ? T.green : T.amber)}55`,
+                color: fireGain.positive ? T.green : T.amber, whiteSpace: "nowrap",
+              }}>
+                {fireGain.positive ? <Zap size={11} /> : <AlertTriangle size={11} />}
+                {fireGain.positive
+                  ? `−${fireGain.months} mois`
+                  : `+${fireGain.months} mois`}
               </span>
-              {fireGain && fireGain.months > 0 && (
-                <span ref={fireBadgeRef} style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 800,
-                  background: fireGain.positive ? "rgba(0,200,150,0.14)" : "rgba(240,168,72,0.14)",
-                  border: `1px solid ${(fireGain.positive ? T.green : T.amber)}55`,
-                  color: fireGain.positive ? T.green : T.amber, whiteSpace: "nowrap",
-                }}>
-                  {fireGain.positive ? <Zap size={11} /> : <AlertTriangle size={11} />}
-                  {fireGain.positive
-                    ? `−${fireGain.months} mois`
-                    : `+${fireGain.months} mois`}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── What-if ── */}
-      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
+      <div>
         <button
           onClick={() => setShowWhatIf(v => !v)}
-          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", background: "none", border: "none", cursor: "pointer", color: T.text }}
+          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", background: "none", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", color: T.text }}
         >
           <span style={{ fontWeight: 700, fontSize: 15 }}>Que se passe-t-il si…</span>
           {showWhatIf ? <ChevronUp size={18} style={{ color: T.muted }} /> : <ChevronDown size={18} style={{ color: T.muted }} />}
         </button>
         {showWhatIf && (
-          <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
-            {whatIf.map(w => (
-              <div key={w.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, borderRadius: 12, gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {whatIf.map((w, i) => (
+              <div key={w.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", gap: 16, ...(i > 0 ? { borderTop: `1px solid ${T.border}` } : {}) }}>
                 <span style={{ color: T.text, fontSize: 13 }}>{w.label}</span>
                 {w.gainMonths != null && w.gainMonths > 0 ? (
                   <span style={{ color: T.green, fontWeight: 800, fontSize: 14, flexShrink: 0 }}>

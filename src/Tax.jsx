@@ -407,7 +407,7 @@ export default function Tax() {
 
           {/* Tax-loss harvesting */}
           {!priceError && harvestOps.length > 0 && netGain > 0 && (
-            <div style={{ background: "rgba(200,136,58,0.08)", border: `1px solid rgba(200,136,58,0.25)`, borderRadius: 14, padding: "16px 20px" }}>
+            <div style={{ background: "rgba(200,136,58,0.08)", border: `1px solid rgba(200,136,58,0.25)`, borderRadius: 14, padding: "16px 20px", overflowX: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <TrendingDown size={16} style={{ color: T.amber }} />
                 <span style={{ color: T.amber, fontWeight: 700, fontSize: 14 }}>
@@ -415,13 +415,13 @@ export default function Tax() {
                   <InfoTooltip text="Tax-Loss Harvesting : réaliser une moins-value latente (vendre un actif en perte) pour compenser une plus-value imposable et réduire le PFU dû. Vous pouvez ensuite racheter l'actif si vous souhaitez conserver votre exposition." align="left" />
                 </span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", gap: "8px 0", fontSize: 12, marginBottom: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", gap: "8px 0", fontSize: 12, marginBottom: 8, minWidth: 460 }}>
                 {["Actif","Position","Valeur actuelle","Perte latente","Économie PFU"].map(h => (
                   <span key={h} style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", textAlign: h !== "Actif" && h !== "Position" ? "right" : "left" }}>{h}</span>
                 ))}
               </div>
               {harvestOps.slice(0, 5).map(h => (
-                <div key={h.id} style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", alignItems: "center", fontSize: 12, padding: "6px 0", borderTop: `1px solid rgba(200,136,58,0.12)` }}>
+                <div key={h.id} style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 100px 100px", alignItems: "center", fontSize: 12, padding: "6px 0", borderTop: `1px solid rgba(200,136,58,0.12)`, minWidth: 460 }}>
                   <span style={{ color: T.text, fontWeight: 700 }}>{h.symbol}</span>
                   <span style={{ color: T.muted }}>{h.remaining.toFixed(4)} unités · coût {eur(h.costBasis)}</span>
                   <span style={{ textAlign: "right", color: T.muted }}>{eur(h.currentValue)}</span>
@@ -561,7 +561,8 @@ export default function Tax() {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+                <div style={{ overflowX: "auto", border: `1px solid ${T.border}`, borderRadius: 16 }}>
+                <div style={{ background: T.panel, minWidth: 590 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "90px 70px 110px 110px 108px 1fr 36px", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: 0.8, textTransform: "uppercase" }}>
                     <span>Date</span><span>Symbole</span><span>Nom</span>
                     <span style={{ textAlign: "right" }}>Quantité</span>
@@ -588,6 +589,7 @@ export default function Tax() {
                     <span style={{ textAlign: "right", color: T.text }}>{eur(lots.reduce((s, l) => s + l.amount * l.costPerUnit, 0))}</span>
                     <span />
                   </div>
+                </div>
                 </div>
               )}
             </>

@@ -713,7 +713,8 @@ export default function Crypto({ setView, marketsOnly = false }) {
 
       {/* ── TAB: Holdings ── */}
       {tab === "holdings" && (
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "visible" }}>
+        <div style={{ overflowX: "auto", border: `1px solid ${T.border}`, borderRadius: 16 }}>
+        <div style={{ background: T.panel, minWidth: 540, borderRadius: 16 }}>
           {/* En-têtes */}
           <div style={{
             display: "grid", gridTemplateColumns: "1fr 90px 100px 100px 120px 36px",
@@ -826,6 +827,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
               </div>
             </div>
           )}
+        </div>
         </div>
       )}
 
@@ -1126,7 +1128,8 @@ export default function Crypto({ setView, marketsOnly = false }) {
               </div>
   
               {/* Table des offres */}
-              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+              <div style={{ overflowX: "auto", border: `1px solid ${T.border}`, borderRadius: 16 }}>
+              <div style={{ background: T.panel, minWidth: 520, borderRadius: 16 }}>
                 {/* Header */}
                 <div style={{
                   display: "grid",
@@ -1206,7 +1209,8 @@ export default function Crypto({ setView, marketsOnly = false }) {
                   );
                 })}
               </div>
-  
+              </div>
+
               {/* Disclaimer */}
               <div className="flex items-start gap-2" style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, padding: "0 4px" }}>
                 <AlertTriangle size={13} style={{ color: T.amber, flexShrink: 0, marginTop: 1 }} />

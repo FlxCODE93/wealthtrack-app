@@ -1126,7 +1126,7 @@ function MonthlyCalendar({ transactions = [] }) {
     return [...arr].sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [byDay, selDay]);
 
-  const navBtn = { width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };
+  const navBtn = { width: 44, height: 44, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };
   const Pastille = ({ t, size = 22 }) => (
     <span title={`${t.label} · ${eurc(t.amount)}`}
       className="rounded-full flex items-center justify-center shrink-0 font-bold"
@@ -1381,12 +1381,30 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             <p className="text-sm mb-4" style={{ color: T.muted }}>
               De vos revenus vers vos postes de dépenses, investissements et épargne — largeur ∝ montant
             </p>
+            {/* Mobile : liste des postes */}
+            <div className="flex sm:hidden flex-col gap-2">
+              {dests.map(d => (
+                <div key={d.name} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                    <span className="text-sm truncate" style={{ color: T.text }}>{d.name}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold" style={{ color: d.color }}>{eur(d.value)}</span>
+                    <span className="text-xs ml-1.5" style={{ color: T.muted }}>{Math.round(d.value / revenus * 100)} %</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop : Sankey */}
+            <div className="hidden sm:block">
             <ExpandableChart height={Math.max(330, data.nodes.length * 38)} title="Flux de trésorerie">
               <Sankey data={data} node={<SankeyNode />} link={<SankeyLink />}
                 nodeWidth={14} nodePadding={20} margin={{ top: 12, right: 168, bottom: 12, left: 96 }}>
                 <Tooltip formatter={(v) => eur(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10 }} itemStyle={{ color: T.text }} />
               </Sankey>
             </ExpandableChart>
+            </div>
           </Card>
         );
       })()}
@@ -1512,7 +1530,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                       {locked ? (
                         <>
                           <span style={{ filter: "blur(4px)", userSelect: "none", flex: 1, pointerEvents: "none" }}>{tip.text}</span>
-                          <button onClick={() => setView("pricing")} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${T.amber}1a`, border: `1px solid ${T.amber}55`, borderRadius: 4, padding: "1px 6px", fontWeight: 700, color: T.amber, cursor: "pointer", fontSize: 10, flexShrink: 0 }}>
+                          <button onClick={() => setView("pricing")} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${T.amber}1a`, border: `1px solid ${T.amber}55`, borderRadius: 4, padding: "4px 8px", fontWeight: 700, color: T.amber, cursor: "pointer", fontSize: 10, flexShrink: 0, minHeight: 28 }}>
                             <Lock size={8} /> Pro
                           </button>
                         </>
@@ -1591,7 +1609,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "clamp(16px, 5vw, 24px)", width: 420, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.7)" }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold" style={{ color: T.text }}>Ajuster les données — {editPillar.label}</h3>
-              <button onClick={closeEdit} aria-label="Fermer" style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 10, width: 36, height: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={16} /></button>
+              <button onClick={closeEdit} aria-label="Fermer" style={{ background: "rgba(255,255,255,0.07)", border: "none", color: T.muted, borderRadius: 10, width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={16} /></button>
             </div>
             <label className="block text-xs font-semibold mb-1.5" style={{ color: T.muted }}>Montant (€)</label>
             <input type="number" autoFocus value={editVal}
@@ -8043,7 +8061,7 @@ export default function App() {
       )}
       {showBankConnect && <BankConnectModal onClose={() => setShowBankConnect(false)} />}
       <Sidebar view={view} setView={setView} profile={profile} plan={plan} setPlan={setPlan} coupleLinked={coupleLinked} />
-      <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
+      <main className="flex-1 p-4 sm:p-6 md:p-8 md:pl-4 pb-24 md:pb-8 overflow-x-hidden" style={{ maxWidth: 1500, marginRight: "auto" }}>
         {coupleLinkSt === "pending_incoming" && coupleLink && (
           <div role="alert" className="flex items-center justify-between gap-3 flex-wrap"
             style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(91,141,239,0.1)", border: `1px solid ${(C && C.blue) || "#5b8def"}44` }}>

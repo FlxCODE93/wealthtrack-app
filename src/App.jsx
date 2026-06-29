@@ -7431,7 +7431,7 @@ function CompoundCalc({ setView }) {
 
       <div className="flex flex-col md:grid" style={{ gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
         {/* Colonne gauche — paramètres */}
-        <div className="border-b md:border-b-0" style={{ padding: "24px", borderColor: T.border, borderRight: `1px solid ${T.border}` }}>
+        <div className="border-b md:border-b-0" style={{ padding: "24px", borderColor: T.border, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <Champ T={T} label="Capital initial" value={initial} set={setInitial} unit="€" step={500} />
           <Champ T={T} label="Épargne mensuelle" value={monthly} set={setMonthly} unit="€" step={50} />
           <Champ T={T} label="Horizon de placement" value={years} set={setYears} unit="ans" step={1} />

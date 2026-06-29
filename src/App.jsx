@@ -5224,7 +5224,12 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [editMode, setEditMode] = useState(false);
   const [openCats, setOpenCats] = useState({});
   const [showComplete, setShowComplete] = useState(false);
-  const [histRange, setHistRange] = useState(12);
+  const HIST_RANGES = [
+    { label: "1J", months: 1 }, { label: "1S", months: 1 }, { label: "1M", months: 1 },
+    { label: "3M", months: 3 }, { label: "6M", months: 6 },
+    { label: "1A", months: 12 }, { label: "2A", months: 24 }, { label: "3A", months: 36 },
+  ];
+  const [histRange, setHistRange] = useState("3M");
   const [compactComp, setCompactComp] = useState(true); // comparaison : vue réduite (mobile)
   const [activeSlice, setActiveSlice] = useState(null); // segment survolé du donut
   const [cryptoSync] = useLocalStorage("wt_crypto_sync", null);
@@ -5248,7 +5253,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const hist = useMemo(() => ensureHistoriqueDepth(patrimoine.historique, 36), [patrimoine.historique]);
   const prevNW = hist.length >= 2 ? hist[hist.length - 2].v : netWorth;
   const monthlyChange = netWorth - prevNW;
-  const chartHist = hist.slice(-histRange);
+  const histMonths = HIST_RANGES.find(r => r.label === histRange)?.months ?? 12;
+  const chartHist = hist.slice(-histMonths);
 
   // Endettement = passifs / actifs
   const debtRatio = totalActifs > 0 ? (totalPassifs / totalActifs) * 100 : 0;
@@ -5492,25 +5498,33 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
               </div>
             </div>
-            <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
-              style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
-              <option value={3}>3 derniers mois</option>
-              <option value={6}>6 derniers mois</option>
-              <option value={12}>12 derniers mois</option>
-              <option value={24}>2 ans</option>
-              <option value={36}>3 ans</option>
-            </select>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {HIST_RANGES.map(r => (
+                <button key={r.label} onClick={() => setHistRange(r.label)}
+                  style={{
+                    padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
+                    background: histRange === r.label ? T.blue : "transparent",
+                    color: histRange === r.label ? "#fff" : T.muted,
+                    border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
+                    transition: "all .15s ease",
+                  }}>{r.label}</button>
+              ))}
+            </div>
           </div>
           <ExpandableChart height={280} title="Évolution du patrimoine net"
             controls={
-              <select value={histRange} onChange={(e) => setHistRange(+e.target.value)}
-                style={{ ...inp, padding: "6px 14px", fontSize: 12, borderRadius: 9999, cursor: "pointer" }}>
-                <option value={3}>3 derniers mois</option>
-                <option value={6}>6 derniers mois</option>
-                <option value={12}>12 derniers mois</option>
-                <option value={24}>2 ans</option>
-                <option value={36}>3 ans</option>
-              </select>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {HIST_RANGES.map(r => (
+                  <button key={r.label} onClick={() => setHistRange(r.label)}
+                    style={{
+                      padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
+                      background: histRange === r.label ? T.blue : "transparent",
+                      color: histRange === r.label ? "#fff" : T.muted,
+                      border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
+                      transition: "all .15s ease",
+                    }}>{r.label}</button>
+                ))}
+              </div>
             }
           >
             <AreaChart data={chartHist}>
@@ -5521,7 +5535,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histRange > 12 ? 55 : 38} />
+              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histMonths > 12 ? 55 : 38} />
               <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                 tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
               <Tooltip {...chartTip} formatter={(v) => eur(v)} />

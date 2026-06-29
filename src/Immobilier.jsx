@@ -250,23 +250,15 @@ function ResidenceSection({ T, netWorth, revenueForBank, bCfg, profileType, auto
               {bCfg.note}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <MiniStat label="Revenus nets mensuels" value={eur(revenueForBank)} />
-            <div style={{ borderRadius: 12, padding: 12, background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 12, marginBottom: 6, color: T.muted }}>Crédits existants hors immo</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <NumInput min={0} value={creditsExistants} onChange={(n) => setCreditsManual(n)}
-                  style={{ ...inputStyle, padding: "4px 8px", fontSize: 14, fontWeight: 700, color: T.amber, width: "100%" }} />
-                <span style={{ fontSize: 12, color: T.muted }}>€/mois</span>
-              </div>
-              {creditsManual !== null && (
-                <button style={{ fontSize: 12, marginTop: 4, color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                  onClick={() => setCreditsManual(null)}>
-                  Remettre auto ({eur(autoCredits)})
-                </button>
-              )}
-            </div>
-            <MiniStat label="Mensualité disponible" value={eur(mensualiteMax)} color={mensualiteMax > 0 ? T.green : T.red} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid rgba(255,255,255,0.04)`, marginBottom: 2 }}>
+            <span style={{ fontSize: 12, color: T.muted, flex: 1 }}>Crédits existants hors immo</span>
+            <NumInput min={0} value={creditsExistants} onChange={(n) => setCreditsManual(n)}
+              style={{ ...inputStyle, padding: "3px 8px", fontSize: 13, fontWeight: 700, color: T.amber, width: 90 }} />
+            <span style={{ fontSize: 12, color: T.muted }}>€/mois</span>
+            {creditsManual !== null && (
+              <button style={{ fontSize: 11, color: T.muted, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                onClick={() => setCreditsManual(null)}>auto ({eur(autoCredits)})</button>
+            )}
           </div>
           <div style={{ borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 12, fontFamily: "monospace", display: "flex", flexWrap: "wrap", gap: "6px 12px", alignItems: "center", background: "rgba(47,155,255,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
             <span style={{ color: T.text }}>Mensualité max</span><span>=</span>
@@ -274,18 +266,16 @@ function ResidenceSection({ T, netWorth, revenueForBank, bCfg, profileType, auto
             {creditsExistants > 0 && <><span>−</span><span style={{ color: T.amber }}>{eur(creditsExistants)} crédits</span></>}
             <span>=</span><span style={{ color: mensualiteMax > 0 ? T.cyan : T.red, fontWeight: 700 }}>{eur(mensualiteMax)}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Card style={{ background: "rgba(59,130,246,0.05)" }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Sur <b>20 ans</b> à 3,5 %</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: loan20 > 0 ? T.cyan : T.muted }}>{eur(loan20)}</div>
-              <div style={{ fontSize: 11, color: T.muted }}>mensualité : {eur(mensualiteMax)}</div>
-            </Card>
-            <Card style={{ background: "rgba(34,199,154,0.05)" }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Sur <b>25 ans</b> à 3,7 %</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: loan25 > 0 ? T.green : T.muted }}>{eur(loan25)}</div>
-              <div style={{ fontSize: 11, color: T.muted }}>mensualité : {eur(mensualiteMax)}</div>
-            </Card>
-          </div>
+          {[
+            { label: "Mensualité disponible (35 %)", value: eur(mensualiteMax), color: mensualiteMax > 0 ? T.green : T.red },
+            { label: "Capacité d'emprunt — 20 ans à 3,5 %", value: eur(loan20), color: T.cyan },
+            { label: "Capacité d'emprunt — 25 ans à 3,7 %", value: eur(loan25), color: T.green },
+          ].map(({ label, value, color }, i, arr) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+              <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: color || T.text }}>{value}</span>
+            </div>
+          ))}
         </AccordionSection>
 
         {/* 2 — Paramètres */}
@@ -314,23 +304,23 @@ function ResidenceSection({ T, netWorth, revenueForBank, bCfg, profileType, auto
 
         {/* 3 — Financement */}
         <AccordionSection accentColor={T.amber} title="Structure du financement" desc="Apport · frais de notaire · crédit · coût total" summaryValue={`${eur(mensualite)}/mois`} summaryColor={T.amber}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <MiniStat label="Montant emprunté" value={eur(credit)} color={T.amber} />
-            <MiniStat label="Avec apport" value={eur(totalApport)} color={T.cyan} />
-            <MiniStat label="Dont frais de notaire" value={eur(notaire)} color={T.muted} />
-            <MiniStat label="Dont sur le bien" value={eur(apportSurBien)} color={T.blue} />
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Mensualité crédit</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: T.text }}>{eur(mensualite)}</div>
-              <div style={{ fontSize: 12, color: T.muted }}>sur {duration} ans à {rate} %</div>
-            </div>
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Coût total du crédit</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: T.amber }}>{eur(credit + totalInterest)}</div>
-              <div style={{ fontSize: 12, color: T.muted }}>dont intérêts : {eur(Math.round(totalInterest))}</div>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", marginBottom: 16 }}>
+            {[
+              { label: "Apport total (notaire inclus)", value: eur(totalApport), color: T.cyan },
+              { label: "Dont frais de notaire", value: eur(notaire) },
+              { label: "Dont sur le bien", value: eur(apportSurBien), color: T.blue },
+              { label: "Montant emprunté", value: eur(credit), color: T.amber },
+              { label: `Mensualité crédit · ${duration} ans à ${rate} %`, value: eur(mensualite) },
+              { label: "Coût total du crédit", value: eur(credit + totalInterest), color: T.amber, sub: `dont intérêts : ${eur(Math.round(totalInterest))}` },
+            ].map(({ label, value, color, sub }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "8px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: color || T.text }}>{value}</span>
+                  {sub && <div style={{ fontSize: 11, color: T.muted }}>{sub}</div>}
+                </div>
+              </div>
+            ))}
           </div>
           <div style={{ borderRadius: 12, padding: 16, background: canAfford ? "rgba(34,199,154,0.06)" : "rgba(255,90,95,0.06)", border: `1px solid ${canAfford ? T.green + "44" : T.red + "44"}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
@@ -397,26 +387,18 @@ function ResidenceSection({ T, netWorth, revenueForBank, bCfg, profileType, auto
               {showRentVsBuy && <Line type="monotone" dataKey="Patrimoine locataire" stroke={T.cyan} strokeWidth={2} dot={false} />}
             </LineChart>
           </ExpandableChart>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-            <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Valeur du bien à {duration} ans</div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: T.amber }}>{eur(finalPropValue)}</div>
-            </div>
-            <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Patrimoine net immobilier</div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{eur(finalEquity)}</div>
-            </div>
-            {showRentVsBuy ? (
-              <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.3)" }}>
-                <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Patrimoine locataire</div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: T.cyan }}>{eur(finalRenterFV)}</div>
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
+            {[
+              { label: `Valeur du bien à ${duration} ans`, value: eur(finalPropValue), color: T.muted },
+              { label: "Intérêts payés sur le crédit", value: eur(Math.round(totalInterest)), color: T.red },
+              { label: "Patrimoine net immobilier", value: eur(finalEquity), color: T.green },
+              ...(showRentVsBuy ? [{ label: "Patrimoine locataire (ETF)", value: eur(finalRenterFV), color: T.cyan }] : []),
+            ].map(({ label, value, color }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color }}>{value}</span>
               </div>
-            ) : (
-              <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Intérêts payés</div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: T.red }}>{eur(Math.round(totalInterest))}</div>
-              </div>
-            )}
+            ))}
           </div>
           {showRentVsBuy && (
             <>
@@ -547,42 +529,37 @@ function LocatifSection({ T, revenueForBank, bCfg, autoCredits }) {
         </AccordionSection>
 
         <AccordionSection accentColor={T.amber} title="Structure du financement" desc="Apport · crédit · assurance emprunteur" summaryValue={`${eur(locMensualite)}/mois`} summaryColor={T.amber}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <MiniStat label="Votre apport" value={eur(locTotalApport)} color={T.cyan} />
-            <MiniStat label="Dont frais de notaire" value={eur(locNotaire)} color={T.muted} />
-            <MiniStat label="Dont sur le bien" value={eur(locApportSurBien)} color={T.blue} />
-            <MiniStat label="Montant emprunté" value={eur(locCredit)} color={T.amber} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Mensualité crédit</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: T.text }}>{eur(locMensualite)}</div>
-              <div style={{ fontSize: 12, color: T.muted }}>sur {locDuration} ans à {locRate} %</div>
-            </div>
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted }}>Assurance emprunteur</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: T.text }}>{eur(locAssuranceEmprunteurMensuelle)}</div>
-              <div style={{ fontSize: 12, color: T.muted }}>par mois, sur {eur(locCredit)} emprunté</div>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {[
+              { label: "Apport total (notaire inclus)", value: eur(locTotalApport), color: T.cyan },
+              { label: "Dont frais de notaire", value: eur(locNotaire) },
+              { label: "Dont sur le bien", value: eur(locApportSurBien), color: T.blue },
+              { label: "Montant emprunté", value: eur(locCredit), color: T.amber },
+              { label: `Mensualité crédit · ${locDuration} ans à ${locRate} %`, value: eur(locMensualite) },
+              { label: `Assurance emprunteur · ${locAssuranceEmprunteurPct} % du capital`, value: `${eur(locAssuranceEmprunteurMensuelle)}/mois` },
+            ].map(({ label, value, color }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: color || T.text }}>{value}</span>
+              </div>
+            ))}
           </div>
         </AccordionSection>
 
         <AccordionSection accentColor={T.amber} title="Rendement locatif" desc="Brut · net · formule détaillée" summaryValue={`${rendementNet.toFixed(2)} % net`} summaryColor={rendementColor(rendementNet)}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted, display: "flex", alignItems: "center" }}>
-                Rendement brut<InfoTooltip text="Loyers annuels (sans vacance) ÷ (prix + notaire)." />
+          <div style={{ display: "flex", flexDirection: "column", marginBottom: 14 }}>
+            {[
+              { label: "Loyers annuels bruts (plein)", value: eur(loyerAnnuelBrut) },
+              { label: `Loyers effectifs (${12 - locVacance} mois/an)`, value: eur(loyerAnnuelEffectif) },
+              { label: "Investissement total (prix + notaire)", value: eur(locInvestissementTotal) },
+              { label: "Rendement brut", value: `${rendementBrut.toFixed(2)} %`, color: rendementColor(rendementBrut) },
+              { label: "Rendement net (après charges, hors crédit/fiscalité)", value: `${rendementNet.toFixed(2)} %`, color: rendementColor(rendementNet) },
+            ].map(({ label, value, color }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: color || T.text }}>{value}</span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: rendementColor(rendementBrut) }}>{rendementBrut.toFixed(2)} %</div>
-              <div style={{ fontSize: 12, color: T.muted }}>{eur(loyerAnnuelBrut)} / an ÷ {eur(locInvestissementTotal)}</div>
-            </div>
-            <div style={{ borderRadius: 12, padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 13, color: T.muted, display: "flex", alignItems: "center" }}>
-                Rendement net<InfoTooltip text="(Loyers réels après vacance − charges) ÷ (prix + notaire). Hors crédit et fiscalité." />
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: "4px 0", color: rendementColor(rendementNet) }}>{rendementNet.toFixed(2)} %</div>
-              <div style={{ fontSize: 12, color: T.muted }}>après charges, hors crédit et fiscalité</div>
-            </div>
+            ))}
           </div>
           <div style={{ borderRadius: 10, padding: "10px 16px", fontSize: 12, fontFamily: "monospace", display: "flex", flexWrap: "wrap", gap: "4px 10px", alignItems: "center", background: "rgba(47,155,255,0.04)", border: `1px solid ${T.border}`, color: T.muted }}>
             <span style={{ color: T.text }}>Rendement net</span><span>=</span>
@@ -633,15 +610,16 @@ function LocatifSection({ T, revenueForBank, bCfg, autoCredits }) {
               <Line type="monotone" dataKey="Capital net" stroke={T.amber} strokeWidth={2.5} dot={false} />
             </LineChart>
           </ExpandableChart>
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Valeur du bien à {locDuration} ans</div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: T.muted }}>{eur(locFinalPropValue)}</div>
-            </div>
-            <div style={{ borderRadius: 10, padding: 12, textAlign: "center", background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 11, marginBottom: 4, color: T.muted }}>Capital net (bien − crédit restant)</div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: T.amber }}>{eur(locFinalEquity)}</div>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
+            {[
+              { label: `Valeur du bien à ${locDuration} ans`, value: eur(locFinalPropValue), color: T.muted },
+              { label: "Capital net (bien − crédit restant)", value: eur(locFinalEquity), color: T.amber },
+            ].map(({ label, value, color }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color }}>{value}</span>
+              </div>
+            ))}
           </div>
         </AccordionSection>
 
@@ -849,9 +827,17 @@ function LocationSection({ T }) {
               Déficit foncier de {eur(Math.round(melDeficitFoncier))} : imputable sur votre revenu global dans la limite de 10 700 €/an.
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <MiniStat label="Impôt + prélèvements sociaux (annuel)" value={eur(Math.round(melImpotAnnuel))} color={T.red} />
-            <MiniStat label="Soit par mois" value={eur(Math.round(melImpotMensuel))} color={T.red} />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {[
+              { label: "Base imposable", value: eur(Math.round(melBaseImposable)) },
+              { label: "Impôt + prélèvements sociaux (annuel)", value: eur(Math.round(melImpotAnnuel)), color: T.red },
+              { label: "Soit mensualisé", value: eur(Math.round(melImpotMensuel)), color: T.red },
+            ].map(({ label, value, color }, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < arr.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: color || T.text }}>{value}</span>
+              </div>
+            ))}
           </div>
         </AccordionSection>
 

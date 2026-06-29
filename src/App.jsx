@@ -1431,10 +1431,9 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               title="Cliquer pour ajuster manuellement"
               className="rounded-2xl p-4 relative"
               style={{
-                cursor: "pointer", background: T.card,
-                border: `1px solid ${hovered ? T.blue : (overridden ? `${T.blue}55` : T.border)}`,
-                boxShadow: hovered ? `0 0 0 1px ${T.blue}33` : "none",
-                transition: "border-color .15s ease, box-shadow .15s ease",
+                cursor: "pointer", background: hovered ? "rgba(59,130,246,0.04)" : "transparent",
+                border: `1px solid ${hovered ? T.blue : (overridden ? `${T.blue}55` : "transparent")}`,
+                transition: "border-color .15s ease, background .15s ease",
               }}>
               <div className="flex items-start justify-between gap-1">
                 <span className="text-xs" style={{ color: T.muted }}>{p.label}</span>
@@ -1454,7 +1453,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           );
         })}
         {/* Restant à vivre (dérivé) */}
-        <div className="rounded-2xl p-4" style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.25)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "transparent" }}>
           <div className="flex items-start justify-between gap-1">
             <span className="text-xs" style={{ color: T.muted }}>Restant à vivre</span>
             <Wallet size={15} style={{ color: T.green, opacity: 0.6, flexShrink: 0 }} />
@@ -1462,7 +1461,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
           <div className="text-xl font-bold mt-2" style={{ color: T.green }}><AnimatedNumber value={restant} formatter={fmt} duration={0.25} /></div>
         </div>
         {/* Taux d'épargne (dérivé) */}
-        <div className="rounded-2xl p-4" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "transparent" }}>
           <div className="flex items-start justify-between gap-1">
             <span className="text-xs" style={{ color: T.muted }}>Taux d'épargne</span>
             <ArrowUpRight size={15} style={{ color: T.blue, opacity: 0.6, flexShrink: 0 }} />

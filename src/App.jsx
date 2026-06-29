@@ -5275,6 +5275,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const [assetSearch, setAssetSearch] = useState("");
   const [sortKey, setSortKey] = useState("value");
   const [sortDir, setSortDir] = useState(-1);
+  const [rowMenu, setRowMenu] = useState(null); // { key, side, catId, itemIdx }
+  const [editRowModal, setEditRowModal] = useState(null); // { side, catId, itemIdx, label, value }
   const HIST_RANGES = [
     { label: "1J", months: 1 }, { label: "1S", months: 1 }, { label: "1M", months: 1 },
     { label: "3M", months: 3 }, { label: "6M", months: 6 },
@@ -5336,7 +5338,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
 
   const flatActifs = useMemo(() => effectiveActifs.flatMap(cat =>
-    (cat.items || []).map(item => ({
+    (cat.items || []).map((item, itemIdx) => ({
       ...item,
       catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
       initials: (cat.label || "").slice(0, 2).toUpperCase(),
@@ -5344,16 +5346,18 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       pl: item.costBasis > 0 ? item.value - item.costBasis : null,
       plPct: item.costBasis > 0 ? ((item.value - item.costBasis) / item.costBasis) * 100 : null,
       isDerived: cat.id === "credits-derived", isSync: !!cat.isSync,
+      itemIdx,
     }))
   ), [effectiveActifs, totalActifs]);
 
   const flatPassifs = useMemo(() => (patrimoine.passifs || []).flatMap(cat =>
-    (cat.items || []).map(item => ({
+    (cat.items || []).map((item, itemIdx) => ({
       ...item,
       catId: cat.id, catLabel: cat.label, catColor: catColor(cat),
       initials: (cat.label || "").slice(0, 2).toUpperCase(),
       allocPct: totalPassifs > 0 ? (item.value / totalPassifs) * 100 : 0,
       pl: null, plPct: null, isDerived: false, isSync: false,
+      itemIdx,
     }))
   ), [patrimoine.passifs, totalPassifs]);
 
@@ -5790,9 +5794,35 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                         <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
                         {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
                       </div>
-                      {!row.isDerived && !row.isSync
-                        ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>
-                        : <span />}
+                      {!row.isDerived && !row.isSync ? (() => {
+                        const menuKey = `${isPassif ? "passifs" : "actifs"}-${row.catId}-${row.itemIdx}`;
+                        const isOpen = rowMenu?.key === menuKey;
+                        return (
+                          <div style={{ position: "relative" }}>
+                            <button onClick={e => { e.stopPropagation(); setRowMenu(isOpen ? null : { key: menuKey, side: isPassif ? "passifs" : "actifs", catId: row.catId, itemIdx: row.itemIdx, label: row.label, value: row.value }); }}
+                              style={{ background: isOpen ? "rgba(255,255,255,0.08)" : "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: "4px 6px", lineHeight: 1, borderRadius: 6, transition: "background .15s" }}>
+                              ···
+                            </button>
+                            {isOpen && (
+                              <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50, background: "#1e2a3a", border: `1px solid ${T.border}`, borderRadius: 10, padding: "6px 0", minWidth: 140, boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }}
+                                onClick={e => e.stopPropagation()}>
+                                <button onClick={() => { setEditRowModal({ side: rowMenu.side, catId: rowMenu.catId, itemIdx: rowMenu.itemIdx, label: rowMenu.label, value: rowMenu.value }); setRowMenu(null); }}
+                                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", color: T.text, fontSize: 13, fontWeight: 600, textAlign: "left" }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                                  ✏️ Modifier
+                                </button>
+                                <button onClick={() => { deleteItem(rowMenu.side, rowMenu.catId, rowMenu.itemIdx); setRowMenu(null); }}
+                                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", color: T.red, fontSize: 13, fontWeight: 600, textAlign: "left" }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.08)"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                                  🗑 Supprimer
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : <span />}
                     </div>
                   ))}
                 </>
@@ -5858,6 +5888,47 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       {showComplete && (
         <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} onManualAdd={addManual} />
       )}
+
+      {/* Click-outside ferme le menu contextuel */}
+      {rowMenu && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setRowMenu(null)} />
+      )}
+
+      {/* Modal édition ligne */}
+      {editRowModal && (() => {
+        const m = editRowModal;
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={() => setEditRowModal(null)}>
+            <div style={{ background: "#1a2235", border: `1px solid ${T.border}`, borderRadius: 16, padding: "28px 28px 24px", minWidth: 340, boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
+              onClick={e => e.stopPropagation()}>
+              <h3 style={{ color: T.text, fontWeight: 800, fontSize: 16, marginBottom: 20 }}>Modifier</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label style={{ color: T.muted, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Nom</label>
+                  <input value={m.label} onChange={e => setEditRowModal(prev => ({ ...prev, label: e.target.value }))}
+                    style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ color: T.muted, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Valeur (€)</label>
+                  <input type="number" value={m.value} onChange={e => setEditRowModal(prev => ({ ...prev, value: Number(e.target.value) }))}
+                    style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                <button onClick={() => setEditRowModal(null)}
+                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button onClick={() => { updateItem(m.side, m.catId, m.itemIdx, { label: m.label, value: m.value }); setEditRowModal(null); }}
+                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

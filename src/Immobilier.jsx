@@ -969,7 +969,7 @@ export default function Immobilier({ totals, simParams, patrimoine, transactions
   const [mode, setMode] = useState("residence");
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
         {setView && (

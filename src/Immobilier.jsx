@@ -129,8 +129,7 @@ function HeroKpis({ kpis, badge }) {
   const T = useT();
   return (
     <div style={{
-      background: T.panel, border: `1px solid ${T.border}`,
-      borderRadius: 16, padding: "22px 28px",
+      padding: "8px 0 24px 0",
       display: "flex", alignItems: "center", gap: 0, flexWrap: "wrap",
     }}>
       {kpis.map((kpi, i) => (

@@ -4371,7 +4371,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       </div>
 
       {/* Résumé — bande horizontale */}
-      <div style={{ background: T.panel, borderRadius: 16, padding: "20px 28px", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
+      <div style={{ padding: "8px 0 24px 0", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
         {[
           { label: "Capital restant dû", value: eur(Math.round(totalRestant)), color: T.red },
           { label: "Mensualités / mois", value: eur(Math.round(totalMensualite)), color: T.amber },

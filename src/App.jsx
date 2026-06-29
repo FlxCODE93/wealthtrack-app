@@ -783,7 +783,7 @@ function Sidebar({ view, setView, profile, plan, setPlan, coupleLinked }) {
               <Logo size={24} />
             </div>
             <div className="min-w-0">
-              <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+              <span className="text-xl font-semibold tracking-tight" style={{ color: T.text, fontFamily: "inherit" }}>WealthTrack</span>
               <div className="text-xs" style={{ color: T.muted }}>Gestion financière</div>
             </div>
           </div>
@@ -1402,7 +1402,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Budget</h1>
+        <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "inherit" }}>Budget</h1>
         <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — {new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase())}</p>
       </div>
 
@@ -1533,7 +1533,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: badge.color }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Santé financière</h2>
+              <h2 className="text-lg font-bold" style={{ color: T.text, fontFamily: "inherit" }}>Santé financière</h2>
               <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ background: badge.color + "18", color: badge.color }}>{badge.level}</span>
             </div>
           </div>
@@ -1549,8 +1549,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             )}
             {streakToast}
             <div className="shrink-0">
-              <span style={{ fontSize: 34, fontWeight: 600, color: badge.color, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-1px" }}>{healthScore.overall}</span>
-              <span style={{ fontSize: 15, fontWeight: 400, color: T.muted, fontFamily: "'Lora', Georgia, serif" }}>/100</span>
+              <span style={{ fontSize: 34, fontWeight: 600, color: badge.color, fontFamily: "inherit", letterSpacing: "-1px" }}>{healthScore.overall}</span>
+              <span style={{ fontSize: 15, fontWeight: 400, color: T.muted, fontFamily: "inherit" }}>/100</span>
             </div>
           </div>
         </div>
@@ -6973,7 +6973,7 @@ export default function App() {
 
   return (
     <DiscreetCtx.Provider value={discreet}>
-    <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       {/* Mode discret : flouter UNIQUEMENT les montants de l'axe Y (sensibles).
           L'axe X (années/dates) et toute la structure (lignes, graduations,
           grille) restent lisibles — sinon le graphique devient inutile. */}
@@ -7047,7 +7047,7 @@ export default function App() {
                 <BarChart3 size={16} style={{ color: T.blue }} />
               </div>
               <div>
-                <div className="font-semibold tracking-tight" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", fontSize: 14, lineHeight: 1.2 }}>WealthTrack</div>
+                <div className="font-semibold tracking-tight" style={{ color: T.text, fontFamily: "inherit", fontSize: 14, lineHeight: 1.2 }}>WealthTrack</div>
                 <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.2 }}>{VIEW_LABELS[view] || view}</div>
               </div>
             </div>

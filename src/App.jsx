@@ -3385,7 +3385,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
             </div>
           )}
-          <ExpandableChart height={280} title={title}>
+          <ExpandableChart height={220} title={title}>
             {logScale ? (
               <ComposedChart data={logData}>
                 <defs>
@@ -3439,26 +3439,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
             )}
           </ExpandableChart>
 
-          {/* Résumé à l'horizon */}
-          {(() => {
-            const last = detailedData[detailedData.length - 1];
-            if (!last) return null;
-            return (
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
-                  { label: "Vos apports", value: eur(last.apports), color: T.muted },
-                  { label: "Gains générés", value: "+" + eur(last.gains), color: T.green },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-xl p-3 text-center"
-                    style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                    <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
-                    <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
         </div>
       </div>
     </Card>

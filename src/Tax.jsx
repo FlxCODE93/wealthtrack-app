@@ -665,55 +665,38 @@ export default function Tax() {
             ))}
           </div>
 
-          {/* Règles clés */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+          {/* Règles */}
+          <div style={{ display: "flex", borderTop: `1px solid ${T.border}` }}>
             {[
-              {
-                icon: <Landmark size={16} style={{ color: T.cyan }} />,
-                title: "PEA — Plan d'Épargne en Actions",
-                color: "rgba(0,180,216,0.08)",
-                border: "rgba(0,180,216,0.25)",
-                items: [
-                  ["good",   "≥ 5 ans : 0 % IR, seulement 17,2 % PS sur les gains"],
-                  ["bad",    "< 5 ans : PFU 30 % + clôture OBLIGATOIRE du plan"],
-                  ["tip",    "Ouvrir un PEA dès aujourd'hui même avec 1 € — le délai de 5 ans commence à l'ouverture"],
-                  ["cycle",  "Après 5 ans : retraits partiels sans clôture, le plan continue de capitaliser"],
-                  ["global", "Limité aux actions zone UE/EEE + quelques ETF éligibles (MSCI World via synthétique)"],
-                ],
-              },
-              {
-                icon: <TrendingUp size={16} style={{ color: T.amber }} />,
-                title: "CTO — Compte-Titres Ordinaire",
-                color: "rgba(245,166,35,0.06)",
-                border: "rgba(245,166,35,0.2)",
-                items: [
-                  ["info",   "PFU 30 % sur toutes les plus-values et dividendes"],
-                  ["tip",    "Option barème progressif si votre TMI < 12,8 % (cases déclaration 2042-C)"],
-                  ["global", "Aucun plafond, accès à toutes les bourses mondiales"],
-                  ["down",   "Moins-values imputables sur plus-values de même nature pendant 10 ans"],
-                  ["warn",   "Titres acquis avant 2018 : abattements 50 % (>2 ans) / 65 % (>8 ans) encore possibles"],
-                ],
-              },
-            ].map(card => (
-              <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  {card.icon}
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
-                </div>
+              { icon: <Landmark size={15} style={{ color: T.cyan }} />, title: "PEA — Plan d'Épargne en Actions", items: [
+                ["good",   "≥ 5 ans : 0 % IR, seulement 17,2 % PS sur les gains"],
+                ["bad",    "< 5 ans : PFU 30 % + clôture OBLIGATOIRE du plan"],
+                ["tip",    "Ouvrir un PEA dès aujourd'hui même avec 1 € — le délai de 5 ans commence à l'ouverture"],
+                ["cycle",  "Après 5 ans : retraits partiels sans clôture, le plan continue de capitaliser"],
+                ["global", "Limité aux actions zone UE/EEE + quelques ETF éligibles (MSCI World via synthétique)"],
+              ]},
+              { icon: <TrendingUp size={15} style={{ color: T.amber }} />, title: "CTO — Compte-Titres Ordinaire", items: [
+                ["info",   "PFU 30 % sur toutes les plus-values et dividendes"],
+                ["tip",    "Option barème progressif si votre TMI < 12,8 % (cases déclaration 2042-C)"],
+                ["global", "Aucun plafond, accès à toutes les bourses mondiales"],
+                ["down",   "Moins-values imputables sur plus-values de même nature pendant 10 ans"],
+                ["warn",   "Titres acquis avant 2018 : abattements 50 % (>2 ans) / 65 % (>8 ans) encore possibles"],
+              ]},
+            ].map((col, i) => (
+              <div key={col.title} style={{ flex: 1, padding: "20px 24px 20px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : { paddingLeft: 0 }) }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>{col.icon}<span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{col.title}</span></div>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {card.items.map(([kind, text], i) => (
-                    <RuleItem key={i} kind={kind}>{text}</RuleItem>
-                  ))}
+                  {col.items.map(([kind, text], j) => <RuleItem key={j} kind={kind}>{text}</RuleItem>)}
                 </ul>
               </div>
             ))}
           </div>
 
-          {/* Calculateur */}
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Calculator size={16} style={{ color: T.blue }} />
-              <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Simulateur PEA vs CTO</span>
+          {/* Simulateur */}
+          <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <Calculator size={14} style={{ color: T.blue }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>Simulateur PEA vs CTO</span>
             </div>
             <div className="flex gap-4 flex-wrap mb-4">
               <div style={{ flex: "1 1 180px" }}>
@@ -734,43 +717,22 @@ export default function Tax() {
                 </div>
               </div>
             </div>
-
             {peaResult && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 16, gap: 0 }}>
                 {[
                   {
                     label: peaCalc.years === "5+" ? "PEA ≥ 5 ans" : "PEA < 5 ans",
                     total: peaCalc.years === "5+" ? peaResult.peaGe5.total : peaResult.peaLt5.total,
                     detail: peaCalc.years === "5+" ? `IR : 0 € · PS : ${eur(peaResult.peaGe5.ps)}` : `IR : ${eur(peaResult.peaLt5.ir)} · PS : ${eur(peaResult.peaLt5.ps)}`,
-                    note: peaCalc.years === "5+" ? peaResult.peaGe5.note : peaResult.peaLt5.note,
                     color: peaCalc.years === "5+" ? T.green : T.red,
-                    bg: peaCalc.years === "5+" ? "rgba(34,199,154,0.08)" : "rgba(239,68,68,0.08)",
-                    border: peaCalc.years === "5+" ? "rgba(34,199,154,0.25)" : "rgba(239,68,68,0.25)",
                   },
-                  {
-                    label: "CTO",
-                    total: peaResult.cto.total,
-                    detail: `IR : ${eur(peaResult.cto.ir)} · PS : ${eur(peaResult.cto.ps)}`,
-                    note: "Standard",
-                    color: T.red,
-                    bg: "rgba(239,68,68,0.06)",
-                    border: "rgba(239,68,68,0.2)",
-                  },
-                  ...(peaCalc.years === "5+" && peaResult.saving > 0 ? [{
-                    label: "Économie PEA vs CTO",
-                    total: peaResult.saving,
-                    detail: `Soit ${((peaResult.saving / peaResult.cto.total) * 100).toFixed(0)} % d'impôt en moins`,
-                    note: "Grâce à l'exonération IR",
-                    color: T.amber,
-                    bg: "rgba(245,166,35,0.08)",
-                    border: "rgba(245,166,35,0.25)",
-                  }] : []),
-                ].map(r => (
-                  <div key={r.label} style={{ background: r.bg, border: `1px solid ${r.border}`, borderRadius: 12, padding: "14px 16px" }}>
+                  { label: "CTO", total: peaResult.cto.total, detail: `IR : ${eur(peaResult.cto.ir)} · PS : ${eur(peaResult.cto.ps)}`, color: T.red },
+                  ...(peaCalc.years === "5+" && peaResult.saving > 0 ? [{ label: "Économie PEA", total: peaResult.saving, detail: `${((peaResult.saving / peaResult.cto.total) * 100).toFixed(0)} % d'impôt en moins`, color: T.amber }] : []),
+                ].map((r, i) => (
+                  <div key={r.label} style={{ flex: 1, minWidth: 120, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                     <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
-                    <div style={{ color: r.color, fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{eur(r.total)}</div>
-                    <div style={{ color: T.muted, fontSize: 11 }}>{r.detail}</div>
-                    <div style={{ color: T.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
+                    <div style={{ color: r.color, fontSize: 22, fontWeight: 800 }}>{eur(r.total)}</div>
+                    <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{r.detail}</div>
                   </div>
                 ))}
               </div>
@@ -778,7 +740,7 @@ export default function Tax() {
           </div>
 
           {/* Stratégie */}
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+          <div style={{ borderLeft: `3px solid ${T.blue}`, paddingLeft: 14, fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
             <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un PEA dès maintenant (même avec 100 €) pour lancer le compteur des 5 ans. Investissez les actions mondiales via un ETF MSCI World synthétique (Amundi, Lyxor) éligible PEA. En parallèle, gardez le CTO pour les titres hors UE (Chine, Inde, Small Caps US) et les obligations. La combinaison PEA + CTO + PEA-PME offre 375 k€ de capacité de versement et une fiscalité optimisée.
           </div>
         </div>
@@ -805,53 +767,36 @@ export default function Tax() {
           </div>
 
           {/* Règles */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+          <div style={{ display: "flex", borderTop: `1px solid ${T.border}` }}>
             {[
-              {
-                icon: <Shield size={16} style={{ color: T.green }} />,
-                title: "Fiscalité des rachats",
-                color: "rgba(34,199,154,0.06)",
-                border: "rgba(34,199,154,0.2)",
-                items: [
-                  ["time", "< 8 ans : PFU 30 % (12,8 % IR + 17,2 % PS) — comme un CTO"],
-                  ["good", "≥ 8 ans : 7,5 % IR + 17,2 % PS APRÈS abattement 4 600 € / an"],
-                  ["warn", "Si primes > 150 k€ (tous contrats) : 12,8 % IR sur la fraction dépassant 150 k€"],
-                  ["calc", "Seule la part de gains est imposée, pas le capital : rachat partiel → gains * (rachat / valeur totale)"],
-                  ["cycle","Les PS (17,2 %) s'appliquent sur les gains BRUTS, sans abattement"],
-                ],
-              },
-              {
-                icon: <Shield size={16} style={{ color: T.amber }} />,
-                title: "Avantage successoral",
-                color: "rgba(245,166,35,0.06)",
-                border: "rgba(245,166,35,0.2)",
-                items: [
-                  ["gift", "Primes versées avant 70 ans : 152 500 € exonérés par bénéficiaire, hors droits de succession"],
-                  ["stat", "Au-delà : 20 % jusqu'à 700 k€, puis 31,25 % (vs 45 % pour la succession classique)"],
-                  ["age",  "Primes après 70 ans : seuls les intérêts sont exonérés ; le capital >30 500 € (global) rentre dans la succession"],
-                  ["note", "Rédiger une clause bénéficiaire précise (nominatif + quote-part) — une clause standard 'conjoint ou enfants' peut bloquer les fonds des années"],
-                ],
-              },
-            ].map(card => (
-              <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  {card.icon}
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{card.title}</span>
-                </div>
+              { icon: <Shield size={15} style={{ color: T.green }} />, title: "Fiscalité des rachats", items: [
+                ["time", "< 8 ans : PFU 30 % (12,8 % IR + 17,2 % PS) — comme un CTO"],
+                ["good", "≥ 8 ans : 7,5 % IR + 17,2 % PS APRÈS abattement 4 600 € / an"],
+                ["warn", "Si primes > 150 k€ (tous contrats) : 12,8 % IR sur la fraction dépassant 150 k€"],
+                ["calc", "Seule la part de gains est imposée : rachat partiel → gains × (rachat / valeur totale)"],
+                ["cycle","Les PS (17,2 %) s'appliquent sur les gains BRUTS, sans abattement"],
+              ]},
+              { icon: <Shield size={15} style={{ color: T.amber }} />, title: "Avantage successoral", items: [
+                ["gift", "Primes versées avant 70 ans : 152 500 € exonérés par bénéficiaire, hors droits de succession"],
+                ["stat", "Au-delà : 20 % jusqu'à 700 k€, puis 31,25 % (vs 45 % pour la succession classique)"],
+                ["age",  "Primes après 70 ans : seuls les intérêts sont exonérés ; le capital >30 500 € rentre dans la succession"],
+                ["note", "Rédigez une clause bénéficiaire précise (nominatif + quote-part) — une clause standard peut bloquer les fonds des années"],
+              ]},
+            ].map((col, i) => (
+              <div key={col.title} style={{ flex: 1, padding: "20px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : { paddingLeft: 0 }) }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>{col.icon}<span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{col.title}</span></div>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {card.items.map(([kind, text], i) => (
-                    <RuleItem key={i} kind={kind}>{text}</RuleItem>
-                  ))}
+                  {col.items.map(([kind, text], j) => <RuleItem key={j} kind={kind}>{text}</RuleItem>)}
                 </ul>
               </div>
             ))}
           </div>
 
-          {/* Calculateur */}
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Calculator size={16} style={{ color: T.blue }} />
-              <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Simulateur Assurance-Vie</span>
+          {/* Simulateur */}
+          <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <Calculator size={14} style={{ color: T.blue }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>Simulateur Assurance-Vie</span>
             </div>
             <div className="flex gap-4 flex-wrap mb-2">
               <div style={{ flex: "1 1 160px" }}>
@@ -889,43 +834,25 @@ export default function Tax() {
                 </div>
               </div>
             </div>
-
             {avResult && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, marginTop: 12 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 16, marginTop: 8, gap: 0 }}>
                 {[
-                  {
-                    label: avCalc.age === "8+" ? "AV ≥ 8 ans" : "AV < 8 ans",
-                    ir: avResult.ir, ps: avResult.ps, total: avResult.total,
-                    note: avCalc.age === "8+" ? `Abattement ${eur(avResult.abattement)} appliqué` : "PFU standard",
-                    color: avResult.total < avResult.cto ? T.green : T.amber,
-                    bg: "rgba(34,199,154,0.07)", border: "rgba(34,199,154,0.2)",
-                  },
-                  {
-                    label: "CTO (référence)",
-                    ir: avResult.cto * (TAX.PFU_IR / TAX.PFU), ps: avResult.cto * (TAX.PS / TAX.PFU), total: avResult.cto,
-                    note: "PFU 30 % sans abattement",
-                    color: T.red, bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.2)",
-                  },
-                  ...(avResult.total < avResult.cto ? [{
-                    label: "Économie vs CTO",
-                    total: avResult.cto - avResult.total,
-                    note: `Soit ${(((avResult.cto - avResult.total) / avResult.cto) * 100).toFixed(0)} % d'impôt économisé`,
-                    color: T.amber, bg: "rgba(245,166,35,0.08)", border: "rgba(245,166,35,0.25)",
-                  }] : []),
-                ].map(r => (
-                  <div key={r.label} style={{ background: r.bg, border: `1px solid ${r.border}`, borderRadius: 12, padding: "14px 16px" }}>
+                  { label: avCalc.age === "8+" ? "AV ≥ 8 ans" : "AV < 8 ans", total: avResult.total, detail: `IR : ${eur(avResult.ir)} · PS : ${eur(avResult.ps)}`, color: avResult.total < avResult.cto ? T.green : T.amber },
+                  { label: "CTO (référence)", total: avResult.cto, detail: `IR : ${eur(avResult.cto * (TAX.PFU_IR / TAX.PFU))} · PS : ${eur(avResult.cto * (TAX.PS / TAX.PFU))}`, color: T.red },
+                  ...(avResult.total < avResult.cto ? [{ label: "Économie vs CTO", total: avResult.cto - avResult.total, detail: `${(((avResult.cto - avResult.total) / avResult.cto) * 100).toFixed(0)} % d'impôt économisé`, color: T.amber }] : []),
+                ].map((r, i) => (
+                  <div key={r.label} style={{ flex: 1, minWidth: 120, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                     <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
-                    <div style={{ color: r.color, fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{eur(r.total)}</div>
-                    {r.ir != null && <div style={{ color: T.muted, fontSize: 11 }}>IR : {eur(r.ir)} · PS : {eur(r.ps)}</div>}
-                    <div style={{ color: T.muted, fontSize: 10, marginTop: 4, fontStyle: "italic" }}>{r.note}</div>
+                    <div style={{ color: r.color, fontSize: 22, fontWeight: 800 }}>{eur(r.total)}</div>
+                    <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{r.detail}</div>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Conseil */}
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+          {/* Stratégie */}
+          <div style={{ borderLeft: `3px solid ${T.blue}`, paddingLeft: 14, fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
             <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Ouvrez un contrat AV dès maintenant pour lancer le compteur des 8 ans. Privilégiez les contrats multisupports (ETF en unités de compte) à frais d'entrée et de gestion réduits. Effectuez vos rachats après 8 ans par tranches annuelles pour maximiser l'abattement de 4 600 € / 9 200 €. En matière de succession, l'AV est l'outil le plus puissant : chaque bénéficiaire peut recevoir 152 500 € sans aucun impôt.
           </div>
         </div>
@@ -962,52 +889,38 @@ export default function Tax() {
             ))}
           </div>
 
-          {/* Calculateur Plus-values */}
+          {/* Plus-values */}
           {immoMode === "pv" && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+              <div style={{ display: "flex", borderTop: `1px solid ${T.border}` }}>
                 {[
-                  {
-                    title: "Abattements IR (exonération à 22 ans)",
-                    color: "rgba(0,180,216,0.07)", border: "rgba(0,180,216,0.2)",
-                    rows: [
-                      ["< 6 ans", "0 %"], ["6 → 21 ans", "6 % / an"], ["22ème année", "+ 4 % → 100 %"], ["≥ 22 ans", "Exonéré IR"],
-                    ],
-                  },
-                  {
-                    title: "Abattements PS (exonération à 30 ans)",
-                    color: "rgba(245,166,35,0.06)", border: "rgba(245,166,35,0.2)",
-                    rows: [
-                      ["< 6 ans", "0 %"], ["6 → 21 ans", "1,65 % / an"], ["22ème année", "+ 1,6 %"], ["23 → 30 ans", "9 % / an → 100 %"],
-                    ],
-                  },
-                ].map(card => (
-                  <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
+                  { title: "Abattements IR — exonération à 22 ans", rows: [["< 6 ans","0 %"],["6 → 21 ans","6 % / an"],["22ème année","+ 4 % → 100 %"],["≥ 22 ans","Exonéré IR"]] },
+                  { title: "Abattements PS — exonération à 30 ans", rows: [["< 6 ans","0 %"],["6 → 21 ans","1,65 % / an"],["22ème année","+ 1,6 %"],["23 → 30 ans","9 % / an → 100 %"]] },
+                ].map((col, i) => (
+                  <div key={col.title} style={{ flex: 1, padding: "20px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : { paddingLeft: 0 }) }}>
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{col.title}</div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                      <tbody>
-                        {card.rows.map(([période, taux]) => (
-                          <tr key={période} style={{ borderBottom: `1px solid ${T.border}` }}>
-                            <td style={{ color: T.muted, padding: "5px 0" }}>{période}</td>
-                            <td style={{ color: T.text, fontWeight: 700, textAlign: "right", padding: "5px 0" }}>{taux}</td>
-                          </tr>
-                        ))}
-                      </tbody>
+                      <tbody>{col.rows.map(([p, t]) => (
+                        <tr key={p} style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ color: T.muted, padding: "5px 0" }}>{p}</td>
+                          <td style={{ color: T.text, fontWeight: 700, textAlign: "right", padding: "5px 0" }}>{t}</td>
+                        </tr>
+                      ))}</tbody>
                     </table>
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator size={16} style={{ color: T.blue }} />
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Calculateur de plus-value immobilière</span>
+              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Calculator size={14} style={{ color: T.blue }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>Calculateur plus-value immobilière</span>
                 </div>
                 <div className="flex gap-4 flex-wrap mb-4">
                   {[
-                    { key: "achat", label: "Prix d'acquisition (€)", placeholder: "200 000" },
-                    { key: "vente", label: "Prix de vente (€)",       placeholder: "320 000" },
-                    { key: "duree", label: "Durée de détention (ans)", placeholder: "12" },
+                    { key: "achat",   label: "Prix d'acquisition (€)",      placeholder: "200 000" },
+                    { key: "vente",   label: "Prix de vente (€)",            placeholder: "320 000" },
+                    { key: "duree",   label: "Durée de détention (ans)",     placeholder: "12" },
                     { key: "travaux", label: "Travaux réels (€, optionnel)", placeholder: "Forfait 15 % si >5 ans" },
                   ].map(f => (
                     <div key={f.key} style={{ flex: "1 1 180px" }}>
@@ -1017,82 +930,68 @@ export default function Tax() {
                     </div>
                   ))}
                 </div>
-
                 {immoResult && (
                   immoResult.pvBrute <= 0 ? (
-                    <div style={{ background: "rgba(34,199,154,0.1)", border: `1px solid rgba(34,199,154,0.3)`, borderRadius: 12, padding: "14px 18px" }}>
+                    <div style={{ borderLeft: `3px solid ${T.green}`, paddingLeft: 14, fontSize: 12, color: T.muted }}>
                       <span style={{ color: T.green, fontWeight: 700 }}>Pas de plus-value imposable.</span>
-                      <span style={{ color: T.muted, fontSize: 12, marginLeft: 8 }}>
-                        Prix de revient (achat + frais + travaux) : {eur(immoResult.prixRevient)} — vous vendez moins cher ou au même prix.
-                      </span>
+                      {" "}Prix de revient : {eur(immoResult.prixRevient)} — vous vendez au même prix ou moins cher.
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+                    <>
+                      <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 16, gap: 0 }}>
                         {[
-                          { label: "Plus-value brute",      value: eur(immoResult.pvBrute),  color: T.amber },
+                          { label: "Plus-value brute", value: eur(immoResult.pvBrute), color: T.amber },
                           { label: `IR 19 % (abat. ${immoResult.abatIR} %)`, value: eur(immoResult.ir), color: T.red },
                           { label: `PS 17,2 % (abat. ${immoResult.abatPS.toFixed(1)} %)`, value: eur(immoResult.ps), color: T.red },
-                          { label: "TOTAL À PAYER",         value: eur(immoResult.total),    color: immoResult.total > 0 ? T.red : T.green },
-                        ].map(r => (
-                          <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                          { label: "Total à payer", value: eur(immoResult.total), color: immoResult.total > 0 ? T.red : T.green },
+                        ].map((r, i) => (
+                          <div key={r.label} style={{ flex: 1, minWidth: 100, padding: "0 24px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                             <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
                             <div style={{ color: r.color, fontSize: 20, fontWeight: 800 }}>{r.value}</div>
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, padding: "8px 0" }}>
-                        Prix de revient retenu : {eur(immoResult.prixRevient)} (acquisition + frais notaire 7,5 % forfait
-                        {parseFloat(immoCalc.travaux) > 0 ? ` + ${eur(parseFloat(immoCalc.travaux))} travaux réels` : immoResult.duree >= 5 ? " + travaux forfait 15 %" : ""})
+                      <div style={{ fontSize: 11, color: T.muted, marginTop: 12 }}>
+                        Prix de revient retenu : {eur(immoResult.prixRevient)} (acquisition + frais notaire 7,5 % forfait{parseFloat(immoCalc.travaux) > 0 ? ` + ${eur(parseFloat(immoCalc.travaux))} travaux réels` : immoResult.duree >= 5 ? " + travaux forfait 15 %" : ""})
                       </div>
-                    </div>
+                    </>
                   )
                 )}
               </div>
             </>
           )}
 
-          {/* Calculateur Revenus locatifs */}
+          {/* Revenus locatifs */}
           {immoMode === "loc" && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+              <div style={{ display: "flex", borderTop: `1px solid ${T.border}` }}>
                 {[
-                  {
-                    title: "Location nue — régimes",
-                    color: "rgba(0,180,216,0.07)", border: "rgba(0,180,216,0.2)",
-                    items: [
-                      ["info", "Micro-foncier : revenus ≤ 15 000 €/an → abattement 30 % forfaitaire"],
-                      ["stat", "Régime réel : déduction charges réelles (intérêts, travaux, gestion, assurance…)"],
-                      ["tip",  "Déficit foncier réel imputable sur revenu global à hauteur de 10 700 €/an"],
-                      ["warn", "Micro-foncier interdit si vous avez des parts de SCPI ou un Monument Historique"],
-                    ],
-                  },
-                  {
-                    title: "LMNP — Meublé non professionnel",
-                    color: "rgba(245,166,35,0.06)", border: "rgba(245,166,35,0.2)",
-                    items: [
-                      ["sofa", "Micro-BIC : revenus ≤ 77 700 €/an → abattement 50 % (71 % si meublé classé)"],
-                      ["job",  "LMNP réel : amortissement comptable du bien + travaux → résultat souvent nul ou déficitaire"],
-                      ["best", "Meilleur régime fiscal locatif : les amortissements permettent souvent 0 € d'impôt pendant 20-30 ans"],
-                      ["note", "Nécessite un expert-comptable et une déclaration 2031 + bilan"],
-                    ],
-                  },
-                ].map(card => (
-                  <div key={card.title} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{card.title}</div>
+                  { title: "Location nue — régimes", items: [
+                    ["info", "Micro-foncier : revenus ≤ 15 000 €/an → abattement 30 % forfaitaire"],
+                    ["stat", "Régime réel : déduction charges réelles (intérêts, travaux, gestion, assurance…)"],
+                    ["tip",  "Déficit foncier réel imputable sur revenu global à hauteur de 10 700 €/an"],
+                    ["warn", "Micro-foncier interdit si vous avez des parts de SCPI ou un Monument Historique"],
+                  ]},
+                  { title: "LMNP — Meublé non professionnel", items: [
+                    ["sofa", "Micro-BIC : revenus ≤ 77 700 €/an → abattement 50 % (71 % si meublé classé)"],
+                    ["job",  "LMNP réel : amortissement du bien + travaux → résultat souvent nul ou déficitaire"],
+                    ["best", "Les amortissements permettent souvent 0 € d'impôt pendant 20-30 ans"],
+                    ["note", "Nécessite un expert-comptable et une déclaration 2031 + bilan"],
+                  ]},
+                ].map((col, i) => (
+                  <div key={col.title} style={{ flex: 1, padding: "20px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : { paddingLeft: 0 }) }}>
+                    <div style={{ color: T.text, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>{col.title}</div>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      {card.items.map(([kind, text], i) => (
-                        <RuleItem key={i} kind={kind}>{text}</RuleItem>
-                      ))}
+                      {col.items.map(([kind, text], j) => <RuleItem key={j} kind={kind}>{text}</RuleItem>)}
                     </ul>
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px" }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator size={16} style={{ color: T.blue }} />
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Calculateur revenus locatifs (location nue)</span>
+              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Calculator size={14} style={{ color: T.blue }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>Calculateur revenus locatifs</span>
                 </div>
                 <div className="flex gap-4 flex-wrap mb-4">
                   <div style={{ flex: "1 1 160px" }}>
@@ -1126,47 +1025,40 @@ export default function Tax() {
                     </select>
                   </div>
                 </div>
-
                 {locResult && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10, marginTop: 4 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 16, gap: 0 }}>
                     {[
                       { label: locCalc.regime === "micro" ? "Revenu net (−30 %)" : "Revenu imposable", value: eur(locResult.net), color: T.text },
                       { label: `IR (${locCalc.tmi} %)`, value: eur(locResult.ir), color: T.amber },
-                      { label: "PS (17,2 %)",            value: eur(locResult.ps), color: T.amber },
-                      { label: "Total charges fiscales", value: eur(locResult.total), color: T.red },
-                      { label: "Net après impôt",        value: eur((parseFloat(locCalc.loyers) || 0) - locResult.total), color: T.green },
-                    ].map(r => (
-                      <div key={r.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                      { label: "PS (17,2 %)", value: eur(locResult.ps), color: T.amber },
+                      { label: "Charges fiscales", value: eur(locResult.total), color: T.red },
+                      { label: "Net après impôt", value: eur((parseFloat(locCalc.loyers) || 0) - locResult.total), color: T.green },
+                      ...(locResult.deficit > 0 ? [{ label: "Déficit foncier", value: eur(locResult.deficit), color: T.green }] : []),
+                    ].map((r, i) => (
+                      <div key={r.label} style={{ flex: 1, minWidth: 100, padding: "0 20px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                         <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>{r.label}</div>
-                        <div style={{ color: r.color, fontSize: 20, fontWeight: 800 }}>{r.value}</div>
+                        <div style={{ color: r.color, fontSize: 18, fontWeight: 800 }}>{r.value}</div>
                       </div>
                     ))}
-                    {locResult.deficit > 0 && (
-                      <div style={{ background: "rgba(34,199,154,0.08)", border: `1px solid rgba(34,199,154,0.25)`, borderRadius: 12, padding: "12px 14px" }}>
-                        <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>Déficit foncier</div>
-                        <div style={{ color: T.green, fontSize: 20, fontWeight: 800 }}>{eur(locResult.deficit)}</div>
-                        <div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>Imputable sur revenu global (max 10 700 €)</div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
               {/* IFI */}
-              <div style={{ background: "rgba(239,68,68,0.06)", border: `1px solid rgba(239,68,68,0.2)`, borderRadius: 14, padding: "16px 18px" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle size={15} style={{ color: T.red }} />
-                  <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>IFI — Impôt sur la Fortune Immobilière</span>
+              <div style={{ borderLeft: `3px solid ${T.red}`, paddingLeft: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <AlertTriangle size={13} style={{ color: T.red }} />
+                  <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>IFI — Impôt sur la Fortune Immobilière</span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, fontSize: 12, color: T.muted }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 12, color: T.muted }}>
                   {[
                     { Icon: Zap,       color: T.red,   content: <>Déclenché si patrimoine immobilier net &gt; <strong style={{ color: T.text }}>800 000 €</strong></> },
                     { Icon: Home,      color: T.blue,  content: <>Résidence principale : abattement <strong style={{ color: T.text }}>30 %</strong></> },
-                    { Icon: BarChart3, color: T.amber, content: "Taux : 0,5 % → 0,7 % → 1 % → 1,25 % → 1,5 % (progressif)" },
-                    { Icon: Lightbulb, color: T.amber, content: <>Actions, crypto, liquidités : <strong style={{ color: T.green }}>hors IFI</strong> (uniquement l'immobilier)</> },
+                    { Icon: BarChart3, color: T.amber, content: "Taux progressif : 0,5 % → 1,5 %" },
+                    { Icon: Lightbulb, color: T.amber, content: <>Actions, crypto, liquidités : <strong style={{ color: T.green }}>hors IFI</strong></> },
                   ].map((row, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <row.Icon size={13} style={{ color: row.color, opacity: 0.85, flexShrink: 0, marginTop: 1 }} />
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, flex: "1 1 180px" }}>
+                      <row.Icon size={12} style={{ color: row.color, flexShrink: 0, marginTop: 2 }} />
                       <span>{row.content}</span>
                     </div>
                   ))}
@@ -1175,9 +1067,9 @@ export default function Tax() {
             </>
           )}
 
-          {/* Conseil */}
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
-            <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Pour la location longue durée, le LMNP au réel est presque toujours supérieur à la location nue : l'amortissement comptable du bien (2-4 % / an) génère un déficit BIC qui efface les loyers pendant 20-30 ans. Pour les plus-values, conserver un bien locatif 22 ans efface 100 % de l'IR, et 30 ans efface 100 % des PS. Sur la résidence principale, toute plus-value est totalement exonérée sans aucun délai ni aucun plafond.
+          {/* Stratégie */}
+          <div style={{ borderLeft: `3px solid ${T.blue}`, paddingLeft: 14, fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
+            <span style={{ color: T.blue, fontWeight: 700 }}>Stratégie optimale :</span> Pour la location longue durée, le LMNP au réel est presque toujours supérieur à la location nue : l'amortissement du bien génère un déficit BIC qui efface les loyers pendant 20-30 ans. Pour les plus-values, conserver un bien locatif 22 ans efface 100 % de l'IR, et 30 ans efface 100 % des PS. Sur la résidence principale, toute plus-value est totalement exonérée sans délai ni plafond.
           </div>
         </div>
       )}
@@ -1274,35 +1166,34 @@ export default function Tax() {
             ))}
           </div>
 
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 22px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <Briefcase size={16} style={{ color: T.blue }} />
-              <h2 style={{ color: T.text, fontSize: 16, fontWeight: 800, margin: 0 }}>PER — Plan d'Épargne Retraite</h2>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, color: T.muted, fontSize: 13, lineHeight: 1.7 }}>
-              <li><strong style={{ color: T.text }}>À l'entrée</strong> : versements déductibles du revenu imposable, plafonnés à 10 % des revenus professionnels (ou 10 % du PASS si plus favorable). Gain = votre TMI × versement.</li>
-              <li><strong style={{ color: T.text }}>À la sortie en capital</strong> : la part <em>versements</em> est imposée au barème de l'IR (sans PS) ; la part <em>plus-values</em> au PFU 30 %.</li>
-              <li><strong style={{ color: T.text }}>Sortie en rente</strong> : imposée selon le régime des rentes viagères à titre gratuit (RVTG).</li>
-              <li><strong style={{ color: T.text }}>Déblocage anticipé</strong> : achat de la résidence principale ou accidents de la vie (invalidité, décès du conjoint, surendettement…).</li>
-              <li style={{ color: T.amber }}>Astuce : la déduction à l'entrée est d'autant plus intéressante que votre TMI est élevée aujourd'hui et plus basse à la retraite.</li>
-            </ul>
+          <div style={{ display: "flex", borderTop: `1px solid ${T.border}` }}>
+            {[
+              { icon: <Briefcase size={15} style={{ color: T.blue }} />, title: "PER — Plan d'Épargne Retraite", items: [
+                ["good",  "À l'entrée : versements déductibles du revenu, plafonnés à 10 % des revenus pro. Gain = TMI × versement."],
+                ["info",  "À la sortie en capital : versements au barème IR (sans PS) ; plus-values au PFU 30 %."],
+                ["stat",  "Sortie en rente : imposée selon le régime des rentes viagères à titre gratuit (RVTG)."],
+                ["cycle", "Déblocage anticipé : achat résidence principale, invalidité, décès du conjoint, surendettement…"],
+                ["tip",   "Plus votre TMI est élevée aujourd'hui et faible à la retraite, plus le PER est avantageux."],
+              ]},
+              { icon: <Gift size={15} style={{ color: T.green }} />, title: "PEE / PERCO — Épargne salariale", items: [
+                ["good",  "Abondement employeur + intéressement/participation placés : exonérés d'IR dans les plafonds légaux."],
+                ["stat",  "Plus-values exonérées d'IR à la sortie — uniquement PS à 17,2 %."],
+                ["time",  "Blocage 5 ans (PEE) ou jusqu'à la retraite (PERCO)."],
+                ["cycle", "Déblocage anticipé : mariage/PACS, 3ᵉ enfant, achat RP, fin de contrat, etc."],
+              ]},
+            ].map((col, i) => (
+              <div key={col.title} style={{ flex: 1, padding: "20px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : { paddingLeft: 0 }) }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>{col.icon}<span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{col.title}</span></div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {col.items.map(([kind, text], j) => <RuleItem key={j} kind={kind}>{text}</RuleItem>)}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 22px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <Gift size={16} style={{ color: T.green }} />
-              <h2 style={{ color: T.text, fontSize: 16, fontWeight: 800, margin: 0 }}>PEE / PERCO — Épargne salariale</h2>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, color: T.muted, fontSize: 13, lineHeight: 1.7 }}>
-              <li><strong style={{ color: T.text }}>Versements</strong> volontaires non déductibles, mais l'<strong style={{ color: T.text }}>abondement employeur</strong> et l'intéressement/participation placés sont exonérés d'impôt sur le revenu (dans les plafonds légaux).</li>
-              <li><strong style={{ color: T.text }}>Plus-values</strong> exonérées d'IR à la sortie, soumises uniquement aux prélèvements sociaux à <strong style={{ color: T.text }}>17,2 %</strong>.</li>
-              <li><strong style={{ color: T.text }}>Blocage 5 ans</strong> (PEE) ou jusqu'à la retraite (PERCO), avec cas de déblocage anticipé : mariage/PACS, naissance du 3ᵉ enfant, achat RP, fin de contrat, etc.</li>
-            </ul>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(91,141,239,0.08)", border: `1px solid ${T.blue}33`, borderRadius: 12, padding: "12px 16px", color: T.muted, fontSize: 12 }}>
-            <Info size={14} style={{ color: T.blue, flexShrink: 0, marginTop: 2 }} />
-            <span>Informations générales à jour des règles {CURRENT_YEAR}. Aucun calculateur ici — les montants dépendent de votre TMI et de plafonds individuels. Vérifiez votre disponibilité d'épargne retraite sur votre avis d'imposition (« Plafond épargne retraite »).</span>
+          <div style={{ borderLeft: `3px solid ${T.blue}`, paddingLeft: 14, fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
+            <Info size={12} style={{ color: T.blue, marginRight: 6, verticalAlign: "middle" }} />
+            Informations à jour {CURRENT_YEAR}. Les montants dépendent de votre TMI et plafonds individuels — vérifiez votre disponibilité d'épargne retraite sur votre avis d'imposition.
           </div>
         </div>
       )}

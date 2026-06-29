@@ -1417,11 +1417,13 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
       <Card>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <div className="lg:col-span-2">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {PILLARS.map((p) => {
+      <div className="grid grid-cols-2 md:grid-cols-3">
+        {PILLARS.map((p, i) => {
           const Icon = p.icon;
           const overridden = monthAdj[p.key] != null;
           const hovered = hoverKey === p.key;
+          const sepR = i % 3 !== 2 ? `1px solid ${T.border}` : "none";
+          const sepB = i < 3 ? `1px solid ${T.border}` : "none";
           return (
             <div key={p.key} role="button" tabIndex={0}
               onClick={() => openEdit(p)}
@@ -1429,11 +1431,16 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
               onMouseEnter={() => setHoverKey(p.key)}
               onMouseLeave={() => setHoverKey(null)}
               title="Cliquer pour ajuster manuellement"
-              className="rounded-2xl p-4 relative"
+              className="p-4 relative"
               style={{
-                cursor: "pointer", background: hovered ? "rgba(59,130,246,0.04)" : "transparent",
-                border: `1px solid ${hovered ? T.blue : (overridden ? `${T.blue}55` : "transparent")}`,
-                transition: "border-color .15s ease, background .15s ease",
+                cursor: "pointer",
+                background: hovered ? "rgba(59,130,246,0.04)" : "transparent",
+                borderRight: hovered ? "none" : sepR,
+                borderBottom: hovered ? "none" : sepB,
+                outline: hovered ? `1px solid ${T.blue}` : (overridden ? `1px solid ${T.blue}55` : "none"),
+                outlineOffset: "-1px",
+                borderRadius: 16,
+                transition: "background .15s ease, outline .15s ease",
               }}>
               <div className="flex items-start justify-between gap-1">
                 <span className="text-xs" style={{ color: T.muted }}>{p.label}</span>
@@ -1452,16 +1459,16 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             </div>
           );
         })}
-        {/* Restant à vivre (dérivé) */}
-        <div className="rounded-2xl p-4" style={{ background: "transparent" }}>
+        {/* Restant à vivre (dérivé) — index 4 */}
+        <div className="p-4" style={{ background: "transparent", borderRight: `1px solid ${T.border}`, borderRadius: 16 }}>
           <div className="flex items-start justify-between gap-1">
             <span className="text-xs" style={{ color: T.muted }}>Restant à vivre</span>
             <Wallet size={15} style={{ color: T.green, opacity: 0.6, flexShrink: 0 }} />
           </div>
           <div className="text-xl font-bold mt-2" style={{ color: T.green }}><AnimatedNumber value={restant} formatter={fmt} duration={0.25} /></div>
         </div>
-        {/* Taux d'épargne (dérivé) */}
-        <div className="rounded-2xl p-4" style={{ background: "transparent" }}>
+        {/* Taux d'épargne (dérivé) — index 5 */}
+        <div className="p-4" style={{ background: "transparent", borderRadius: 16 }}>
           <div className="flex items-start justify-between gap-1">
             <span className="text-xs" style={{ color: T.muted }}>Taux d'épargne</span>
             <ArrowUpRight size={15} style={{ color: T.blue, opacity: 0.6, flexShrink: 0 }} />

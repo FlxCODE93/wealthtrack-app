@@ -646,7 +646,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
 
       {/* Summary — bande horizontale */}
       {!marketsOnly && (
-        <div style={{ padding: "4px 0 16px 0" }}>
+        <div style={{ padding: "8px 0 24px 0" }}>
           <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
               { label: "Valeur totale", value: fmtCtx(totalValue), color: T.text },
@@ -654,9 +654,9 @@ export default function Crypto({ setView, marketsOnly = false }) {
               { label: "Performance", value: pct(totalGainP), color: totalGainP >= 0 ? T.green : T.red },
               { label: "Positions", value: `${holdings.length}`, color: T.blue },
             ].map(({ label, value, color }, i) => (
-              <div key={i} style={{ flex: 1, minWidth: 100, padding: "0 24px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
-                <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>{label}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+              <div key={i} style={{ flex: 1, minWidth: 100, padding: "0 36px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+                <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 8 }}>{label}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
               </div>
             ))}
           </div>

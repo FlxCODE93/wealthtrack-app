@@ -3374,106 +3374,110 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
           ))}
         </div>
       )}
-      <div className="flex flex-wrap items-baseline gap-3 mb-5">
-        <h2 className="text-xl font-bold" style={{ color: T.text }}>{title}</h2>
-        <span className="text-sm" style={{ color: T.muted }}>{rate}</span>
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl p-4"
-            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-            <div className="text-sm" style={{ color: T.muted }}>{s.label}</div>
-            <div className="text-2xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
 
-      {logScale && (
-        <div className="mb-3">
-          <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
+        {/* Colonne gauche : titre + KPIs + note */}
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-xl font-bold" style={{ color: T.text }}>{title}</h2>
+            <span className="text-sm" style={{ color: T.muted }}>{rate}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map((s) => (
+              <div key={s.label} className="rounded-xl p-4"
+                style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                <div className="text-xs" style={{ color: T.muted }}>{s.label}</div>
+                <div className="text-xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl p-4 text-xs" style={{ background: "rgba(59,130,246,0.04)", color: T.muted, lineHeight: 1.6 }}>
+            {note}
+          </div>
         </div>
-      )}
 
-      <ExpandableChart height={280} title={title}>
-        {logScale ? (
-          <ComposedChart data={logData}>
-            <defs>
-              <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T.green} stopOpacity={0.45} />
-                <stop offset="100%" stopColor={T.green} stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
-              tickFormatter={logFmt} width={64} />
-            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-            {hasBand && (
-              <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
-                stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
-            )}
-            <Area type="monotone" dataKey="logCapital" name="Capital total"
-              stroke={T.green} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
-            <Line type="monotone" dataKey="logApports" name="Apports cumulés"
-              stroke={T.blue} strokeWidth={1.5} dot={false} />
-          </ComposedChart>
-        ) : (
-          <ComposedChart data={augmentedData}>
-            <defs>
-              <linearGradient id={`gA${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T.blue} stopOpacity={0.12} />
-                <stop offset="100%" stopColor={T.blue} stopOpacity={0.04} />
-              </linearGradient>
-              <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T.green} stopOpacity={0.52} />
-                <stop offset="100%" stopColor={T.green} stopOpacity={0.12} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-            <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
-              tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
-            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-            {hasBand && (
-              <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
-                stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
-            )}
-            <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
-              stroke={T.blue} strokeWidth={1.5}
-              fill={`url(#gA${chartKey})`} />
-            <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
-              stroke={T.green} strokeWidth={2.5}
-              fill={`url(#gG${chartKey})`} />
-          </ComposedChart>
-        )}
-      </ExpandableChart>
-
-
-      {/* Summary at horizon */}
-      {(() => {
-        const last = detailedData[detailedData.length - 1];
-        if (!last) return null;
-        return (
-          <div className="mt-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
-                { label: "Vos apports", value: eur(last.apports), color: T.muted },
-                { label: "Gains générés", value: "+" + eur(last.gains), color: T.green },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl p-3 text-center"
-                  style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                  <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
-                  <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
-                </div>
-              ))}
+        {/* Colonne droite : graphe + résumé */}
+        <div className="flex flex-col gap-4">
+          {logScale && (
+            <div>
+              <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
             </div>
-          </div>
-        );
-      })()}
+          )}
+          <ExpandableChart height={280} title={title}>
+            {logScale ? (
+              <ComposedChart data={logData}>
+                <defs>
+                  <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.green} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={T.green} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
+                <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
+                  tickFormatter={logFmt} width={64} />
+                <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
+                {hasBand && (
+                  <Area type="monotone" dataKey="logRange" name="Fourchette pess. → opt." legendType="none"
+                    stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+                )}
+                <Area type="monotone" dataKey="logCapital" name="Capital total"
+                  stroke={T.green} strokeWidth={2.5} fill={`url(#gG${chartKey})`} />
+                <Line type="monotone" dataKey="logApports" name="Apports cumulés"
+                  stroke={T.blue} strokeWidth={1.5} dot={false} />
+              </ComposedChart>
+            ) : (
+              <ComposedChart data={augmentedData}>
+                <defs>
+                  <linearGradient id={`gA${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.blue} stopOpacity={0.12} />
+                    <stop offset="100%" stopColor={T.blue} stopOpacity={0.04} />
+                  </linearGradient>
+                  <linearGradient id={`gG${chartKey}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.green} stopOpacity={0.52} />
+                    <stop offset="100%" stopColor={T.green} stopOpacity={0.12} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
+                <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
+                  tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
+                <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
+                {hasBand && (
+                  <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
+                    stroke="none" fill={T.green} fillOpacity={0.16} isAnimationActive={false} activeDot={false} />
+                )}
+                <Area type="monotone" dataKey="apports" name="Apports cumulés" stackId="s"
+                  stroke={T.blue} strokeWidth={1.5}
+                  fill={`url(#gA${chartKey})`} />
+                <Area type="monotone" dataKey="gains" name="Gains composés" stackId="s"
+                  stroke={T.green} strokeWidth={2.5}
+                  fill={`url(#gG${chartKey})`} />
+              </ComposedChart>
+            )}
+          </ExpandableChart>
 
-      <div className="rounded-xl p-4 mt-4 text-sm" style={{ background: "rgba(59,130,246,0.04)", color: T.muted }}>
-        {note}
+          {/* Résumé à l'horizon */}
+          {(() => {
+            const last = detailedData[detailedData.length - 1];
+            if (!last) return null;
+            return (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Capital à l'horizon", value: eur(last.capital), color: lineColor },
+                  { label: "Vos apports", value: eur(last.apports), color: T.muted },
+                  { label: "Gains générés", value: "+" + eur(last.gains), color: T.green },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl p-3 text-center"
+                    style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                    <div className="text-xs mb-1" style={{ color: T.muted }}>{s.label}</div>
+                    <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </Card>
   );

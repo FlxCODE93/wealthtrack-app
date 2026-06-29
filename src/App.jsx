@@ -5558,116 +5558,248 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </button>
       </div>
 
-      {/* Évolution + Performance côte à côte (façon Finary) */}
+      {/* Bloc unifié Patrimoine */}
       {hasData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+
+          {/* ── Header : valeur nette + pills ── */}
+          <div style={{ padding: "24px 28px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold" style={{ color: T.text }}>Patrimoine net</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ color: T.muted, fontWeight: 700, fontSize: 13, letterSpacing: "0.03em", textTransform: "uppercase" }}>Patrimoine net</span>
                 <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
                   icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
                   label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
               </div>
+              <div style={{ fontSize: 38, fontWeight: 800, color: T.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmt(netWorth)}</div>
+              <div style={{ marginTop: 6, fontSize: 13, color: monthlyChange >= 0 ? T.green : T.red, display: "flex", alignItems: "center", gap: 3 }}>
+                {monthlyChange >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                {monthlyChange >= 0 ? "+" : ""}{fmt(monthlyChange)} ce mois
+              </div>
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {HIST_RANGES.map(r => (
-                <button key={r.label} onClick={() => setHistRange(r.label)}
-                  style={{
-                    padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
-                    background: histRange === r.label ? T.blue : "transparent",
-                    color: histRange === r.label ? "#fff" : T.muted,
-                    border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
-                    transition: "all .15s ease",
-                  }}>{r.label}</button>
+                <button key={r.label} onClick={() => setHistRange(r.label)} style={{
+                  padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
+                  background: histRange === r.label ? T.blue : "transparent",
+                  color: histRange === r.label ? "#fff" : T.muted,
+                  border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
+                  transition: "all .15s ease",
+                }}>{r.label}</button>
               ))}
             </div>
           </div>
-          <ExpandableChart height={280} title="Patrimoine net"
-            controls={
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {HIST_RANGES.map(r => (
-                  <button key={r.label} onClick={() => setHistRange(r.label)}
-                    style={{
-                      padding: "4px 10px", fontSize: 12, borderRadius: 8, fontWeight: 600, cursor: "pointer",
-                      background: histRange === r.label ? T.blue : "transparent",
-                      color: histRange === r.label ? "#fff" : T.muted,
-                      border: `1px solid ${histRange === r.label ? T.blue : T.border}`,
-                      transition: "all .15s ease",
-                    }}>{r.label}</button>
-                ))}
-              </div>
-            }
-          >
-            <AreaChart data={chartHist}>
-              <defs>
-                <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={T.blue} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-              <XAxis dataKey="m" stroke={T.muted} tick={{ fontSize: 11 }} minTickGap={histMonths > 12 ? 55 : 38} />
-              <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
-                tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
-              <Tooltip {...chartTip} formatter={(v) => eur(v)} />
-              <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2.5}
-                fill="url(#gradNW)" dot={false} />
-            </AreaChart>
-          </ExpandableChart>
-        </Card>
 
-        {/* Répartition donut */}
-        <Card className="flex flex-col">
-          <div className="mb-2 text-center">
-            <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Répartition</h2>
-            <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+          {/* ── Chart ── */}
+          <div style={{ height: 210, padding: "0 12px 0 0" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartHist} margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.blue} stopOpacity={0.22} />
+                    <stop offset="100%" stopColor={T.blue} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} horizontal={false} />
+                <XAxis dataKey="m" stroke="transparent" tick={{ fontSize: 11, fill: T.muted }} minTickGap={histMonths > 12 ? 55 : 38} axisLine={false} tickLine={false} />
+                <YAxis stroke="transparent" tick={{ fontSize: 11, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={42} />
+                <Tooltip {...chartTip} formatter={(v) => eur(v)} />
+                <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2.5} fill="url(#gradNW)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <ExpandableChart height={280} title="Répartition du patrimoine"
-            overlay={
-              activeSlice != null && allSlices[activeSlice] ? (
-                <>
-                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
-                  <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
-                  <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                    {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
-                  <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
-                </>
-              )
-            }
-            legend={
-              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
-                {allSlices.map((s, i) => (
-                  <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                    {s.name}
-                    <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                  </span>
+
+          {/* ── Séparateur ── */}
+          <div style={{ borderTop: `1px solid ${T.border}` }} />
+
+          {/* ── Tabs Actifs / Passifs / Répartition ── */}
+          <div style={{ padding: "0 28px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ display: "flex" }}>
+                {["actifs", "passifs", "répartition"].map(tab => (
+                  <button key={tab} onClick={() => setPatTab(tab)} style={{
+                    padding: "14px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer",
+                    background: "none", border: "none",
+                    color: patTab === tab ? T.text : T.muted,
+                    borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
+                    marginBottom: -1, transition: "all .15s",
+                  }}>
+                    {tab === "actifs" ? "Actifs" : tab === "passifs" ? "Passifs" : "Répartition"}
+                  </button>
                 ))}
               </div>
-            }
-          >
-            <PieChart>
-              <Pie data={allSlices} dataKey="value" nameKey="name"
-                innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-                stroke="none" startAngle={90} endAngle={-270}
-                activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-                onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-                {allSlices.map((s, i) => (
-                  <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
-                    style={{ transition: "opacity 0.2s" }} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ExpandableChart>
+              {patTab !== "répartition" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
+                    Catégories
+                    <button onClick={() => setGroupByType(g => !g)} style={{
+                      width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                      background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
+                    }}>
+                      <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
+                    </button>
+                  </label>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
+                    <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
+                      style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Contenu tab ── */}
+          <div style={{ padding: "0 28px 28px" }}>
+            {patTab === "répartition" ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center", paddingTop: 24 }}>
+                {/* Donut */}
+                <div style={{ height: 300, position: "relative" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={allSlices} dataKey="value" nameKey="name"
+                        innerRadius="58%" outerRadius="82%" paddingAngle={3} cornerRadius={7}
+                        stroke="none" startAngle={90} endAngle={-270}
+                        activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                        onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                        {allSlices.map((s, i) => (
+                          <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42} style={{ transition: "opacity 0.2s" }} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Centre overlay */}
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                    {activeSlice != null && allSlices[activeSlice] ? (
+                      <>
+                        <span style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{allSlices[activeSlice].name}</span>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
+                        <span style={{ fontSize: 12, color: T.muted }}>{pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</span>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {/* Légende détaillée */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {allSlices.map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                      padding: "8px 12px", borderRadius: 10,
+                      background: activeSlice === i ? `${s.color}12` : "transparent",
+                      transition: "background .15s",
+                      cursor: "default",
+                    }}
+                      onMouseEnter={() => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                        <span style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{s.name}</span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{fmt(s.value)}</span>
+                        <span style={{ color: T.muted, fontSize: 12, marginLeft: 8 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : editMode ? (
+              <div style={{ marginTop: 16 }}>
+                {patTab === "actifs"
+                  ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))
+                  : (patrimoine.passifs || []).map(cat => renderCategory(cat, "passifs"))}
+              </div>
+            ) : (() => {
+              const isPassif = patTab === "passifs";
+              const rawItems = isPassif ? flatPassifs : flatActifs;
+              const totalVal = isPassif ? totalPassifs : totalActifs;
+              let items = rawItems.filter(r => !assetSearch ||
+                (r.label || "").toLowerCase().includes(assetSearch.toLowerCase()) ||
+                (r.catLabel || "").toLowerCase().includes(assetSearch.toLowerCase()));
+              items = [...items].sort((a, b) => {
+                const va = typeof a[sortKey] === "string" ? a[sortKey] : (a[sortKey] ?? 0);
+                const vb = typeof b[sortKey] === "string" ? b[sortKey] : (b[sortKey] ?? 0);
+                return typeof va === "string" ? sortDir * va.localeCompare(vb) : sortDir * (va - vb);
+              });
+              const rows = groupByType
+                ? [...new Set(items.map(i => i.catId))].flatMap(catId => {
+                    const grp = items.filter(i => i.catId === catId);
+                    return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
+                  })
+                : items;
+              const COL = "2.5fr 1.2fr 0.9fr 1fr 32px";
+              const SortBtn = ({ k, label }) => (
+                <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+                    color: sortKey === k ? T.text : T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                    display: "flex", alignItems: "center", gap: 3 }}>
+                  {label} <span style={{ opacity: sortKey === k ? 1 : 0.35 }}>{sortKey === k && sortDir === 1 ? "↑" : "↓"}</span>
+                </button>
+              );
+              return (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", paddingBottom: 10, marginTop: 16, borderBottom: `1px solid ${T.border}` }}>
+                    <SortBtn k="label" label="Nom" />
+                    <SortBtn k="catLabel" label="Type" />
+                    <SortBtn k="allocPct" label="Répartition" />
+                    <SortBtn k="value" label="Valeur" />
+                    <span />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "12px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
+                      Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
+                    </span>
+                    <span /><span />
+                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
+                    <span />
+                  </div>
+                  {rows.map((row, i) => row.isGroupHeader ? (
+                    <div key={"gh" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0 6px", borderBottom: `1px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 4, background: row.catColor, flexShrink: 0 }} />
+                      {row.catLabel} <span style={{ fontWeight: 400 }}>· {row.count} · {fmt(row.catTotal)}</span>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        {(() => { const logo = getBankLogo(row.label, row.catLabel); return (
+                          <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                            {logo
+                              ? <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.innerHTML = `<span style="font-size:11px;font-weight:800;color:${row.catColor}">${row.initials}</span>`; }} />
+                              : <span style={{ fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</span>}
+                          </div>
+                        ); })()}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
+                          <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
+                        </div>
+                      </div>
+                      <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 8, background: `${row.catColor}18`, color: row.catColor, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        {(() => { const r2=11,sw=3,circ=2*Math.PI*r2,dash=Math.min(100,row.allocPct)/100*circ; return (
+                          <svg width={28} height={28} style={{ transform:"rotate(-90deg)", flexShrink:0 }}>
+                            <circle cx={14} cy={14} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw}/>
+                            <circle cx={14} cy={14} r={r2} fill="none" stroke={row.catColor} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeLinecap="round"/>
+                          </svg>
+                        ); })()}
+                        <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
+                        {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
+                      </div>
+                      {!row.isDerived && !row.isSync
+                        ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>
+                        : <span />}
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </div>
         </Card>
-        </div>
       )}
 
       {/* Accès rapides aux composantes du patrimoine */}
@@ -5722,139 +5854,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         </Card>
       )}
 
-      {/* Finary-style table Actifs / Passifs + Donut */}
-      {hasData && (
-      <div className="grid grid-cols-1 gap-6 items-start">
-      <Card>
-        {/* Tabs + controls */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-          <div style={{ display: "flex", gap: 0, borderBottom: `2px solid ${T.border}` }}>
-            {["actifs", "passifs"].map(tab => (
-              <button key={tab} onClick={() => setPatTab(tab)} style={{
-                padding: "6px 22px 10px", fontWeight: 700, fontSize: 15, cursor: "pointer",
-                background: "none", border: "none",
-                color: patTab === tab ? T.text : T.muted,
-                borderBottom: `2px solid ${patTab === tab ? T.blue : "transparent"}`,
-                marginBottom: -2, transition: "all .15s",
-              }}>{tab === "actifs" ? "Actifs" : "Passifs"}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
-              Catégories
-              <button onClick={() => setGroupByType(g => !g)} style={{
-                width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-                background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
-              }}>
-                <span style={{ position: "absolute", top: 3, left: groupByType ? 21 : 3, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left .2s" }} />
-              </button>
-            </label>
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <Search size={13} style={{ position: "absolute", left: 10, color: T.muted, pointerEvents: "none" }} />
-              <input placeholder="Rechercher" value={assetSearch} onChange={e => setAssetSearch(e.target.value)}
-                style={{ ...inp, paddingLeft: 30, paddingTop: 7, paddingBottom: 7, fontSize: 13, width: 180 }} />
-            </div>
-          </div>
-        </div>
-
-        {editMode ? (
-          <div>
-            {patTab === "actifs"
-              ? effectiveActifs.map(cat => renderCategory(cat, "actifs"))
-              : (patrimoine.passifs || []).map(cat => renderCategory(cat, "passifs"))}
-          </div>
-        ) : (() => {
-          const isPassif = patTab === "passifs";
-          const rawItems = isPassif ? flatPassifs : flatActifs;
-          const totalVal = isPassif ? totalPassifs : totalActifs;
-          let items = rawItems.filter(r => !assetSearch ||
-            (r.label || "").toLowerCase().includes(assetSearch.toLowerCase()) ||
-            (r.catLabel || "").toLowerCase().includes(assetSearch.toLowerCase()));
-          items = [...items].sort((a, b) => {
-            const va = typeof a[sortKey] === "string" ? a[sortKey] : (a[sortKey] ?? 0);
-            const vb = typeof b[sortKey] === "string" ? b[sortKey] : (b[sortKey] ?? 0);
-            return typeof va === "string" ? sortDir * va.localeCompare(vb) : sortDir * (va - vb);
-          });
-          const rows = groupByType
-            ? [...new Set(items.map(i => i.catId))].flatMap(catId => {
-                const grp = items.filter(i => i.catId === catId);
-                return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
-              })
-            : items;
-          const COL = "2.5fr 1.2fr 0.9fr 1fr 32px";
-          const SortBtn = ({ k, label }) => (
-            <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
-                color: sortKey === k ? T.text : T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
-                display: "flex", alignItems: "center", gap: 3 }}>
-              {label} <span style={{ opacity: sortKey === k ? 1 : 0.35 }}>{sortKey === k && sortDir === 1 ? "↑" : "↓"}</span>
-            </button>
-          );
-          return (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", paddingBottom: 10, borderBottom: `1px solid ${T.border}` }}>
-                <SortBtn k="label" label="Nom" />
-                <SortBtn k="catLabel" label="Type" />
-                <SortBtn k="allocPct" label="Répartition" />
-                <SortBtn k="value" label="Valeur" />
-                <span />
-              </div>
-              {/* Total row */}
-              <div style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "12px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
-                <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
-                  Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
-                </span>
-                <span /><span />
-                <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
-                <span />
-              </div>
-              {rows.map((row, i) => row.isGroupHeader ? (
-                <div key={"gh" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0 6px", borderBottom: `1px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 4, background: row.catColor, flexShrink: 0 }} />
-                  {row.catLabel} <span style={{ fontWeight: 400 }}>· {row.count} · {fmt(row.catTotal)}</span>
-                </div>
-              ) : (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                    {(() => { const logo = getBankLogo(row.label, row.catLabel); return (
-                      <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                        {logo
-                          ? <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.innerHTML = `<span style="font-size:11px;font-weight:800;color:${row.catColor}">${row.initials}</span>`; }} />
-                          : <span style={{ fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</span>}
-                      </div>
-                    ); })()}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
-                      <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
-                    </div>
-                  </div>
-                  <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 8, background: `${row.catColor}18`, color: row.catColor, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    {(() => { const r2=11,sw=3,circ=2*Math.PI*r2,dash=Math.min(100,row.allocPct)/100*circ; return (
-                      <svg width={28} height={28} style={{ transform:"rotate(-90deg)", flexShrink:0 }}>
-                        <circle cx={14} cy={14} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw}/>
-                        <circle cx={14} cy={14} r={r2} fill="none" stroke={row.catColor} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeLinecap="round"/>
-                      </svg>
-                    ); })()}
-                    <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
-                    {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
-                  </div>
-                  {!row.isDerived && !row.isSync
-                    ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>
-                    : <span />}
-                </div>
-              ))}
-            </>
-          );
-        })()}
-      </Card>
-
-      {/* Performance — masqué temporairement */}
-      </div>
-      )}
 
       {showComplete && (
         <CompleterPatrimoineModal onClose={() => setShowComplete(false)} onPick={handleComplete} onManualAdd={addManual} />

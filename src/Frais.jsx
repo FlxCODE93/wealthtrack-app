@@ -276,10 +276,10 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
 
       {/* Simulateur d'impact */}
       <Section T={T} first title="Combien les frais vous coûtent">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+        <div className="flex flex-col md:grid" style={{ gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
 
           {/* Colonne gauche — placements + saisies */}
-          <div style={{ padding: "24px", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 20, overflow: "auto" }}>
+          <div className="border-b md:border-b-0" style={{ padding: "24px", borderColor: T.border, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 20, overflow: "auto" }}>
 
             {/* Vos placements */}
             <div>

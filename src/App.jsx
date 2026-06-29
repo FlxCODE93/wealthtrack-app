@@ -3385,7 +3385,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
               <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
             </div>
           )}
-          <ExpandableChart height={280} title={title}>
+          <ExpandableChart height={360} title={title}>
             {logScale ? (
               <ComposedChart data={logData}>
                 <defs>

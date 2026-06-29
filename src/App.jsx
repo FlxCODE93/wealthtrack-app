@@ -5618,26 +5618,54 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </ExpandableChart>
         </Card>
 
-        {/* Performance — déplacée à côté du graphe (façon Finary) */}
+        {/* Répartition donut */}
         <Card className="flex flex-col">
-          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Performance</h2>
-          <p className="text-sm mb-5" style={{ color: T.muted }}>
-            Performance depuis le {chartHist[0]?.m || "—"} : {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-          </p>
-          <div className="flex flex-col justify-center flex-1 gap-2">
-            <div className="text-4xl font-bold" style={{ color: growthTotalPct >= 0 ? T.green : T.red }}>
-              {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-            </div>
-            <div className="flex items-center gap-1.5 text-sm flex-wrap">
-              {growthTotalAbs >= 0
-                ? <ArrowUpRight size={15} style={{ color: T.green }} />
-                : <ArrowDownRight size={15} style={{ color: T.red }} />}
-              <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
-                {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
-              </span>
-              <span style={{ color: T.muted }}>sur la période</span>
-            </div>
+          <div className="mb-2 text-center">
+            <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Répartition</h2>
+            <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
           </div>
+          <ExpandableChart height={280} title="Répartition du patrimoine"
+            overlay={
+              activeSlice != null && allSlices[activeSlice] ? (
+                <>
+                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
+                  <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
+                  <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
+                    {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
+                  <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
+                </>
+              )
+            }
+            legend={
+              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+                {allSlices.map((s, i) => (
+                  <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                    {s.name}
+                    <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
+                  </span>
+                ))}
+              </div>
+            }
+          >
+            <PieChart>
+              <Pie data={allSlices} dataKey="value" nameKey="name"
+                innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
+                stroke="none" startAngle={90} endAngle={-270}
+                activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
+                onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
+                {allSlices.map((s, i) => (
+                  <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
+                    style={{ transition: "opacity 0.2s" }} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ExpandableChart>
         </Card>
         </div>
       )}
@@ -5713,7 +5741,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: T.muted, fontSize: 13, userSelect: "none" }}>
-              Grouper par type
+              Catégories
               <button onClick={() => setGroupByType(g => !g)} style={{
                 width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
                 background: groupByType ? T.blue : "rgba(255,255,255,0.12)", position: "relative", transition: "background .2s",
@@ -5844,54 +5872,26 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         })()}
       </Card>
 
-      {/* Donut Répartition */}
+      {/* Performance */}
       <Card className="flex flex-col">
-        <div className="mb-2 text-center">
-          <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Répartition</h2>
-          <p className="text-sm" style={{ color: T.muted }}>Actifs vs passifs par catégorie</p>
+        <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Performance</h2>
+        <p className="text-sm mb-5" style={{ color: T.muted }}>
+          Depuis le {chartHist[0]?.m || "—"} : {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+        </p>
+        <div className="flex flex-col justify-center flex-1 gap-2">
+          <div className="text-4xl font-bold" style={{ color: growthTotalPct >= 0 ? T.green : T.red }}>
+            {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
+          </div>
+          <div className="flex items-center gap-1.5 text-sm flex-wrap">
+            {growthTotalAbs >= 0
+              ? <ArrowUpRight size={15} style={{ color: T.green }} />
+              : <ArrowDownRight size={15} style={{ color: T.red }} />}
+            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
+              {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
+            </span>
+            <span style={{ color: T.muted }}>sur la période</span>
+          </div>
         </div>
-        <ExpandableChart height={330} title="Répartition du patrimoine"
-          overlay={
-            activeSlice != null && allSlices[activeSlice] ? (
-              <>
-                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>{allSlices[activeSlice].name}</span>
-                <span className="text-2xl font-bold" style={{ color: allSlices[activeSlice].color }}>{fmt(allSlices[activeSlice].value)}</span>
-                <span className="text-xs font-semibold mt-0.5" style={{ color: T.muted }}>
-                  {pct(totalSlices > 0 ? (allSlices[activeSlice].value / totalSlices) * 100 : 0)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-[11px] uppercase tracking-wide mb-0.5" style={{ color: T.muted }}>Patrimoine total</span>
-                <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? T.green : T.red }}>{fmt(netWorth)}</span>
-              </>
-            )
-          }
-          legend={
-            <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
-              {allSlices.map((s, i) => (
-                <span key={i} className="flex items-center gap-1.5 text-xs" style={{ color: "#cbd5e1" }}>
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                  {s.name}
-                  <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{pct(totalSlices > 0 ? (s.value / totalSlices) * 100 : 0)}</span>
-                </span>
-              ))}
-            </div>
-          }
-        >
-          <PieChart>
-            <Pie data={allSlices} dataKey="value" nameKey="name"
-              innerRadius="64%" outerRadius="86%" paddingAngle={3} cornerRadius={7}
-              stroke="none" startAngle={90} endAngle={-270}
-              activeIndex={activeSlice ?? -1} activeShape={renderActiveSlice}
-              onMouseEnter={(_, i) => setActiveSlice(i)} onMouseLeave={() => setActiveSlice(null)}>
-              {allSlices.map((s, i) => (
-                <Cell key={i} fill={s.color} opacity={activeSlice == null || activeSlice === i ? 1 : 0.42}
-                  style={{ transition: "opacity 0.2s" }} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ExpandableChart>
       </Card>
       </div>
       )}

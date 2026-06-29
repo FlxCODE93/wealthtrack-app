@@ -3405,10 +3405,6 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
                 <YAxis stroke={T.muted} tick={{ fontSize: 12 }}
                   tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
                 <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-                {hasBand && (
-                  <Area type="monotone" dataKey="range" name="Fourchette pess. → opt." legendType="none"
-                    stroke="none" fill={T.green} fillOpacity={0.08} isAnimationActive={false} activeDot={false} />
-                )}
                 <Area type="monotone" dataKey="apports" name="Apports cumulés"
                   stroke={T.blue} strokeWidth={1.5} fill="none" dot={false} />
                 <Area type="monotone" dataKey="capital" name="Capital total"

@@ -85,7 +85,9 @@ const CAT_COLORS = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Multi-devise — taux de change indicatifs (mis à jour manuellement)*/
+/*  Multi-devise — taux de change indicatifs (à mettre à jour manuellement).
+    Fiat : stables sur semaines. Crypto : volatiles → mettre à jour chaque mois.
+    Dernière MAJ indicative : juin 2026. BTC ≈ 95 000 €, ETH ≈ 3 200 €.       */
 /* ------------------------------------------------------------------ */
 const FX_RATES    = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, CAD: 0.67, JPY: 0.0062, BTC: 95000, ETH: 3200 };
 const CURRENCIES  = ["EUR", "USD", "GBP", "CHF", "CAD", "JPY", "BTC", "ETH"];
@@ -1354,7 +1356,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold" style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>Budget</h1>
-        <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — Juin 2026</p>
+        <p style={{ color: T.muted }}>Vue d'ensemble de vos finances — {new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase())}</p>
       </div>
 
       {/* Ligne 1 — flux de trésorerie (Sankey) : revenus → postes */}
@@ -1868,7 +1870,7 @@ function Finances({ totals, tx, setView, onAdd, onDelete, onUpdate, budgets, set
   // Si le mois sélectionné n'existe plus (suppression), on retombe sur le plus récent.
   useEffect(() => {
     if (!months.includes(period)) setPeriod(months[0] || CUR_YM);
-  }, [months]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [months, period]); // period intentionally included: re-check validity when period or months changes
 
   const byType = filter === "tout" ? tx : filter === "recurring" ? tx.filter(t => t.recurring) : tx.filter((t) => t.type === filter);
   const list = byType
@@ -3155,7 +3157,7 @@ function CryptoHistoryTooltip({ coin }) {
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-lg font-bold" style={{ color }}>{name} — Historique des cours</div>
-          <div className="text-xs" style={{ color: T.muted }}>Depuis la création jusqu'au 8 juin 2026 · Échelle log</div>
+          <div className="text-xs" style={{ color: T.muted }}>Depuis la création jusqu'au {new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · Échelle log</div>
         </div>
       </div>
 
@@ -3590,8 +3592,8 @@ function Couple({ transactions, simParams, patrimoine, profile, userId, userEmai
   useEffect(() => { reload(); }, [reload]);
 
   const myNetWorth = useMemo(() => {
-    const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    const p = patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    const a = (patrimoine?.actifs || []).flatMap((c) => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
+    const p = (patrimoine?.passifs || []).flatMap((c) => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
     return a - p;
   }, [patrimoine]);
 
@@ -3612,11 +3614,11 @@ function Couple({ transactions, simParams, patrimoine, profile, userId, userEmai
     return null;
   }, [combinedNW, totalMonthly, goalTarget]);
 
-  const progressPct = Math.min(100, Math.round((combinedNW / goalTarget) * 100));
+  const progressPct = goalTarget > 0 ? Math.min(100, Math.round((combinedNW / goalTarget) * 100)) : 0;
   const horizonY = Math.min(yearsToGoal || 20, 20);
 
   const projSeries = useMemo(() => Array.from({ length: horizonY + 1 }, (_, y) => ({
-    year: 2026 + y,
+    year: SIM_START_YEAR + y,
     Ensemble: Math.round(fv(combinedNW, totalMonthly, RATE, y)),
     Séparément: partner
       ? Math.round(fv(myNetWorth, myMonthly, RATE, y) + fv(partnerNetWorth, partnerMonthly, RATE, y))
@@ -3763,7 +3765,7 @@ function Couple({ transactions, simParams, patrimoine, profile, userId, userEmai
           <div className="rounded-xl p-4 text-center" style={{ background: "rgba(59,130,246,0.08)", border: `1px solid ${T.blue}44` }}>
             <div className="text-sm mb-1" style={{ color: T.muted }}>Objectif atteint en</div>
             <div className="text-4xl font-bold" style={{ color: T.blue }}>{yearsToGoal} ans</div>
-            <div className="text-xs mt-1" style={{ color: T.muted }}>À l'horizon {2026 + yearsToGoal} · {eur(goalTarget)}</div>
+            <div className="text-xs mt-1" style={{ color: T.muted }}>À l'horizon {SIM_START_YEAR + yearsToGoal} · {eur(goalTarget)}</div>
           </div>
         )}
       </Card>
@@ -3780,7 +3782,7 @@ function Couple({ transactions, simParams, patrimoine, profile, userId, userEmai
               </div>
               <span className="font-bold text-sm" style={{ color: T.text }}>{eur(m.target)}</span>
               <span className="ml-auto text-sm" style={{ color: m.status === "done" ? T.green : T.muted }}>
-                {m.status === "done" ? "Déjà atteint" : m.years ? `dans ${m.years} ans · ${2026 + m.years}` : "50+ ans"}
+                {m.status === "done" ? "Déjà atteint" : m.years ? `dans ${m.years} ans · ${SIM_START_YEAR + m.years}` : "50+ ans"}
               </span>
             </div>
           ))}
@@ -4676,8 +4678,8 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
   const inputStyle = makeInputStyle(T);
   const chartTip = makeChartTip(T);
   const netWorth = useMemo(() => {
-    const a = patrimoine.actifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
-    const p = patrimoine.passifs.flatMap((c) => c.items).reduce((s, i) => s + i.value, 0);
+    const a = (patrimoine?.actifs || []).flatMap((c) => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
+    const p = (patrimoine?.passifs || []).flatMap((c) => c.items || []).reduce((s, i) => s + (i.value || 0), 0);
     return a - p;
   }, [patrimoine]);
 
@@ -4806,7 +4808,7 @@ function Immobilier({ totals, simParams, patrimoine, transactions, setView }) {
     const remaining = loanRemaining(credit, rate / 100, duration, y * 12);
     const equity = propValue - remaining;
     const renterFV = Math.round(fv(0, investMonthly, RATE_A, y));
-    return { year: 2026 + y, propValue, "Propriété nette": Math.max(0, equity), "Patrimoine locataire": renterFV };
+    return { year: SIM_START_YEAR + y, propValue, "Propriété nette": Math.max(0, equity), "Patrimoine locataire": renterFV };
   }), [price, appreciation, mensualite, credit, monthlyRate, n, duration, investMonthly]);
 
   const finalEquity = ownershipSeries[ownershipSeries.length - 1]["Propriété nette"] || 0;
@@ -6432,8 +6434,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
     ];
   }, [patrimoine.actifs, cryptoSync]);
 
-  const totalActifs = effectiveActifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
-  const totalPassifs = patrimoine.passifs.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.value, 0), 0);
+  const totalActifs = effectiveActifs.reduce((s, c) => s + (c.items || []).reduce((ss, i) => ss + (i.value || 0), 0), 0);
+  const totalPassifs = (patrimoine.passifs || []).reduce((s, c) => s + (c.items || []).reduce((ss, i) => ss + (i.value || 0), 0), 0);
   const netWorth = totalActifs - totalPassifs;
   const hasData = totalActifs > 0 || totalPassifs > 0; // sinon → état vide (pas de fausses données)
   const hist = useMemo(() => ensureHistoriqueDepth(patrimoine.historique, 36), [patrimoine.historique]);
@@ -6446,7 +6448,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const debtColor = debtRatio > 50 ? T.red : debtRatio > 30 ? T.amber : T.green;
 
   // Catégorie d'actif dominante
-  const actifCatTotals = effectiveActifs.map((c) => ({ ...c, total: c.items.reduce((s, i) => s + i.value, 0) }));
+  const actifCatTotals = effectiveActifs.map((c) => ({ ...c, total: (c.items || []).reduce((s, i) => s + (i.value || 0), 0) }));
   const topActifCat = actifCatTotals.reduce((a, b) => (b.total > (a?.total || 0) ? b : a), null);
   const topActifShare = topActifCat && totalActifs > 0 ? (topActifCat.total / totalActifs) * 100 : 0;
 
@@ -6470,8 +6472,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
   const catColor = (cat) => CAT_PALETTE[cat.id] || cat.color;
 
   const allSlices = [
-    ...effectiveActifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
-    ...patrimoine.passifs.map((c) => ({ name: c.label, value: c.items.reduce((s, i) => s + i.value, 0), color: catColor(c) })),
+    ...effectiveActifs.map((c) => ({ name: c.label, value: (c.items || []).reduce((s, i) => s + (i.value || 0), 0), color: catColor(c) })),
+    ...(patrimoine.passifs || []).map((c) => ({ name: c.label, value: (c.items || []).reduce((s, i) => s + (i.value || 0), 0), color: catColor(c) })),
   ].filter((s) => s.value > 0);
   const totalSlices = allSlices.reduce((s, x) => s + x.value, 0);
 

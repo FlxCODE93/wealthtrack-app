@@ -279,7 +279,7 @@ function CoinDetailModal({ coin, onClose, chart, chartLoading, range, onRangeCha
   const T = useT();
   if (!coin) return null;
 
-  const chartChange = chart && chart.length > 1
+  const chartChange = chart && chart.length > 1 && chart[0].price !== 0
     ? ((chart[chart.length - 1].price - chart[0].price) / chart[0].price) * 100
     : null;
   const fallbackChange = range === "1" ? coin.price_change_percentage_24h : coin.price_change_percentage_7d_in_currency;

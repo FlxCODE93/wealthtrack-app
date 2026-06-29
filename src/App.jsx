@@ -4370,17 +4370,27 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
         )}
       </div>
 
-      {/* Résumé */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Capital restant dû" value={eur(Math.round(totalRestant))} valueColor={T.red} />
-        <KpiCard label="Mensualités / mois" value={eur(Math.round(totalMensualite))} valueColor={T.amber} />
-        <KpiCard label="Intérêts restants" value={eur(Math.round(totalInterets))} valueColor={T.muted} />
-        <KpiCard label="Taux d'effort (endettement bancaire)"
-          value={debtRatio == null ? "—" : `${debtRatio.toFixed(1).replace(".", ",")} %`}
-          valueColor={debtColor}
-          sub={debtRatio == null
-            ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 12 }}>Ajoutez vos revenus dans Budget</button>
-            : <span style={{ color: T.muted }}>{incomeIsSmoothed ? "basé sur votre revenu moyen (12 mois) · seuil 35 %" : "mensualités ÷ revenus · seuil 35 %"}</span>} />
+      {/* Résumé — bande horizontale */}
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 28px", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
+        {[
+          { label: "Capital restant dû", value: eur(Math.round(totalRestant)), color: T.red },
+          { label: "Mensualités / mois", value: eur(Math.round(totalMensualite)), color: T.amber },
+          { label: "Intérêts restants", value: eur(Math.round(totalInterets)), color: T.muted },
+        ].map(({ label, value, color }, i) => (
+          <div key={i} style={{ flex: 1, minWidth: 120, padding: "0 24px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+            <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
+          </div>
+        ))}
+        <div style={{ flex: 1, minWidth: 140, padding: "0 24px", borderLeft: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>Taux d'effort</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: debtColor }}>{debtRatio == null ? "—" : `${debtRatio.toFixed(1).replace(".", ",")} %`}</div>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>
+            {debtRatio == null
+              ? <button onClick={() => setView && setView("finances")} style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", padding: 0, fontSize: 11 }}>Ajoutez vos revenus</button>
+              : incomeIsSmoothed ? "revenu moyen 12 mois · seuil 35 %" : "mensualités ÷ revenus · seuil 35 %"}
+          </div>
+        </div>
       </div>
 
       {/* Répartition + désendettement */}

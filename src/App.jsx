@@ -4161,7 +4161,7 @@ function CreditCardItem({ credit, now, onEdit, onDelete, onArbitrage }) {
   const revolvingStuck = creditRevolvingStuck(credit);
 
   return (
-    <Card>
+    <Card style={{ border: "none" }}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <span style={{ width: 38, height: 38, borderRadius: 10, background: `${meta.color}1a`, border: `1px solid ${meta.color}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -4371,7 +4371,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       </div>
 
       {/* Résumé — bande horizontale */}
-      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 28px", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
+      <div style={{ background: T.panel, borderRadius: 16, padding: "20px 28px", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
         {[
           { label: "Capital restant dû", value: eur(Math.round(totalRestant)), color: T.red },
           { label: "Mensualités / mois", value: eur(Math.round(totalMensualite)), color: T.amber },
@@ -4396,7 +4396,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
       {/* Répartition + désendettement */}
       {active.length > 0 && totalRestant > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
+          <Card style={{ border: "none" }}>
             <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Répartition par type</h2>
             <div ref={pieRef} style={{ width: "100%", height: 220 }}>
               {pieW > 0 && (
@@ -4422,7 +4422,7 @@ function Credits({ credits, setCredits, monthlyIncome = 0, incomeIsSmoothed = fa
               ))}
             </div>
           </Card>
-          <Card>
+          <Card style={{ border: "none" }}>
             <h2 className="text-xl font-bold mb-2" style={{ color: T.text }}>Trajectoire de désendettement</h2>
             <p className="text-xs mb-3" style={{ color: T.muted }}>Capital restant total projeté, à mensualités constantes.</p>
             <ExpandableChart height={200} title="Trajectoire de désendettement">

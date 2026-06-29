@@ -646,7 +646,7 @@ export default function Crypto({ setView, marketsOnly = false }) {
 
       {/* Summary — bande horizontale */}
       {!marketsOnly && (
-        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 28px" }}>
+        <div style={{ padding: "4px 0 16px 0" }}>
           <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
               { label: "Valeur totale", value: fmtCtx(totalValue), color: T.text },

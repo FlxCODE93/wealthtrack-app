@@ -87,9 +87,9 @@ const CAT_COLORS = {
 /* ------------------------------------------------------------------ */
 /*  Multi-devise — taux de change indicatifs (à mettre à jour manuellement).
     Fiat : stables sur semaines. Crypto : volatiles → mettre à jour chaque mois.
-    Dernière MAJ indicative : juin 2026. BTC ≈ 95 000 €, ETH ≈ 3 200 €.       */
+    Dernière MAJ indicative : juin 2026. BTC ≈ 52 500 €, ETH ≈ 1 380 €.       */
 /* ------------------------------------------------------------------ */
-const FX_RATES    = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, CAD: 0.67, JPY: 0.0062, BTC: 95000, ETH: 3200 };
+const FX_RATES    = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, CAD: 0.67, JPY: 0.0062, BTC: 52521, ETH: 1380 };
 const CURRENCIES  = ["EUR", "USD", "GBP", "CHF", "CAD", "JPY", "BTC", "ETH"];
 const toEUR = (native, cur) => (native || 0) * (FX_RATES[cur] || 1);
 

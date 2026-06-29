@@ -592,7 +592,7 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             {/* Patrimoine actuel */}
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>Patrimoine actuel</div>
-              <div style={{ color: T.blue, fontSize: 18, fontWeight: 800 }}>{eur(savings)}</div>
+              <div style={{ color: T.blue, fontSize: 18, fontWeight: 800 }}><AnimatedNumber value={savings} formatter={(n) => eur(n)} duration={0.8} /></div>
             </div>
 
             {/* Cible FIRE — éditable inline */}
@@ -664,13 +664,13 @@ export default function FI({ patrimoine, totals, simParams, profile, setView }) 
             {/* Revenus passifs */}
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>Revenu passif actuel</div>
-              <div style={{ color: T.muted, fontSize: 18, fontWeight: 800 }}>{eur(passiveNow)}/mois</div>
+              <div style={{ color: T.muted, fontSize: 18, fontWeight: 800 }}><AnimatedNumber value={passiveNow} formatter={(n) => eur(n)} duration={0.8} />/mois</div>
             </div>
             <div>
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 4 }}>
                 Revenu total à l'IF
               </div>
-              <div style={{ color: T.green, fontSize: 18, fontWeight: 800 }}>{eur(totalIncomeAtFI)}/mois</div>
+              <div style={{ color: T.green, fontSize: 18, fontWeight: 800 }}><AnimatedNumber value={totalIncomeAtFI} formatter={(n) => eur(n)} duration={0.8} />/mois</div>
               {pensionMonthly > 0 && (
                 <div style={{ color: T.muted, fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>
                   {eur(passiveAtFI)} portefeuille + {eur(pensionMonthly)} pension

@@ -7429,9 +7429,9 @@ function CompoundCalc({ setView }) {
         <p style={{ color: T.muted }}>Projetez la croissance d'un capital avec versements réguliers.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Paramètres */}
-        <div className="rounded-2xl p-6" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+      <div className="flex flex-col md:grid" style={{ gridTemplateColumns: "1fr 1.6fr", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+        {/* Colonne gauche — paramètres */}
+        <div className="border-b md:border-b-0" style={{ padding: "24px", borderColor: T.border, borderRight: `1px solid ${T.border}` }}>
           <Champ T={T} label="Capital initial" value={initial} set={setInitial} unit="€" step={500} />
           <Champ T={T} label="Épargne mensuelle" value={monthly} set={setMonthly} unit="€" step={50} />
           <Champ T={T} label="Horizon de placement" value={years} set={setYears} unit="ans" step={1} />
@@ -7450,8 +7450,8 @@ function CompoundCalc({ setView }) {
           </div>
         </div>
 
-        {/* Résultat */}
-        <div className="rounded-2xl p-6" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+        {/* Colonne droite — résultat + graph */}
+        <div style={{ padding: "24px" }}>
           <div className="text-center mb-4">
             <div className="text-xs mb-1" style={{ color: T.muted }}>Capital final</div>
             <div className="text-4xl font-black" style={{ color: T.text }}>{eur(capitalFinal)}</div>

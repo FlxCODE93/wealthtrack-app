@@ -4194,21 +4194,25 @@ function CreditCardItem({ credit, now, onEdit, onDelete, onArbitrage }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-        <MiniStat label="Capital restant" value={eur(Math.round(restant))} color={T.text} />
-        <MiniStat label={assurance > 0 ? "Mensualité (assur. incl.)" : "Mensualité"} value={eur(Math.round(mensualite))} color={T.amber} />
-        <MiniStat label={isRevolving ? "Intérêts / mois" : "Intérêts restants"}
-          value={eur(Math.round(creditInteretsRestants(credit, now)))} color={T.red} />
-        <MiniStat label="Échéance"
-          value={isRevolving ? "—" : (moisRestants > 0 ? fmtDuree(moisRestants) : "Soldé")}
-          color={T.muted} />
+      {/* Métriques en un seul bloc horizontal */}
+      <div style={{ display: "flex", gap: 0, marginTop: 14, paddingTop: 14, borderTop: `1px solid rgba(255,255,255,0.05)`, flexWrap: "wrap" }}>
+        {[
+          { label: "Capital restant", value: eur(Math.round(restant)), color: T.text },
+          { label: assurance > 0 ? "Mensualité (assur. incl.)" : "Mensualité", value: eur(Math.round(mensualite)), color: T.amber },
+          { label: isRevolving ? "Intérêts / mois" : "Intérêts restants", value: eur(Math.round(creditInteretsRestants(credit, now))), color: T.red },
+          { label: "Échéance", value: isRevolving ? "—" : (moisRestants > 0 ? fmtDuree(moisRestants) : "Soldé"), color: T.muted },
+        ].map(({ label, value, color }, i) => (
+          <div key={i} style={{ flex: "1 1 0", minWidth: 80, ...(i > 0 ? { borderLeft: `1px solid rgba(255,255,255,0.05)`, paddingLeft: 16, marginLeft: 16 } : {}) }}>
+            <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color }}>{value}</div>
+          </div>
+        ))}
       </div>
-
       {/* Détails secondaires */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs" style={{ color: T.muted }}>
-        {!isRevolving && <span>Capital remboursé : <b style={{ color: T.text }}>{eur(Math.round(remboursé))}</b></span>}
-        {assurance > 0 && <span>Dont assurance : <b style={{ color: T.text }}>{eur(Math.round(assurance))}/mois</b></span>}
-        {coutTotal != null && <span>Coût total du crédit : <b style={{ color: T.text }}>{eur(Math.round(coutTotal))}</b> d'intérêts</span>}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs" style={{ color: T.muted }}>
+        {!isRevolving && <span>Remboursé : <b style={{ color: T.text }}>{eur(Math.round(remboursé))}</b></span>}
+        {assurance > 0 && <span>Assurance : <b style={{ color: T.text }}>{eur(Math.round(assurance))}/mois</b></span>}
+        {coutTotal != null && <span>Coût total : <b style={{ color: T.text }}>{eur(Math.round(coutTotal))}</b> d'intérêts</span>}
         {!isRevolving && dateFin && <span>Fin : <b style={{ color: T.text }}>{dateFin.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</b></span>}
       </div>
 

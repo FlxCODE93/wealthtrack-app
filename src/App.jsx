@@ -2545,53 +2545,62 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
         </div>
       )}
 
-      {/* Paramètres communs */}
-      <Card>
-        <h2 className="text-xl font-bold mb-4" style={{ color: T.text }}>Paramètres</h2>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Investissement mensuel (€)">
-            <NumInput value={monthly || 0} placeholder="0" style={inputStyle}
-              onChange={(n) => setMonthly(n)} />
-          </Field>
-          <Field label="Épargne / apport initial (€)">
-            <NumInput value={initial || 0} placeholder="0" style={inputStyle}
-              onChange={(n) => setInitial(n)} />
-          </Field>
-          <Field label="Horizon">
-            <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
-              style={{ ...inputStyle, paddingRight: 34,
-                appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#','')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
-              <option value={1}>1 an</option>
-              <option value={2}>2 ans</option>
-              <option value={5}>5 ans</option>
-              <option value={10}>10 ans</option>
-              <option value={20}>20 ans</option>
-              <option value={30}>30 ans</option>
-            </select>
-          </Field>
-        </div>
-      </Card>
+      {/* Bloc unique : rail gauche (paramètres + sélecteur) · contenu droite */}
+      <div className="flex flex-col md:grid" style={{ gridTemplateColumns: "300px 1fr", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => {
-          const hasHistoChart = t.id === "btc" || t.id === "eth" || t.id === "etf";
-          return (
-            <button key={t.id} onClick={() => setActiveTab(t.id)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all inline-flex items-center gap-1.5"
-              style={{
-                background: activeTab === t.id ? `${t.color}18` : "rgba(255,255,255,0.03)",
-                border: `1.5px solid ${activeTab === t.id ? t.color : T.border}`,
-                color: activeTab === t.id ? t.color : T.muted,
-                cursor: "pointer",
-              }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+        {/* Rail gauche : paramètres communs + sélecteur d'actif */}
+        <div className="border-b md:border-b-0" style={{ padding: "24px", borderColor: T.border, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <h2 className="text-xs font-bold mb-3" style={{ color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Paramètres</h2>
+            <div className="flex flex-col gap-3">
+              <Field label="Investissement mensuel (€)">
+                <NumInput value={monthly || 0} placeholder="0" style={inputStyle}
+                  onChange={(n) => setMonthly(n)} />
+              </Field>
+              <Field label="Épargne / apport initial (€)">
+                <NumInput value={initial || 0} placeholder="0" style={inputStyle}
+                  onChange={(n) => setInitial(n)} />
+              </Field>
+              <Field label="Horizon">
+                <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}
+                  style={{ ...inputStyle, paddingRight: 34,
+                    appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23${(T.muted || '#94a3b8').replace('#','')}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" }}>
+                  <option value={1}>1 an</option>
+                  <option value={2}>2 ans</option>
+                  <option value={5}>5 ans</option>
+                  <option value={10}>10 ans</option>
+                  <option value={20}>20 ans</option>
+                  <option value={30}>30 ans</option>
+                </select>
+              </Field>
+            </div>
+          </div>
+
+          {/* Sélecteur d'actif vertical */}
+          <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+            <h2 className="text-xs font-bold mb-3" style={{ color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Actif</h2>
+            <div className="flex flex-col gap-1.5">
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left"
+                  style={{
+                    background: activeTab === t.id ? `${t.color}18` : "transparent",
+                    border: `1.5px solid ${activeTab === t.id ? t.color : "transparent"}`,
+                    color: activeTab === t.id ? t.color : T.muted,
+                    cursor: "pointer",
+                  }}>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color, opacity: activeTab === t.id ? 1 : 0.4 }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu droite : projection de l'actif sélectionné */}
+        <div style={{ padding: "24px", minWidth: 0 }}>
 
       {/* ── TAB: ETF ── */}
       {activeTab === "etf" && <>
@@ -2700,7 +2709,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
 
       {/* ── TAB: COMPARATIF ── */}
       {activeTab === "compare" && (
-        <Card>
+        <div>
           {/* En-tête */}
           <div className="flex items-center flex-wrap gap-3 mb-2">
             <TrendingUp size={20} style={{ color: T.blue }} />
@@ -2760,8 +2769,11 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           <p className="text-xs mt-3" style={{ color: T.muted }}>
             Le capital final retient le <strong style={{ color: T.text }}>rendement médian</strong> (milieu de chaque fourchette). Rendements annuels indicatifs, <strong style={{ color: T.text }}>bruts de frais et de fiscalité</strong> — sauf le Livret A (net, défiscalisé) et l'Or (net des frais de stockage). La fiscalité réelle dépend de l'enveloppe (PEA, assurance-vie, CTO, PER) et n'est pas déduite ici. Les performances passées ne garantissent pas les rendements futurs.
           </p>
-        </Card>
+        </div>
       )}
+
+        </div>{/* fin contenu droite */}
+      </div>{/* fin bloc unique */}
 
       {/* ── MODAL: Prix Live ── */}
       {liveOpen && (
@@ -3327,9 +3339,9 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
   }
 
   return (
-    <Card style={{ borderColor: accent + "33" }}>
+    <div className="flex flex-col gap-5">
       {warning && (
-        <div className="rounded-xl p-4 mb-5 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.45)" }}>
+        <div className="rounded-xl p-4 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.45)" }}>
           <div className="font-bold mb-2" style={{ color: "#ef4444" }}>{warning.title}</div>
           <ul className="space-y-1 mb-3" style={{ color: "#fca5a5" }}>
             {warning.points.map((p) => <li key={p}>· {p}</li>)}
@@ -3338,7 +3350,7 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         </div>
       )}
       {riskBadges && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2">
           {riskBadges.map((b) => (
             <span key={b.label} className="px-3 py-1 rounded-full text-xs font-semibold"
               style={{ background: b.bg, color: b.color, border: `1px solid ${b.color}55` }}>
@@ -3348,65 +3360,62 @@ function ScenarioCard({ title, rate, accent, stats, detailedData, lineColor, not
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
-        {/* Colonne gauche : titre + KPIs + note */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-xl font-bold" style={{ color: T.text }}>{title}</h2>
-            <span className="text-sm" style={{ color: T.muted }}>{rate}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {stats.map((s) => (
-              <div key={s.label} className="rounded-xl p-4"
-                style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
-                <div className="text-xs" style={{ color: T.muted }}>{s.label}</div>
-                <div className="text-xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-          <div className="rounded-xl p-4 text-xs" style={{ background: "rgba(59,130,246,0.04)", color: T.muted, lineHeight: 1.6 }}>
-            {note}
-          </div>
-        </div>
-
-        {/* Colonne droite : graphe + résumé */}
-        <div className="flex flex-col gap-4">
-          {logScale && (
-            <div>
-              <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
-            </div>
-          )}
-          <ExpandableChart height={360} title={title}>
-            {logScale ? (
-              <ComposedChart data={logData}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-                <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
-                  tickFormatter={logFmt} width={64} />
-                <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-                <Area type="monotone" dataKey="logCapital" name="Capital total"
-                  stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
-                <Line type="monotone" dataKey="logApports" name="Apports cumulés"
-                  stroke={T.blue} strokeWidth={1.5} dot={false} />
-              </ComposedChart>
-            ) : (
-              <ComposedChart data={augmentedData}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
-                <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
-                <YAxis stroke={T.muted} tick={{ fontSize: 12 }} domain={['dataMin', 'auto']}
-                  tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
-                <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
-                <Area type="monotone" dataKey="apports" name="Apports cumulés"
-                  stroke={T.blue} strokeWidth={1.5} fill="none" dot={false} />
-                <Area type="monotone" dataKey="capital" name="Capital total"
-                  stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
-              </ComposedChart>
-            )}
-          </ExpandableChart>
-
-        </div>
+      {/* En-tête */}
+      <div className="flex flex-wrap items-baseline gap-3">
+        <h2 className="text-xl font-bold" style={{ color: T.text }}>{title}</h2>
+        <span className="text-sm" style={{ color: T.muted }}>{rate}</span>
       </div>
-    </Card>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl p-4"
+            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+            <div className="text-xs" style={{ color: T.muted }}>{s.label}</div>
+            <div className="text-xl font-bold mt-1" style={{ color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Graphe */}
+      {logScale && (
+        <div>
+          <Badge tone="neutral" label="Échelle logarithmique — chaque graduation = ×10" />
+        </div>
+      )}
+      <ExpandableChart height={340} title={title}>
+        {logScale ? (
+          <ComposedChart data={logData}>
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
+            <YAxis domain={[logYMin, logYMax]} ticks={logYTicks} stroke={T.muted} tick={{ fontSize: 12 }}
+              tickFormatter={logFmt} width={64} />
+            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
+            <Area type="monotone" dataKey="logCapital" name="Capital total"
+              stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
+            <Line type="monotone" dataKey="logApports" name="Apports cumulés"
+              stroke={T.blue} strokeWidth={1.5} dot={false} />
+          </ComposedChart>
+        ) : (
+          <ComposedChart data={augmentedData}>
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} horizontal={false} />
+            <XAxis dataKey="year" stroke={T.muted} tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={24} />
+            <YAxis stroke={T.muted} tick={{ fontSize: 12 }} domain={['dataMin', 'auto']}
+              tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "k€" : v)} />
+            <Tooltip content={<ScenarioTooltip />} cursor={{ stroke: T.border }} />
+            <Area type="monotone" dataKey="apports" name="Apports cumulés"
+              stroke={T.blue} strokeWidth={1.5} fill="none" dot={false} />
+            <Area type="monotone" dataKey="capital" name="Capital total"
+              stroke={T.green} strokeWidth={2.5} fill="none" dot={false} />
+          </ComposedChart>
+        )}
+      </ExpandableChart>
+
+      {/* Note */}
+      <div className="rounded-xl p-4 text-xs" style={{ background: "rgba(59,130,246,0.04)", color: T.muted, lineHeight: 1.6 }}>
+        {note}
+      </div>
+    </div>
   );
 }
 

@@ -650,14 +650,14 @@ export default function Tax() {
         <div className="flex flex-col gap-5">
 
           {/* KPI */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div style={{ padding: "8px 0 24px 0", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
               { label: "PEA ≥ 5 ans — IR",     value: "0 %",    sub: "+ 17,2 % PS",          color: T.green },
               { label: "PEA < 5 ans / CTO",     value: "30 %",   sub: "12,8 % IR + 17,2 % PS", color: T.red },
               { label: "Plafond PEA",            value: "150 k€", sub: "225 k€ avec PEA-PME",   color: T.cyan },
               { label: "Dividendes dans PEA",    value: "0 %",    sub: "Tant qu'ils restent",    color: T.green },
-            ].map(c => (
-              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+            ].map((c, i) => (
+              <div key={c.label} style={{ flex: 1, minWidth: 120, padding: "0 36px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                 <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
                 <div style={{ color: c.color, fontSize: 26, fontWeight: 800 }}>{c.value}</div>
                 <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
@@ -789,16 +789,16 @@ export default function Tax() {
         <div className="flex flex-col gap-5">
 
           {/* KPI */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div style={{ padding: "8px 0 24px 0", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
-              { label: "AV ≥ 8 ans — IR",         value: "7,5 %",   sub: "+ 17,2 % PS",                  color: T.green },
-              { label: "Abattement annuel (seul)",  value: "4 600 €", sub: "9 200 € pour un couple",       color: T.cyan },
-              { label: "AV < 8 ans",                value: "30 %",    sub: "Même taux que le CTO",          color: T.amber },
+              { label: "AV ≥ 8 ans — IR",         value: "7,5 %",     sub: "+ 17,2 % PS",                  color: T.green },
+              { label: "Abattement annuel (seul)",  value: "4 600 €",   sub: "9 200 € pour un couple",       color: T.cyan },
+              { label: "AV < 8 ans",                value: "30 %",      sub: "Même taux que le CTO",          color: T.amber },
               { label: "Avantage succession",        value: "152 500 €", sub: "Hors droits par bénéficiaire", color: T.green },
-            ].map(c => (
-              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+            ].map((c, i) => (
+              <div key={c.label} style={{ flex: 1, minWidth: 120, padding: "0 36px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                 <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
-                <div style={{ color: c.color, fontSize: c.value.length > 6 ? 18 : 26, fontWeight: 800 }}>{c.value}</div>
+                <div style={{ color: c.color, fontSize: c.value.length > 6 ? 20 : 26, fontWeight: 800 }}>{c.value}</div>
                 <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
               </div>
             ))}
@@ -936,16 +936,16 @@ export default function Tax() {
         <div className="flex flex-col gap-5">
 
           {/* KPI */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div style={{ padding: "8px 0 24px 0", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
               { label: "Résidence principale",  value: "0 %",    sub: "Exonération totale",          color: T.green },
               { label: "Locatif — taux PV",      value: "36,2 %", sub: "19 % IR + 17,2 % PS",         color: T.red },
               { label: "Exonération IR",         value: "22 ans", sub: "Abattements progressifs",      color: T.cyan },
               { label: "Exonération PS",         value: "30 ans", sub: "1,65 %/an puis 9 %/an",        color: T.amber },
-            ].map(c => (
-              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+            ].map((c, i) => (
+              <div key={c.label} style={{ flex: 1, minWidth: 120, padding: "0 36px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                 <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
-                <div style={{ color: c.color, fontSize: 24, fontWeight: 800 }}>{c.value}</div>
+                <div style={{ color: c.color, fontSize: 26, fontWeight: 800 }}>{c.value}</div>
                 <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>
               </div>
             ))}
@@ -1259,14 +1259,14 @@ export default function Tax() {
       {/* ══ PER & ÉPARGNE SALARIALE (informatif) ════════════════════════ */}
       {envelope === "epargne" && (
         <div className="flex flex-col gap-5" style={{ animation: "wt-fade-in 200ms ease-in-out both" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div style={{ padding: "8px 0 24px 0", display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
             {[
-              { label: "PER — entrée",     value: "Déductible", sub: "Plafond 10 % revenus pro", color: T.green },
-              { label: "PER — sortie",      value: "IR + PFU",   sub: "Versements au barème, gains PFU 30 %", color: T.amber },
-              { label: "PEE — gains",       value: "17,2 %",     sub: "Exonéré d'IR, PS uniquement (5 ans)", color: T.cyan },
-              { label: "Abondement",        value: "Exonéré IR", sub: "Dans la limite légale", color: T.green },
-            ].map(c => (
-              <div key={c.label} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 18px" }}>
+              { label: "PER — entrée",  value: "Déductible", sub: "Plafond 10 % revenus pro",               color: T.green },
+              { label: "PER — sortie",  value: "IR + PFU",   sub: "Versements au barème, gains PFU 30 %",   color: T.amber },
+              { label: "PEE — gains",   value: "17,2 %",     sub: "Exonéré d'IR, PS uniquement (5 ans)",    color: T.cyan },
+              { label: "Abondement",    value: "Exonéré IR", sub: "Dans la limite légale",                   color: T.green },
+            ].map((c, i) => (
+              <div key={c.label} style={{ flex: 1, minWidth: 120, padding: "0 36px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
                 <div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{c.label}</div>
                 <div style={{ color: c.color, fontSize: 22, fontWeight: 800 }}>{c.value}</div>
                 <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{c.sub}</div>

@@ -37,7 +37,7 @@ export default class ErrorBoundary extends React.Component {
           justifyContent: "center",
           background: "#020617",
           color: "#f8fafc",
-          fontFamily: "'IBM Plex Sans', 'Inter', sans-serif",
+          fontFamily: "inherit",
           padding: 24,
         }}
       >

@@ -770,7 +770,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
   };
 
   return (
-    <div style={{ color: T.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+    <div style={{ color: T.text, fontFamily: "'Inter', -apple-system, sans-serif", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <Suspense fallback={null}><PaperShaderBackground /></Suspense>
       <HeroOrbs />
 
@@ -791,7 +791,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
               <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5" stroke="#3b82f6" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>
           </div>
-          <span className="text-sm sm:text-lg font-bold tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
+          <span className="text-sm sm:text-lg font-bold tracking-tight" style={{ fontFamily: "inherit", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2.5">
           <button onClick={onLogin} className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all"
@@ -812,7 +812,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
-          style={{ color: T.text, fontFamily: "'Lora', Georgia, serif" }}>
+          style={{ color: T.text, fontFamily: "inherit" }}>
           <span style={{ color: T.text }}>
             Simulez.
           </span>{" "}
@@ -1252,7 +1252,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     <path d="M6 18 C9 16.5 10.5 12 13 10 C15.5 8 17.5 6.5 19.5 5.5" stroke="#3b82f6" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                   </svg>
                 </div>
-                <span className="font-bold text-sm" style={{ fontFamily: "'Lora', Georgia, serif", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
+                <span className="font-bold text-sm" style={{ fontFamily: "inherit", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
               </div>
               <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: T.muted }}>
                 L'outil de simulation patrimoniale pour comprendre et piloter vos finances.

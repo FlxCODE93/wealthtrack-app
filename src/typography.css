@@ -16,8 +16,8 @@ input[type="number"] {
 
 :root {
   /* Font family stack */
-  --font-display: 'Lora', Georgia, serif;
-  --font-primary: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   /* Type scale (px) */

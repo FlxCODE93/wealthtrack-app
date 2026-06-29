@@ -300,7 +300,7 @@ function AssistantCard() {
 
 function FrameShell({ premium, children }) {
   return (
-    <div style={{ background: C.bgGradient, color: C.text, fontFamily: "'Geist Sans', 'Inter', -apple-system, 'Segoe UI', sans-serif", minHeight: "100vh" }}>
+    <div style={{ background: C.bgGradient, color: C.text, fontFamily: "'Inter', -apple-system, sans-serif", minHeight: "100vh" }}>
       <div className="max-w-[1280px] mx-auto flex">
 
         {/* Sidebar */}
@@ -309,7 +309,7 @@ function FrameShell({ premium, children }) {
             <div className="rounded-xl p-2" style={{ background: C.blue }}>
               <BarChart3 size={18} color="#fff" />
             </div>
-            <span className="text-base font-bold" style={{ color: C.text, fontFamily: "'Lora', Georgia, serif" }}>WealthTrack</span>
+            <span className="text-base font-bold" style={{ color: C.text, fontFamily: "inherit" }}>WealthTrack</span>
           </div>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;

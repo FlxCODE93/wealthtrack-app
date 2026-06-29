@@ -5724,8 +5724,8 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
 
       {/* Finary-style table Actifs / Passifs + Donut */}
       {hasData && (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-      <Card className="lg:col-span-3">
+      <div className="grid grid-cols-1 gap-6 items-start">
+      <Card>
         {/* Tabs + controls */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           <div style={{ display: "flex", gap: 0, borderBottom: `2px solid ${T.border}` }}>
@@ -5872,27 +5872,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
         })()}
       </Card>
 
-      {/* Performance */}
-      <Card className="flex flex-col">
-        <h2 className="text-xl font-bold mb-1" style={{ color: T.text }}>Performance</h2>
-        <p className="text-sm mb-5" style={{ color: T.muted }}>
-          Depuis le {chartHist[0]?.m || "—"} : {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-        </p>
-        <div className="flex flex-col justify-center flex-1 gap-2">
-          <div className="text-4xl font-bold" style={{ color: growthTotalPct >= 0 ? T.green : T.red }}>
-            {(growthTotalPct >= 0 ? "+" : "") + pct(growthTotalPct)}
-          </div>
-          <div className="flex items-center gap-1.5 text-sm flex-wrap">
-            {growthTotalAbs >= 0
-              ? <ArrowUpRight size={15} style={{ color: T.green }} />
-              : <ArrowDownRight size={15} style={{ color: T.red }} />}
-            <span className="font-semibold" style={{ color: growthTotalAbs >= 0 ? T.green : T.red }}>
-              {growthTotalAbs >= 0 ? "+" : ""}{eur(growthTotalAbs)}
-            </span>
-            <span style={{ color: T.muted }}>sur la période</span>
-          </div>
-        </div>
-      </Card>
+      {/* Performance — masqué temporairement */}
       </div>
       )}
 

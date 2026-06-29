@@ -279,7 +279,7 @@ function ResidenceSection({ T, netWorth, revenueForBank, bCfg, profileType, auto
         </AccordionSection>
 
         {/* 2 — Paramètres */}
-        <AccordionSection accentColor={T.blue} title="Paramètres du projet" desc="Prix, apport, taux, durée, appréciation annuelle" summaryValue={eur(price)} summaryColor={T.blue} defaultOpen={true}>
+        <AccordionSection accentColor={T.blue} title="Paramètres du projet" desc="Prix, apport, taux, durée, appréciation annuelle" summaryValue={eur(price)} summaryColor={T.blue}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Prix du bien (€)">
               <NumInput value={price} style={inputStyle} onChange={(n) => setPrice(n)} />
@@ -504,7 +504,7 @@ function LocatifSection({ T, revenueForBank, bCfg, autoCredits }) {
           </div>
         </AccordionSection>
 
-        <AccordionSection accentColor={T.blue} title="Paramètres du bien locatif" desc="Prix, apport, taux, loyer, charges, vacance" summaryValue={eur(locPrice)} summaryColor={T.blue} defaultOpen={true}>
+        <AccordionSection accentColor={T.blue} title="Paramètres du bien locatif" desc="Prix, apport, taux, loyer, charges, vacance" summaryValue={eur(locPrice)} summaryColor={T.blue}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Prix du bien (€)"><NumInput value={locPrice} style={inputStyle} onChange={(n) => setLocPrice(n)} /></Field>
             <Field label={`Apport, notaire inclus (${locApportPct} % = ${eur(locTotalApport)})`}>
@@ -740,7 +740,7 @@ function LocationSection({ T }) {
 
       <div className="flex flex-col gap-3">
 
-        <AccordionSection accentColor={T.blue} title="Paramètres de la mise en location" desc="Loyer, crédit, charges, vacance, code postal" summaryValue={`${eur(melLoyerBrut)}/mois`} summaryColor={T.blue} defaultOpen={true}>
+        <AccordionSection accentColor={T.blue} title="Paramètres de la mise en location" desc="Loyer, crédit, charges, vacance, code postal" summaryValue={`${eur(melLoyerBrut)}/mois`} summaryColor={T.blue}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, marginBottom: 16, userSelect: "none", borderRadius: 10, padding: "10px 14px", background: melMeuble ? "rgba(34,199,154,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${melMeuble ? T.green + "44" : T.border}` }}>
             <input type="checkbox" checked={melMeuble} onChange={(e) => setMelMeuble(e.target.checked)} style={{ accentColor: T.green, width: 16, height: 16 }} />
             <span style={{ color: melMeuble ? T.green : T.text, fontWeight: 600 }}>Bien loué meublé (LMNP)</span>

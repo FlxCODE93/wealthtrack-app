@@ -5550,9 +5550,10 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
 
       {/* Bloc unifié Patrimoine */}
       {hasData && (
+        <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
 
-          {/* ── Header : valeur nette + pills ── */}
+          {/* ── Header : valeur nette + select ── */}
           <div style={{ padding: "24px 28px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -5577,7 +5578,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           </div>
 
           {/* ── Chart ── */}
-          <div style={{ height: 210, padding: "0 12px 16px 0" }}>
+          <div style={{ height: 210, padding: "0 12px 20px 0" }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartHist} margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
                 <defs>
@@ -5595,11 +5596,13 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             </ResponsiveContainer>
           </div>
 
-          {/* ── Séparateur ── */}
-          <div style={{ borderTop: `1px solid ${T.border}` }} />
+        </Card>
 
-          {/* ── Tabs Actifs / Passifs / Répartition ── */}
-          <div style={{ padding: "12px 28px 0" }}>
+        {/* ── Bloc Actifs / Passifs / Répartition ── */}
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+
+          {/* ── Tabs ── */}
+          <div style={{ padding: "0 28px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${T.border}` }}>
               <div style={{ display: "flex" }}>
                 {["actifs", "passifs", "répartition"].map(tab => (
@@ -5812,6 +5815,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             })()}
           </div>
         </Card>
+        </>
       )}
 
       {/* Accès rapides aux composantes du patrimoine */}

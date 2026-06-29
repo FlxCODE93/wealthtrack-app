@@ -5552,7 +5552,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
       {hasData && (
         <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 440px" }}>
 
             {/* ── Gauche : header + graphe ── */}
             <div style={{ borderRight: `1px solid ${T.border}` }}>
@@ -5578,7 +5578,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
                 </select>
               </div>
-              <div style={{ height: 180, padding: "0 8px 16px 0" }}>
+              <div style={{ height: 140, padding: "0 8px 12px 0" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartHist} margin={{ top: 0, right: 16, bottom: 0, left: 0 }}>
                     <defs>
@@ -5600,7 +5600,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
             {/* ── Droite : donut répartition ── */}
             <div style={{ padding: "20px 20px 16px", display: "flex", flexDirection: "column" }}>
               <span style={{ color: T.muted, fontWeight: 700, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>Répartition</span>
-              <div style={{ height: 160, position: "relative", flexShrink: 0 }}>
+              <div style={{ height: 140, position: "relative", flexShrink: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={allSlices} dataKey="value" nameKey="name"

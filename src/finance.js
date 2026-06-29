@@ -22,7 +22,7 @@ export const RATE_LEP       = 0.035; // Livret d'Épargne Populaire
 export const RATE_BTC       = 0.30;  // Bitcoin — extrêmement volatil, valeur indicative uniquement
 export const RATE_ETH       = 0.25;  // Ethereum — extrêmement volatil, valeur indicative uniquement
 export const RATE_IMMO_APPRECIATION = 0.02; // Appréciation immobilière annuelle moyenne
-export const RATE_GOLD      = 0.05;  // Or — appréciation nominale annuelle moyenne long terme (valeur refuge)
+export const RATE_GOLD      = 0.065; // Or — appréciation nominale annuelle moyenne long terme, ajusté EUR (8,17 % USD 50 ans, source goldmarket.fr)
 
 /* Hypothèse PRUDENTE retenue pour les positions crypto dans le calcul du
    rendement pondéré du patrimoine (planification retraite / FI). Volontairement

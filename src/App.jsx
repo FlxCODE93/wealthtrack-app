@@ -5555,7 +5555,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 440px" }}>
 
             {/* ── Gauche : header + graphe ── */}
-            <div style={{ borderRight: `1px solid ${T.border}` }}>
+            <div style={{ borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column" }}>
               <div style={{ padding: "20px 24px 10px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -5578,9 +5578,9 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   {HIST_RANGES.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
                 </select>
               </div>
-              <div style={{ height: 140, padding: "0 8px 12px 0" }}>
+              <div style={{ flex: 1, minHeight: 120, padding: "0 8px 12px 0" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartHist} margin={{ top: 0, right: 16, bottom: 0, left: 0 }}>
+                  <AreaChart data={chartHist} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="gradNW" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={T.blue} stopOpacity={0.22} />
@@ -5589,7 +5589,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} horizontal={false} />
                     <XAxis dataKey="m" stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} minTickGap={histMonths > 12 ? 55 : 38} axisLine={false} tickLine={false} />
-                    <YAxis stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={38} />
+                    <YAxis stroke="transparent" tick={{ fontSize: 10, fill: T.muted }} tickFormatter={(v) => (Math.abs(v) >= 1000 ? Math.round(v / 1000) + "k" : v)} axisLine={false} tickLine={false} width={38} domain={["auto", "auto"]} />
                     <Tooltip {...chartTip} formatter={(v) => eur(v)} />
                     <Area type="monotone" dataKey="v" name="Patrimoine" stroke={T.blue} strokeWidth={2} fill="url(#gradNW)" dot={false} />
                   </AreaChart>

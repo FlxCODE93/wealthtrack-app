@@ -5781,10 +5781,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 return grp.length ? [{ isGroupHeader: true, ...grp[0], catTotal: grp.reduce((s, i) => s + i.value, 0), count: grp.length }, ...grp] : [];
               })
             : items;
-          const totalPL = items.reduce((s, i) => s + (i.pl ?? 0), 0);
-          const knownBasis = items.reduce((s, i) => s + (i.costBasis > 0 ? i.costBasis : 0), 0);
-          const totalPLPct = knownBasis > 0 ? (totalPL / knownBasis) * 100 : null;
-          const COL = "2.5fr 1.2fr 0.9fr 1fr 1fr 32px";
+          const COL = "2.5fr 1.2fr 0.9fr 1fr 32px";
           const SortBtn = ({ k, label }) => (
             <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
@@ -5800,7 +5797,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 <SortBtn k="catLabel" label="Type" />
                 <SortBtn k="allocPct" label="Répartition" />
                 <SortBtn k="value" label="Valeur" />
-                <SortBtn k="pl" label="P&L" />
                 <span />
               </div>
               {/* Total row */}
@@ -5810,14 +5806,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 </span>
                 <span /><span />
                 <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
-                <div style={{ textAlign: "right" }}>
-                  {totalPLPct != null && <>
-                    <div style={{ fontWeight: 700, color: totalPL >= 0 ? T.green : T.red, fontSize: 14 }}>{totalPL >= 0 ? "+" : ""}{fmt(totalPL)}</div>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: totalPL >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: totalPL >= 0 ? T.green : T.red }}>
-                      {totalPL >= 0 ? "▲" : "▼"} {Math.abs(totalPLPct).toFixed(2)}%
-                    </span>
-                  </>}
-                </div>
                 <span />
               </div>
               {rows.map((row, i) => row.isGroupHeader ? (
@@ -5853,14 +5841,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
                     {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    {row.pl != null && <>
-                      <div style={{ fontWeight: 700, color: row.pl >= 0 ? T.green : T.red, fontSize: 14 }}>{row.pl >= 0 ? "+" : ""}{fmt(row.pl)}</div>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: row.pl >= 0 ? "rgba(0,200,150,0.15)" : "rgba(255,90,95,0.15)", color: row.pl >= 0 ? T.green : T.red }}>
-                        {row.pl >= 0 ? "▲" : "▼"} {Math.abs(row.plPct ?? 0).toFixed(2)}%
-                      </span>
-                    </>}
                   </div>
                   {!row.isDerived && !row.isSync
                     ? <button style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: 4, lineHeight: 1 }}>···</button>

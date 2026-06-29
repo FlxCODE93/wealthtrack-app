@@ -2486,8 +2486,8 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       mk("Livret A",   "defensif", "1,5 %",      ASSET.livret, "Très faible", capAt(0.015),                       apports),
       mk("ETF World",  "etf",      "8 – 12 %",   ASSET.etf,    "Modéré",      capAt(0.10),                        apports),
       mk("Or",         "or",       "6,5 %",      "#f59e0b",    "Modéré",      capAt(RATE_GOLD),                   apports),
-      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Spéculatif",  capAt(0.10),                        apports),
-      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Spéculatif",  capAt(0.065),                       apports),
+      mk("Bitcoin",    "btc",      "−10 – 30 %", ASSET.btc,    "Élevé",  capAt(0.10),                        apports),
+      mk("Ethereum",   "eth",      "−12 – 25 %", ASSET.eth,    "Élevé",  capAt(0.065),                       apports),
     ];
   }, [initial, monthly, horizon, price, sim]);
 

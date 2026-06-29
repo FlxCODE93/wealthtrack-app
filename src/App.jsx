@@ -2616,19 +2616,6 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
           detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" showBand={false}
           note="Moyenne MSCI World 1970–2020 ≈ 9,21 %/an (source : extraetf.com). Les performances passées ne garantissent pas les performances futures."
         />
-
-        {/* Teaser → Analyse des frais */}
-        <div style={{ borderRadius: 14, padding: 16, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Mes frais — simulateur complet</div>
-            <div style={{ color: T.muted, fontSize: 13 }}>Comparez ETF PEA, AV, PER, OPCVM, SCPI — et mesurez le coût réel des frais sur votre capital.</div>
-          </div>
-          <button onClick={() => setView("frais")}
-            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "10px 18px", color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-            Ouvrir →
-          </button>
-        </div>
-
       </>}
 
       {/* ── TAB: OR ── */}

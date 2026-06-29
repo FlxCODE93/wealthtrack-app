@@ -16,7 +16,7 @@
    projections. Ils sont hors frais et hors fiscalité,
    et NE CONSTITUENT PAS UNE PROMESSE DE RENDEMENT FUTUR.            */
 
-export const RATE_ETF_WORLD = 0.105; // ETF actions monde (ex: MSCI World) — perf. nominale historique récente
+export const RATE_ETF_WORLD = 0.09;  // ETF actions monde (ex: MSCI World) — moyenne MSCI World 1970-2020 arrondie
 export const RATE_LIVRET_A  = 0.015; // Livret A
 export const RATE_LEP       = 0.035; // Livret d'Épargne Populaire
 export const RATE_BTC       = 0.30;  // Bitcoin — extrêmement volatil, valeur indicative uniquement

@@ -2597,7 +2597,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
       {activeTab === "etf" && <>
         <ScenarioCard
           title="ETF PEA — MSCI World"
-          rate="médian 10,5 %/an" accent={ASSET.etf}
+          rate="médian 9 %/an" accent={ASSET.etf}
           stats={[
             { label: "Capital final", value: eur(sim.A.cap), color: ASSET.etf },
             { label: "Apports totaux", value: eur(sim.apports), color: T.text },
@@ -2605,7 +2605,7 @@ function Simulations({ totals, simParams, setSimParams, age, transactions, setVi
             { label: "Âge d'indépendance", value: typeof fireAge === "number" ? fireAge + " ans" : fireAge, color: T.amber },
           ]}
           detailedData={sim.detailedA} lineColor={ASSET.etf} chartKey="A" showBand={false}
-          note="Performance historique annualisée du WPEA (MSCI World PEA) sur 10 ans ≈ 10,5 % / an. Les performances passées ne garantissent pas les performances futures."
+          note="Moyenne MSCI World 1970–2020 ≈ 9,21 %/an (source : extraetf.com). Les performances passées ne garantissent pas les performances futures."
         />
 
         {/* Teaser → Analyse des frais */}
@@ -3012,7 +3012,7 @@ function ETFHistoryTooltip() {
 
       <div className="rounded-lg p-2.5 text-xs italic"
         style={{ background: "rgba(34,199,154,0.06)", border: "1px solid rgba(34,199,154,0.25)", color: "#6ee7b7" }}>
-        Rendement annualisé ~10,5 % / an sur 15 ans (2009–2026). Les performances passées ne garantissent pas les performances futures.
+        Rendement annualisé ~9 % / an (moyenne MSCI World 1970–2020). Les performances passées ne garantissent pas les performances futures.
       </div>
     </div>
   );

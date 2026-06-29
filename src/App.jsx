@@ -6465,52 +6465,49 @@ function ReferralPage({ profile }) {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {/* Hero */}
-      <div className="rounded-3xl p-6 sm:p-8" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-        <h1 className="text-2xl sm:text-3xl font-black leading-tight" style={{ color: T.text }}>Invitez vos proches,</h1>
-        <h1 className="text-2xl sm:text-3xl font-black leading-tight mb-5" style={{ color: T.blue }}>obtenez du Pro gratuitement !</h1>
-        <div className="text-xs font-bold mb-5" style={{ color: T.amber, letterSpacing: 0.6 }}>COMMENT ÇA MARCHE ?</div>
+      <div>
+        <h1 style={{ color: T.text, fontSize: 28, fontWeight: 800, lineHeight: 1.2 }}>Invitez vos proches,</h1>
+        <h1 style={{ color: T.blue, fontSize: 28, fontWeight: 800, lineHeight: 1.2, marginBottom: 24 }}>obtenez du Pro gratuitement !</h1>
 
-        <div className="text-xs mb-2" style={{ color: T.muted }}>Votre lien de parrainage</div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-          <div className="text-sm font-medium truncate flex-1 min-w-0" style={{ color: T.text, paddingBottom: 8, borderBottom: `1px solid ${T.border}` }}>{link}</div>
-          <button onClick={() => copy(link, "link")} className="inline-flex items-center justify-center gap-2 shrink-0"
-            style={{ minHeight: 44, padding: "10px 20px", borderRadius: 999, background: T.blue, color: "#fff", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-            {copied === "link" ? <Check size={16} /> : <Copy size={16} />} {copied === "link" ? "Copié !" : "Copier"}
+        <div style={{ marginBottom: 6, fontSize: 11, color: T.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>Votre lien de parrainage</div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div style={{ fontSize: 14, color: T.text, paddingBottom: 8, borderBottom: `1px solid ${T.border}`, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</div>
+          <button onClick={() => copy(link, "link")} style={{ minHeight: 40, padding: "9px 20px", borderRadius: 999, background: T.blue, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+            {copied === "link" ? <Check size={15} /> : <Copy size={15} />} {copied === "link" ? "Copié !" : "Copier"}
           </button>
         </div>
-        <div className="flex items-center gap-2 text-sm" style={{ color: T.muted }}>
-          Code de parrainage : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1 }}>{code}</span>
-          <button onClick={() => copy(code, "code")} aria-label="Copier le code"
-            style={{ background: "none", border: "none", color: copied === "code" ? T.green : T.muted, cursor: "pointer", padding: 4, display: "inline-flex" }}>
-            {copied === "code" ? <Check size={14} /> : <Copy size={14} />}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 13, color: T.muted }}>
+          Code : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1 }}>{code}</span>
+          <button onClick={() => copy(code, "code")} style={{ background: "none", border: "none", color: copied === "code" ? T.green : T.muted, cursor: "pointer", padding: 4, display: "inline-flex" }}>
+            {copied === "code" ? <Check size={13} /> : <Copy size={13} />}
           </button>
         </div>
       </div>
 
-      {/* 3 colonnes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {cards.map((c) => {
+      {/* 3 colonnes — sans fond */}
+      <div style={{ display: "flex", borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
+        {cards.map((c, i) => {
           const Icon = c.icon;
           return (
-            <div key={c.title} className="rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="rounded-lg p-2 shrink-0" style={{ background: `${T.blue}1a` }}><Icon size={16} style={{ color: T.blue }} /></span>
-                <span className="font-bold text-sm" style={{ color: T.text }}>{c.title}</span>
+            <div key={c.title} style={{ flex: 1, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <Icon size={15} style={{ color: T.blue, flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{c.title}</span>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{c.body}</p>
+              <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: 0 }}>{c.body}</p>
             </div>
           );
         })}
       </div>
 
       {/* Récompenses */}
-      <div>
-        <h2 className="text-xl font-bold mb-3" style={{ color: T.text }}>Vos récompenses</h2>
-        <div className="rounded-2xl p-8 text-center" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-          <Gift size={28} style={{ color: T.muted, margin: "0 auto 10px" }} />
-          <div className="text-sm" style={{ color: T.muted }}>Aucune récompense pour l'instant. Partagez votre lien pour commencer à gagner des mois de Pro.</div>
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Vos récompenses</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, color: T.muted, fontSize: 13 }}>
+          <Gift size={20} style={{ color: T.muted, flexShrink: 0 }} />
+          Aucune récompense pour l'instant — partagez votre lien pour gagner des mois de Pro.
         </div>
       </div>
     </div>

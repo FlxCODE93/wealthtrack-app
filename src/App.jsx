@@ -5492,7 +5492,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold" style={{ color: T.text }}>Évolution du patrimoine net</h2>
+                <h2 className="text-xl font-bold" style={{ color: T.text }}>Patrimoine net</h2>
                 <Badge tone={growthTotalPct >= 0 ? "green" : "red"}
                   icon={growthTotalPct >= 0 ? ArrowUpRight : ArrowDownRight}
                   label={`${growthTotalPct >= 0 ? "+" : ""}${pct(growthTotalPct)}`} />
@@ -5511,7 +5511,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               ))}
             </div>
           </div>
-          <ExpandableChart height={280} title="Évolution du patrimoine net"
+          <ExpandableChart height={280} title="Patrimoine net"
             controls={
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {HIST_RANGES.map(r => (

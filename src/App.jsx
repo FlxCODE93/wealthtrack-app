@@ -7863,9 +7863,11 @@ export default function App() {
   return (
     <DiscreetCtx.Provider value={discreet}>
     <div className="flex min-h-screen" style={{ background: T.bgGradient, fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-      {/* Masquage axes Recharts en mode discret */}
+      {/* Mode discret : flouter UNIQUEMENT les montants de l'axe Y (sensibles).
+          L'axe X (années/dates) et toute la structure (lignes, graduations,
+          grille) restent lisibles — sinon le graphique devient inutile. */}
       {discreet && (
-        <style>{`.recharts-cartesian-axis-tick text,.recharts-cartesian-axis-tick-value{visibility:hidden!important}`}</style>
+        <style>{`.recharts-yAxis .recharts-cartesian-axis-tick-value{filter:blur(6px);user-select:none}`}</style>
       )}
       {/* Bouton mode discret — fixe haut droite */}
       <button

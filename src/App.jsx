@@ -94,6 +94,52 @@ const FX_RATES    = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, CAD: 0.67, JPY: 0
 const CURRENCIES  = ["EUR", "USD", "GBP", "CHF", "CAD", "JPY", "BTC", "ETH"];
 const toEUR = (native, cur) => (native || 0) * (FX_RATES[cur] || 1);
 
+const BANK_LOGOS = [
+  { keys: ["linxea"],                         domain: "linxea.com" },
+  { keys: ["fortuneo"],                        domain: "fortuneo.fr" },
+  { keys: ["crypto.com"],                      domain: "crypto.com" },
+  { keys: ["binance"],                         domain: "binance.com" },
+  { keys: ["coinbase"],                        domain: "coinbase.com" },
+  { keys: ["kraken"],                          domain: "kraken.com" },
+  { keys: ["etoro"],                           domain: "etoro.com" },
+  { keys: ["trade republic"],                  domain: "traderepublic.com" },
+  { keys: ["degiro"],                          domain: "degiro.fr" },
+  { keys: ["scalable"],                        domain: "scalable.capital" },
+  { keys: ["interactive brokers", "ibkr"],     domain: "interactivebrokers.com" },
+  { keys: ["boursorama", "bourso"],            domain: "boursorama.com" },
+  { keys: ["bourse direct"],                   domain: "boursedirect.fr" },
+  { keys: ["revolut"],                         domain: "revolut.com" },
+  { keys: ["n26"],                             domain: "n26.com" },
+  { keys: ["lydia"],                           domain: "lydia-app.com" },
+  { keys: ["hello bank", "hellobank"],         domain: "hellobank.fr" },
+  { keys: ["caisse d'épargne", "caisse epargne", "cep"], domain: "caisse-epargne.fr" },
+  { keys: ["société générale", "societe generale", "sgpe", "sg "], domain: "societegenerale.fr" },
+  { keys: ["bnp paribas", "bnp"],              domain: "bnpparibas.fr" },
+  { keys: ["crédit agricole", "credit agricole", "lcl"], domain: "credit-agricole.fr" },
+  { keys: ["crédit mutuel", "credit mutuel"],  domain: "creditmutuel.fr" },
+  { keys: ["cic"],                             domain: "cic.fr" },
+  { keys: ["hsbc"],                            domain: "hsbc.fr" },
+  { keys: ["ing"],                             domain: "ing.fr" },
+  { keys: ["banque postale", "la banque postale"], domain: "labanquepostale.fr" },
+  { keys: ["nalo"],                            domain: "nalo.fr" },
+  { keys: ["yomoni"],                          domain: "yomoni.fr" },
+  { keys: ["saxo"],                            domain: "home.saxo" },
+  { keys: ["swisslife", "swiss life"],         domain: "swisslife.fr" },
+  { keys: ["axa"],                             domain: "axa.fr" },
+  { keys: ["generali"],                        domain: "generali.fr" },
+  { keys: ["cardif", "bnp cardif"],            domain: "cardif.fr" },
+  { keys: ["aviva", "abeille"],                domain: "aviva-france.fr" },
+  { keys: ["maif"],                            domain: "maif.fr" },
+  { keys: ["spirica"],                         domain: "spirica.fr" },
+];
+const getBankLogo = (label = "", catLabel = "") => {
+  const text = (label + " " + catLabel).toLowerCase();
+  for (const b of BANK_LOGOS) {
+    if (b.keys.some(k => text.includes(k))) return `https://www.google.com/s2/favicons?domain=${b.domain}&sz=64`;
+  }
+  return null;
+};
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -5710,7 +5756,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
           const totalPL = items.reduce((s, i) => s + (i.pl ?? 0), 0);
           const knownBasis = items.reduce((s, i) => s + (i.costBasis > 0 ? i.costBasis : 0), 0);
           const totalPLPct = knownBasis > 0 ? (totalPL / knownBasis) * 100 : null;
-          const COL = "2.5fr 1.2fr 0.9fr 0.6fr 1fr 1fr 32px";
+          const COL = "2.5fr 1.2fr 0.9fr 1fr 1fr 32px";
           const SortBtn = ({ k, label }) => (
             <button onClick={() => { sortKey === k ? setSortDir(d => -d) : (setSortKey(k), setSortDir(-1)); }}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
@@ -5725,7 +5771,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 <SortBtn k="label" label="Nom" />
                 <SortBtn k="catLabel" label="Type" />
                 <SortBtn k="allocPct" label="Répartition" />
-                <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>Déten.</span>
                 <SortBtn k="value" label="Valeur" />
                 <SortBtn k="pl" label="P&L" />
                 <span />
@@ -5735,7 +5780,7 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                 <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
                   Total <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 500 }}>{items.length} {isPassif ? "passifs" : "actifs"}</span>
                 </span>
-                <span /><span /><span />
+                <span /><span />
                 <span style={{ fontWeight: 700, color: T.text, fontSize: 14, textAlign: "right" }}>{fmt(totalVal)}</span>
                 <div style={{ textAlign: "right" }}>
                   {totalPLPct != null && <>
@@ -5755,7 +5800,13 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
               ) : (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: COL, gap: "0 8px", padding: "14px 0", borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</div>
+                    {(() => { const logo = getBankLogo(row.label, row.catLabel); return (
+                      <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${row.catColor}22`, border: `1px solid ${row.catColor}44`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                        {logo
+                          ? <img src={logo} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.innerHTML = `<span style="font-size:11px;font-weight:800;color:${row.catColor}">${row.initials}</span>`; }} />
+                          : <span style={{ fontSize: 11, fontWeight: 800, color: row.catColor }}>{row.initials}</span>}
+                      </div>
+                    ); })()}
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, color: T.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</div>
                       <div style={{ color: T.muted, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.catLabel}</div>
@@ -5771,9 +5822,6 @@ function Patrimoine({ patrimoine, setPatrimoine, onConnectBank, setView }) {
                     ); })()}
                     <span style={{ color: T.muted, fontSize: 12 }}>{row.allocPct.toFixed(2)} %</span>
                   </div>
-                  <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: T.muted, fontSize: 11, fontWeight: 700 }}>
-                    {row.detention != null && row.detention !== 100 ? `${row.detention}%` : "PF"}
-                  </span>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{isPassif ? "−" : ""}{fmt(row.value)}</span>
                     {row.currency && row.currency !== "EUR" && <div style={{ fontSize: 11, color: T.muted }}>{(row.valueNative ?? row.value).toLocaleString("fr-FR")} {row.currency}</div>}

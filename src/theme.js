@@ -1,7 +1,7 @@
 export const C = {
   // Bleu nuit institutionnel — plus sobre, moins violet, plus rassurant
   bg:        "#0f111a",        // Blue-navy profond (institutionnel)
-  panel:     "#111622",        // Surface section
+  panel:     "#161c2e",        // Surface section
   card:      "#161c2e",        // Carte élevée
   border:    "rgba(255,255,255,0.06)",  // Subtle glass divider
   text:      "#f8fafc",        // Pale white (not pure white)

@@ -364,6 +364,7 @@ export default function Tax() {
         </div>
       </div>
 
+      <div key={envelope} style={{ animation: "wt-fade-in 200ms ease-in-out both" }}>
       {/* ══ CRYPTO ══════════════════════════════════════════════════════ */}
       {envelope === "crypto" && (
         <>
@@ -1182,6 +1183,7 @@ export default function Tax() {
           </div>
         </div>
       )}
+      </div>
 
       {/* ══ Modals ═══════════════════════════════════════════════════════ */}
       {showLotForm && (
@@ -1258,7 +1260,7 @@ export default function Tax() {
 
       {/* ══ PER & ÉPARGNE SALARIALE (informatif) ════════════════════════ */}
       {envelope === "epargne" && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-5" style={{ animation: "wt-fade-in 200ms ease-in-out both" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             {[
               { label: "PER — entrée",     value: "Déductible", sub: "Plafond 10 % revenus pro", color: T.green },

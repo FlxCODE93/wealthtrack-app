@@ -1422,7 +1422,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
                 <Icon size={15} style={{ color: p.color, flexShrink: 0 }} />
               </div>
               <div className="text-xl font-bold mt-2 flex items-center gap-1.5 flex-wrap" style={{ color: p.color }}>
-                {fmt(p.value)}
+                <AnimatedNumber value={p.value} formatter={fmt} duration={0.25} />
                 {overridden && (
                   <span className="inline-flex items-center gap-1 px-1 py-0.5 rounded-md"
                     title="Montant modifié manuellement — cliquer pour ajuster ou réinitialiser"
@@ -1440,7 +1440,7 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
             <span className="text-xs" style={{ color: T.muted }}>Restant à vivre</span>
             <Wallet size={15} style={{ color: T.green, opacity: 0.6, flexShrink: 0 }} />
           </div>
-          <div className="text-xl font-bold mt-2" style={{ color: T.green }}>{fmt(restant)}</div>
+          <div className="text-xl font-bold mt-2" style={{ color: T.green }}><AnimatedNumber value={restant} formatter={fmt} duration={0.25} /></div>
         </div>
         {/* Taux d'épargne (dérivé) */}
         <div className="rounded-2xl p-4" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)" }}>
@@ -8110,6 +8110,7 @@ export default function App() {
           <AlertsBanner totals={totals} patrimoine={patrimoineDerived} dismissed={dismissed} onDismiss={handleDismissAlert} incomeRef={incomeRef} incomeIsSmoothed={incomeIsSmoothed} />
         )}
 
+        <div key={view} style={{ animation: "wt-fade-in 200ms ease-in-out both" }}>
         {view === "pricing"      && <PricingPage plan={plan} setPlan={setPlan} />}
         {view === "parrainage"   && <ReferralPage profile={profile} />}
         {view === "outils"       && <OutilsHub setView={setView} plan={plan} />}
@@ -8144,6 +8145,7 @@ export default function App() {
         {view === "couple"       && ((canAccess(plan, "couple") || coupleLinked)
             ? <Couple transactions={transactions} simParams={simParams} patrimoine={patrimoineDerived} profile={profile} userId={currentUser?.id} userEmail={currentUser?.email} />
             : <PaywallBanner feature="couple" plan={plan} onUpgrade={() => setView("pricing")} />)}
+        </div>
       </main>
 
       {/* Assistant financier — popup flottant (remplace l'ancien onglet Assistant) */}

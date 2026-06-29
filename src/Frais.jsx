@@ -405,7 +405,7 @@ export default function Frais({ invested = 0, investItems = [], setView }) {
               <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>après {horizon} ans · {impactData.pct} % de capital en moins</div>
             </div>
             {/* Graphique */}
-            <div style={{ flex: 1, minHeight: 200 }}>
+            <div style={{ height: 240 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 16, left: 8 }}>
                   <XAxis dataKey="y" tick={{ fill: T.muted, fontSize: 11 }} axisLine={{ stroke: T.border }} tickLine={false}

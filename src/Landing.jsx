@@ -917,7 +917,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── DASHBOARD PREVIEW ── */}
-      <div id="dashboard-preview" className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-6xl mx-auto">
+      <div id="dashboard-preview" className="relative px-6 md:px-16 mb-12 max-w-6xl mx-auto">
         <div className="relative rounded-3xl overflow-x-auto wt-glow-pulse wt-glass"
           style={{ border: `1px solid ${T.border}`, background: isDark ? "rgba(7,13,26,0.88)" : T.card }}>
 

@@ -6393,33 +6393,27 @@ function ReferralPage({ profile }) {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col" style={{ gap: 0 }}>
 
       {/* Hero */}
-      <div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `${T.amber}18`, border: `1px solid ${T.amber}40`, borderRadius: 999, padding: "4px 12px", marginBottom: 14 }}>
-          <Gift size={13} style={{ color: T.amber }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.amber }}>Programme de parrainage</span>
-        </div>
+      <div style={{ paddingBottom: 24 }}>
         <h1 style={{ color: T.text, fontSize: 36, fontWeight: 800, lineHeight: 1.15, marginBottom: 6 }}>
           Invitez vos proches,
         </h1>
-        <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.15, marginBottom: 10, background: `linear-gradient(135deg, ${T.blue} 0%, #60a5fa 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+        <h1 style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.15, marginBottom: 12, background: `linear-gradient(135deg, ${T.blue} 0%, #60a5fa 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
           obtenez du Pro gratuitement.
         </h1>
-        <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, margin: 0 }}>
           Chaque filleul qui rejoint WealthTrack vous offre <strong style={{ color: T.text }}>1 mois Pro (9,90 €)</strong> — sans plafond.
         </p>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        {kpis.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}18`, border: `1px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon size={15} style={{ color }} />
-              </div>
+      {/* KPIs — colonnes séparées par borderLeft, pas de fond */}
+      <div style={{ display: "flex", borderTop: `1px solid ${T.border}`, paddingTop: 20, paddingBottom: 24 }}>
+        {kpis.map(({ label, value, icon: Icon, color }, i) => (
+          <div key={label} style={{ flex: 1, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+              <Icon size={14} style={{ color, flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{label}</span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, color: T.text }}>{value}</div>
@@ -6427,48 +6421,25 @@ function ReferralPage({ profile }) {
         ))}
       </div>
 
-      {/* Comment ça marche */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "22px 24px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 18 }}>Comment ça marche</div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 0 }}>
-          {steps.map((s, i) => (
-            <div key={s.n} style={{ flex: 1, display: "flex", alignItems: "flex-start", gap: 0 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${T.blue}cc, ${T.violet}cc)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>{s.n}</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{s.label}</span>
-                </div>
-                <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: 0, paddingLeft: 38 }}>{s.desc}</p>
-              </div>
-              {i < steps.length - 1 && (
-                <div style={{ padding: "6px 12px", color: T.muted, fontSize: 18, flexShrink: 0 }}>→</div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Share box */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "22px 24px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 14 }}>Votre lien de parrainage</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>
+      {/* Lien de parrainage */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20, paddingBottom: 24 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>Votre lien de parrainage</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3, borderBottom: `1px solid ${T.border}`, paddingBottom: 10, marginBottom: 12 }}>
           <span style={{ fontSize: 13, color: T.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</span>
-          <button onClick={() => copy(link, "link")} style={{ background: copied === "link" ? `${T.green}22` : T.blue, color: copied === "link" ? T.green : "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, transition: "all 0.2s" }}>
+          <button onClick={() => copy(link, "link")} style={{ background: copied === "link" ? "transparent" : T.blue, color: copied === "link" ? T.green : "#fff", border: copied === "link" ? `1px solid ${T.green}` : "none", borderRadius: 8, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, transition: "all 0.2s" }}>
             {copied === "link" ? <Check size={13} /> : <Copy size={13} />}
             {copied === "link" ? "Copié !" : "Copier"}
           </button>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <a href={`https://wa.me/?text=${encodeURIComponent(shareMsg)}`} target="_blank" rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10, background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 13, textDecoration: "none", cursor: "pointer" }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 8, background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 12, textDecoration: "none", cursor: "pointer" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             WhatsApp
           </a>
           <a href={`mailto:?subject=${encodeURIComponent("1 mois WealthTrack Pro offert")}&body=${encodeURIComponent(shareMsg)}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10, background: T.panel, color: T.text, border: `1px solid ${T.border}`, fontWeight: 700, fontSize: 13, textDecoration: "none", cursor: "pointer" }}>
-            <Mail size={14} /> Email
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 8, color: T.text, border: `1px solid ${T.border}`, fontWeight: 700, fontSize: 12, textDecoration: "none", cursor: "pointer" }}>
+            <Mail size={13} /> Email
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", fontSize: 13, color: T.muted }}>
             Code : <span style={{ color: T.text, fontWeight: 700, letterSpacing: 1.5 }}>{code}</span>
@@ -6479,32 +6450,50 @@ function ReferralPage({ profile }) {
         </div>
       </div>
 
-      {/* Info cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        {infoCards.map(({ icon: Icon, title, body }) => (
-          <div key={title} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Icon size={14} style={{ color: T.blue, flexShrink: 0 }} />
-              <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{title}</span>
+      {/* Comment ça marche — colonnes borderLeft */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20, paddingBottom: 24 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 16 }}>Comment ça marche</div>
+        <div style={{ display: "flex" }}>
+          {steps.map((s, i) => (
+            <div key={s.n} style={{ flex: 1, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: `${T.blue}22`, border: `1px solid ${T.blue}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: T.blue }}>{s.n}</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{s.label}</span>
+              </div>
+              <p style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, margin: 0, paddingLeft: 28 }}>{s.desc}</p>
             </div>
-            <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, margin: 0 }}>{body}</p>
+          ))}
+        </div>
+      </div>
+
+      {/* Détails — colonnes borderLeft, même pattern que garanties Tarifs */}
+      <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, paddingTop: 20, paddingBottom: 24 }}>
+        {infoCards.map(({ icon: Icon, title, body }, i) => (
+          <div key={title} style={{ flex: 1, minWidth: 180, padding: "0 28px", ...(i === 0 ? { paddingLeft: 0 } : { borderLeft: `1px solid ${T.border}` }) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Icon size={14} style={{ color: T.blue, flexShrink: 0 }} />
+              <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{title}</span>
+            </div>
+            <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, margin: 0 }}>{body}</p>
           </div>
         ))}
       </div>
 
-      {/* Récompenses — empty state amélioré */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "28px 24px", textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", background: `${T.amber}18`, border: `1px solid ${T.amber}30`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-          <Flame size={22} style={{ color: T.amber }} />
+      {/* Récompenses */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>Vos récompenses</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: T.muted, fontSize: 13 }}>
+            <Flame size={16} style={{ color: T.amber, flexShrink: 0 }} />
+            Aucune récompense pour l'instant — partagez votre lien pour gagner des mois de Pro.
+          </div>
+          <button onClick={() => copy(link, "cta")} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "transparent", color: T.amber, border: `1px solid ${T.amber}55`, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+            {copied === "cta" ? <Check size={13} /> : <Copy size={13} />}
+            {copied === "cta" ? "Copié !" : "Copier mon lien"}
+          </button>
         </div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 6 }}>Soyez le premier à parrainer</div>
-        <p style={{ fontSize: 13, color: T.muted, maxWidth: 340, margin: "0 auto 18px", lineHeight: 1.6 }}>
-          Partagez votre lien et vos récompenses apparaîtront ici. Chaque filleul actif = 1 mois Pro offert.
-        </p>
-        <button onClick={() => copy(link, "cta")} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 20px", borderRadius: 10, background: `linear-gradient(135deg, #92400e, #d97706)`, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-          {copied === "cta" ? <Check size={14} /> : <Copy size={14} />}
-          {copied === "cta" ? "Lien copié !" : "Copier mon lien"}
-        </button>
       </div>
 
     </div>

@@ -1349,7 +1349,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     className="mt-6 px-5 py-2.5 rounded-xl text-sm font-bold"
                     style={plan.highlight
                       ? { background: T.gradientPrimary, color: "#fff" }
-                      : { border: `1px solid ${T.border}`, color: T.muted, background: "transparent" }}>
+                      : plan.name === "Couple"
+                        ? { background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)", color: "#fff", border: "none" }
+                        : { border: `1px solid ${T.border}`, color: T.muted, background: "transparent" }}>
                     {plan.name === "Gratuit" ? "Commencer gratuitement" : `Essayer ${plan.name}`}
                   </button>
                 </div>

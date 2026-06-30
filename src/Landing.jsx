@@ -1296,23 +1296,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
             </div>
           </div>
 
-          {/* Badges de confiance */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pt-8" style={{ borderTop: `1px solid ${T.border}` }}>
-            {[
-              { icon: ShieldCheck, label: "RGPD Compliant",    color: T.green },
-              { icon: Database,    label: "Cloud Supabase",   color: T.blue },
-              { icon: EyeOff,      label: "Aucun tracking",   color: T.blue },
-              { icon: Award,       label: "Outil pédagogique", color: "#64748b" },
-            ].map((b) => {
-              const Icon = b.icon;
-              return (
-                <span key={b.label} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full"
-                  style={{ background: b.color + "10", color: b.color, border: `1px solid ${b.color}22` }}>
-                  <Icon size={10} /> {b.label}
-                </span>
-              );
-            })}
-          </div>
 
           <p className="text-xs max-w-2xl mx-auto text-center leading-relaxed mb-4" style={{ color: T.subtle2 }}>
             WealthTrack est un outil d'aide à la décision financière à caractère pédagogique. Il ne constitue pas un conseil en investissement au sens des articles L. 321-1 et suivants du Code monétaire et financier, ni au sens de la réglementation AMF. Les simulations sont fournies à titre indicatif et ne garantissent pas les performances futures. Pour tout conseil personnalisé, consultez un professionnel agréé (CIF, CGP, expert-comptable).

@@ -17,7 +17,7 @@ import {
   LayoutDashboard, Bitcoin, MessageCircle, ListTree, Percent, Crown,
   CreditCard, Landmark,
 } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LineChart, Line, YAxis, XAxis } from "recharts";
 import { ScrollProgressBar } from "./lib/motion.jsx";
 
 /* ── Constantes de contenu ─────────────────────────────────────── */
@@ -50,10 +50,10 @@ const PATR_ALLOC = [
 // Reflète la vraie sidebar de l'app (cf. Sidebar dans App.jsx).
 const SIDEBAR_PREVIEW_ITEMS = [
   { label: "Tableau de bord", icon: LayoutDashboard },
-  { label: "Patrimoine", icon: Wallet, active: true },
+  { label: "Patrimoine", icon: Wallet },
   { label: "Simulations", icon: TrendingUp },
   { label: "Plan d'action", icon: Star },
-  { label: "Mes frais", icon: Percent },
+  { label: "Mes frais", icon: Percent, active: true },
   { label: "Objectifs", icon: Target },
   { label: "Fiscalité", icon: Calculator },
   { label: "Tarifs", icon: Crown },
@@ -873,7 +873,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5a623" }} />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#27a37a" }} />
-            <span className="ml-3 text-xs" style={{ color: T.muted }}>wealthtrack.app · Patrimoine</span>
+            <span className="ml-3 text-xs" style={{ color: T.muted }}>wealthtrack.app · Mes frais</span>
           </div>
 
           {/* Contenu */}
@@ -896,121 +896,95 @@ export default function Landing({ onStart, onLogin = onStart }) {
               })}
             </div>
 
-            <div className="flex-1 p-5 md:p-7 text-left">
+            <div className="flex-1 p-5 md:p-6 text-left">
               {/* En-tête */}
-              <div className="mb-5">
-                <div className="text-xl md:text-2xl font-black" style={{ color: T.text }}>Patrimoine</div>
-                <div className="text-xs" style={{ color: T.muted }}>Suivi de votre richesse nette</div>
-              </div>
-
-              {/* Accès rapides */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[
-                  { icon: CreditCard, color: "#ef4444", title: "Mes crédits", sub: "Prêts & passifs" },
-                  { icon: Bitcoin,    color: T.amber,   title: "Crypto",      sub: "Portefeuille & cours live" },
-                  { icon: Landmark,   color: T.blue,    title: "Importer / Banque", sub: "Relevés & connexion" },
-                ].map((a) => {
-                  const Icon = a.icon;
-                  return (
-                    <div key={a.title} className="rounded-xl p-3 flex items-center gap-2.5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                      <span className="rounded-lg p-1.5 shrink-0" style={{ background: a.color + "1a" }}><Icon size={15} style={{ color: a.color }} /></span>
-                      <span className="min-w-0">
-                        <span className="block text-xs font-bold truncate" style={{ color: T.text }}>{a.title}</span>
-                        <span className="block text-[10px] truncate" style={{ color: T.muted }}>{a.sub}</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Évolution + Performance — layout fidèle au screenshot */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                {/* Évolution du patrimoine net (2/3) */}
-                <div className="md:col-span-2 rounded-2xl p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-bold" style={{ color: T.text }}>Évolution du patrimoine net</div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ background: "rgba(0,200,150,0.12)", color: C.green }}>
-                        ↗ +38,5 %
-                      </span>
-                    </div>
-                    <div className="text-[10px] px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.05)", color: T.muted, border: `1px solid ${T.border}` }}>12 derniers mois</div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#ef444422" }}>
+                    <Percent size={18} style={{ color: "#ef4444" }} />
                   </div>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <AreaChart data={HERO_SERIES} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="patrGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={C.blue} stopOpacity={0.35} />
-                          <stop offset="100%" stopColor={C.blue} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="value" stroke={C.blue} strokeWidth={2} fill="url(#patrGrad)" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <div className="text-xl font-black" style={{ color: T.text }}>Mes frais</div>
                 </div>
-
-                {/* Performance (1/3) */}
-                <div className="rounded-2xl p-5 flex flex-col justify-between" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                  <div>
-                    <div className="text-sm font-bold mb-1" style={{ color: T.text }}>Performance</div>
-                    <div className="text-[10px] mb-4" style={{ color: T.muted }}>Depuis Juil 2025 : +38,5 %</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-black mb-2" style={{ color: C.green }}>+38,5 %</div>
-                    <div className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}>
-                      ↗ <span>+42 729 €</span>
-                      <span style={{ color: T.muted, fontWeight: 400 }}>sur la période</span>
-                    </div>
-                  </div>
+                <div className="text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1.5" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
+                  Glossaire
                 </div>
               </div>
+              <div className="text-sm font-bold mb-4" style={{ color: T.text }}>Combien les frais vous coûtent</div>
 
-              {/* Actifs + Répartition */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Liste actifs (2/3) */}
-                <div className="md:col-span-2 rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="text-sm font-bold" style={{ color: T.text }}>Actifs</div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${C.blue}18`, color: C.blue }}>288 729 €</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
+              {/* Layout 2 colonnes */}
+              <div className="grid grid-cols-5 gap-4">
+                {/* Colonne gauche — inputs */}
+                <div className="col-span-2 rounded-2xl p-4 flex flex-col gap-3" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                  {/* Table placements */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-black tracking-wider" style={{ color: T.muted }}>VOS PLACEMENTS</div>
+                      <div className="text-[10px] font-bold" style={{ color: T.text }}>45 000 €</div>
+                    </div>
+                    <div className="flex text-[9px] font-bold mb-1" style={{ color: T.subtle2 }}>
+                      <span className="flex-1">PLACEMENT</span>
+                      <span className="w-16 text-right">VALEUR</span>
+                      <span className="w-12 text-right">FRAIS</span>
+                    </div>
                     {[
-                      { label: "Épargne liquide",   value: "22 500 €", color: C.green },
-                      { label: "Investissements",    value: "45 000 €", color: C.blue },
-                      { label: "Immobilier",         value: "200 000 €", color: "#3b82f6" },
-                      { label: "Autres actifs",      value: "10 000 €", color: C.muted },
-                    ].map((a) => (
-                      <div key={a.label} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
-                          <span className="text-xs" style={{ color: T.text }}>{a.label}</span>
+                      { name: "ETF World PEA", val: "40 000 €", frais: "1,5" },
+                      { name: "Actions",        val: "5 000 €",  frais: "0,5" },
+                    ].map((r) => (
+                      <div key={r.name} className="flex items-center py-1.5" style={{ borderTop: `1px solid ${T.border}` }}>
+                        <span className="flex-1 text-[10px]" style={{ color: T.text }}>{r.name}</span>
+                        <span className="w-16 text-right text-[10px]" style={{ color: T.muted }}>{r.val}</span>
+                        <span className="w-12 text-right">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: T.veil2, border: `1px solid ${T.border}`, color: T.text }}>{r.frais} %</span>
+                        </span>
+                      </div>
+                    ))}
+                    <div className="mt-2 text-[10px]" style={{ color: T.muted }}>
+                      Frais pondérés <span className="font-bold" style={{ color: T.text }}>1,39 %/an</span>
+                      {" · "}<span style={{ color: "#ef4444" }}>625 €/an</span>
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: C.blue }}>Modifier dans Patrimoine →</div>
+                  </div>
+
+                  {/* Inputs */}
+                  <div style={{ borderTop: `1px solid ${T.border}` }} className="pt-3 flex flex-col gap-3">
+                    {[
+                      { label: "CAPITAL INITIAL", value: "45 000", unit: "€", big: true },
+                      { label: "HORIZON DE PLACEMENT", value: "20", unit: "ans", big: true },
+                      { label: "TAUX DE FRAIS", value: "1,39", unit: "%", sub: "pondérés", big: true },
+                    ].map((f) => (
+                      <div key={f.label}>
+                        <div className="text-[9px] font-black tracking-wider mb-1" style={{ color: T.muted }}>{f.label}</div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-2xl font-black" style={{ color: T.text }}>{f.value}</span>
+                          <span className="text-xs" style={{ color: T.muted }}>{f.unit}</span>
+                          {f.sub && <span className="text-[10px]" style={{ color: T.subtle2 }}>{f.sub}</span>}
                         </div>
-                        <span className="text-xs font-bold" style={{ color: a.color }}>{a.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Répartition donut (1/3) */}
-                <div className="rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-bold" style={{ color: T.text }}>Répartition</div>
-                    <div className="text-[10px]" style={{ color: T.muted }}>7 catégories</div>
-                  </div>
-                  <ResponsiveContainer width="100%" height={110}>
-                    <PieChart>
-                      <Pie data={PATR_ALLOC} dataKey="value" nameKey="name" innerRadius={30} outerRadius={48} paddingAngle={2} stroke="none">
-                        {PATR_ALLOC.map((e, i) => <Cell key={i} fill={e.color} />)}
-                      </Pie>
-                    </PieChart>
+                {/* Colonne droite — résultat + chart */}
+                <div className="col-span-3 rounded-2xl p-4" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+                  <div className="text-[10px] font-bold mb-1" style={{ color: T.muted }}>Manque à gagner</div>
+                  <div className="text-3xl font-black mb-1" style={{ color: "#ef4444" }}>– 65 193 €</div>
+                  <div className="text-[10px] mb-3" style={{ color: T.muted }}>après 20 ans · 24 % de capital en moins</div>
+                  <ResponsiveContainer width="100%" height={195}>
+                    <LineChart
+                      data={Array.from({ length: 21 }, (_, i) => ({
+                        t: i,
+                        sansFrais: Math.round(45000 * Math.pow(1.088, i)),
+                        avecFrais: Math.round(45000 * Math.pow(1.07, i)),
+                      }))}
+                      margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <YAxis domain={[0, 280000]} tickCount={5} tickFormatter={(v) => v === 0 ? "0k €" : `${v / 1000}k €`}
+                        tick={{ fontSize: 9, fill: T.muted }} axisLine={false} tickLine={false} width={42} />
+                      <XAxis dataKey="t" tickFormatter={(v) => v === 0 ? "0 ans" : v % 6 === 0 ? `${v} ans` : ""}
+                        tick={{ fontSize: 9, fill: T.muted }} axisLine={false} tickLine={false} />
+                      <Line type="monotone" dataKey="sansFrais" stroke="#ffffff" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="avecFrais" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 3" />
+                    </LineChart>
                   </ResponsiveContainer>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-1">
-                    {PATR_ALLOC.map((a) => (
-                      <span key={a.name} className="text-[10px] flex items-center gap-1" style={{ color: T.muted }}>
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.color }} /> {a.name}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

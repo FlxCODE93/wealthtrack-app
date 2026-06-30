@@ -811,7 +811,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-center">
+      <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-0.02em" }}>
           <span style={{ color: T.text }}>
@@ -857,7 +857,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── DASHBOARD PREVIEW ── */}
-      <div id="dashboard-preview" className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-5xl mx-auto">
+      <div id="dashboard-preview" className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-6xl mx-auto">
         <div className="relative rounded-3xl overflow-hidden wt-glow-pulse wt-glass"
           style={{ border: `1px solid ${T.border}`, background: isDark ? "rgba(7,13,26,0.88)" : T.card }}>
 
@@ -1020,7 +1020,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </div>
 
       {/* ── STATS ── */}
-      <div className="px-6 md:px-16 mb-20 max-w-4xl mx-auto">
+      <div className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "24px 0" }}>
           {[
             { end: 16,  suffix: "",     label: "modules de simulation" },
@@ -1039,7 +1039,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </div>
 
       {/* ── POUR QUI ── */}
-      <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
+      <section className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Votre situation. Votre simulation.</h2>
           <p style={{ color: T.muted }}>WealthTrack s'adapte à votre profil — pas l'inverse.</p>
@@ -1079,7 +1079,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="fonctionnalites" className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
+      <section id="fonctionnalites" className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Moins de doutes. Plus de décisions.</h2>
           <p style={{ color: T.muted }}>Chaque module répond à une question concrète — PEA vs AV, capacité d'emprunt, indépendance financière, fiscalité crypto.</p>
@@ -1126,7 +1126,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── PASSONS À L'ACTION ── */}
-      <section id="comment-ca-marche" className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
+      <section id="comment-ca-marche" className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Opérationnel en 3 minutes</h2>
           <p style={{ color: T.muted }}>Inscription, connexion de vos comptes, premier plan d'action — tout ça avant votre prochain café.</p>
@@ -1171,7 +1171,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── TÉMOIGNAGES ── */}
-      <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
+      <section className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Ce qu'en disent nos utilisateurs</h2>
           <p style={{ color: T.muted }}>Retours d'expérience sur la prise en main et les résultats obtenus.</p>
@@ -1213,7 +1213,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="px-6 md:px-16 mb-20 max-w-3xl mx-auto">
+      <section className="px-6 md:px-16 mb-20 max-w-5xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Questions fréquentes</h2>
         </div>
@@ -1244,7 +1244,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── FOOTER ── */}
       <footer className="px-6 md:px-16 py-14" style={{ borderTop: `1px solid ${T.border}` }}>
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
           {/* Colonnes */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">

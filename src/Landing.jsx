@@ -1021,16 +1021,15 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── STATS ── */}
       <div className="px-6 md:px-16 mb-20 max-w-4xl mx-auto">
-        <div className="rounded-2xl p-8 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-8 wt-glass"
-          style={{ background: isDark ? "rgba(7,13,26,0.85)" : T.card, border: `1px solid ${T.border}`, boxShadow: isDark ? "inset 0 1px 0 rgba(255,255,255,0.04)" : "none" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "24px 0" }}>
           {[
             { end: 16,  suffix: "",     label: "modules de simulation" },
             { end: 30,  suffix: " ans", label: "d'horizon de projection" },
             { end: 100, suffix: "%",    label: "données sous contrôle" },
             { end: 0,   suffix: " €",   label: "pour commencer" },
-          ].map(({ end, suffix, label }) => (
-            <div key={label} className="text-center">
-              <div className="text-2xl md:text-3xl font-black mb-2" style={{ color: T.blue }}>
+          ].map(({ end, suffix, label }, i) => (
+            <div key={label} style={{ flex: 1, minWidth: 120, textAlign: "center", padding: "0 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : {}) }}>
+              <div className="text-2xl md:text-3xl font-black mb-1" style={{ color: T.blue }}>
                 <CountUpNumber end={end} suffix={suffix} />
               </div>
               <div className="text-xs leading-tight" style={{ color: T.muted }}>{label}</div>
@@ -1047,21 +1046,23 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${inView ? "wt-stagger" : ""}`}>
-              {PERSONAS.map((p) => {
+            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
+              {PERSONAS.map((p, i) => {
                 const Icon = p.icon;
                 return (
                   <div key={p.title}
-                    className={`text-left rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter cursor-pointer ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{ padding: "20px 0", borderBottom: `1px solid ${T.border}`, animationDelay: `${i * 60}ms` }}
                     onClick={onLogin}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.blue + "66"; e.currentTarget.style.background = `${T.blue}08`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
-                    <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: `${T.blue}18` }}>
-                      <Icon size={18} style={{ color: T.blue }} />
+                    onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = "8px"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = "0"; }}>
+                    <div className="rounded-xl p-2.5 w-fit shrink-0" style={{ background: `${T.blue}18` }}>
+                      <Icon size={16} style={{ color: T.blue }} />
                     </div>
-                    <h3 className="text-base font-bold mb-1.5" style={{ color: T.text }}>{p.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
+                    <div>
+                      <h3 className="text-sm font-bold mb-1" style={{ color: T.text }}>{p.title}</h3>
+                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
+                    </div>
                   </div>
                 );
               })}
@@ -1078,20 +1079,26 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${inView ? "wt-stagger" : ""}`}>
-              {FEATURES.map((f) => {
+            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
+              {FEATURES.map((f, i) => {
                 const Icon = f.icon;
                 return (
-                  <div key={f.title} className={`rounded-2xl px-5 pt-4 pb-2 transition-all wt-card-hover wt-card-enter cursor-pointer ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                  <div key={f.title}
+                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{ padding: "18px 0", borderBottom: `1px solid ${T.border}`, animationDelay: `${i * 40}ms` }}
                     onClick={onLogin}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = f.color + "66"; e.currentTarget.style.background = `${f.color}08`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.panel; }}>
-                    <div className="rounded-xl p-2.5 w-fit mb-3" style={{ background: f.color + "1a" }}>
-                      <Icon size={18} style={{ color: f.color }} />
+                    onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = "8px"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = "0"; }}>
+                    <div className="rounded-lg p-2 w-fit shrink-0" style={{ background: f.color + "18" }}>
+                      <Icon size={15} style={{ color: f.color }} />
                     </div>
-                    <h3 className="font-bold text-base mb-1.5" style={{ color: T.text }}>{f.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-4 mb-1">
+                        <h3 className="font-bold text-sm" style={{ color: T.text }}>{f.title}</h3>
+                        <span className="text-xs font-semibold shrink-0" style={{ color: f.color }}>{f.stat}</span>
+                      </div>
+                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
+                    </div>
                   </div>
                 );
               })}
@@ -1153,50 +1160,27 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${inView ? "wt-stagger" : ""}`}>
+            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
               {TESTIMONIALS.map((t, idx) => (
-                <div
-                  key={t.name}
-                  className={`rounded-2xl p-8 flex flex-col wt-card-hover wt-glass transition-all duration-300 ${inView ? "opacity-100" : "opacity-0"}`}
-                  style={{
-                    background: isDark ? "rgba(9,14,30,0.82)" : T.panel,
-                    border: `1px solid ${T.border}`,
-                    animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both` : "none",
-                    animationDelay: `${idx * 100}ms`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)";
-                    e.currentTarget.style.background = isDark ? "rgba(124,58,237,0.06)" : `${T.violet}08`;
-                    e.currentTarget.style.transform = "translateY(-3px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = T.border;
-                    e.currentTarget.style.background = isDark ? "rgba(9,14,30,0.82)" : T.panel;
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-5"
-                    style={{ background: `${T.green}18`, color: T.green, border: `1px solid ${T.green}30` }}>
-                    <Check size={10} /> {t.result}
-                  </div>
-                  <p className="text-sm leading-relaxed mb-6 flex-1" style={{ color: T.text }}>
-                    «&nbsp;<span style={{ color: T.muted }}>{t.text}</span>&nbsp;»
-                  </p>
-                  <div className="flex items-center gap-4 pt-4" style={{ borderTop: `1px solid ${T.border}` }}>
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                      style={{
-                        background: `linear-gradient(135deg, ${T.blue} 0%, ${T.violet} 100%)`,
-                        color: "#fff",
-                      }}>
+                <div key={t.name}
+                  className={`transition-all ${inView ? "opacity-100" : "opacity-0"}`}
+                  style={{ padding: "24px 0", borderBottom: `1px solid ${T.border}`, animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16,1,0.3,1) both` : "none", animationDelay: `${idx * 80}ms` }}>
+                  <div className="flex items-start gap-5">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{ background: `linear-gradient(135deg, ${T.blue} 0%, ${T.violet} 100%)`, color: "#fff" }}>
                       {t.initials}
                     </div>
-                    <div>
-                      <div className="font-semibold text-sm" style={{ color: T.text }}>
-                        {t.name}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className="text-sm font-semibold" style={{ color: T.text }}>{t.name}</span>
+                        <span className="text-xs" style={{ color: T.muted }}>{t.role}</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: T.green }}>
+                          <Check size={10} /> {t.result}
+                        </span>
                       </div>
-                      <div className="text-xs leading-tight" style={{ color: T.muted }}>
-                        {t.role}
-                      </div>
+                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>
+                        «&nbsp;{t.text}&nbsp;»
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1211,14 +1195,14 @@ export default function Landing({ onStart, onLogin = onStart }) {
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Questions fréquentes</h2>
         </div>
-        <div className="space-y-2">
+        <div style={{ borderTop: `1px solid ${T.border}` }}>
           {FAQS.map((faq, i) => (
-            <div key={i} className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
-              <button className="w-full flex items-center justify-between px-6 py-4 text-left transition-colors"
-                style={{ background: openFaq === i ? `${T.blue}08` : T.veil1 }}
+            <div key={i} style={{ borderBottom: `1px solid ${T.border}`, padding: "14px 0" }}>
+              <button className="w-full flex items-center justify-between text-left"
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                 <span className="font-semibold text-sm pr-4" style={{ color: T.text }}>{faq.q}</span>
-                <ChevronDown size={15} style={{
+                <ChevronDown size={14} style={{
                   color: T.muted, flexShrink: 0,
                   transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)",
                   transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -1226,7 +1210,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
               </button>
               <div style={{ display: "grid", gridTemplateRows: openFaq === i ? "1fr" : "0fr", transition: "grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}>
                 <div className="overflow-hidden">
-                  <div className="px-6 pb-5 pt-1 text-sm leading-relaxed" style={{ color: T.muted }}>
+                  <div className="text-sm leading-relaxed pt-3" style={{ color: T.muted }}>
                     {faq.a}
                   </div>
                 </div>

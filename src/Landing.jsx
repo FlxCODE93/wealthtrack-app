@@ -1158,6 +1158,10 @@ export default function Landing({ onStart, onLogin = onStart }) {
                   );
                 })}
               </div>
+              {/* Mockup téléphone à droite */}
+              <div className="hidden lg:flex items-center justify-center">
+                <SyncPhoneMockup />
+              </div>
             </div>
           )}
         </Reveal>

@@ -828,19 +828,35 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
-        {/* Badge bêta + countdown */}
-        <div className="inline-flex flex-wrap justify-center items-center gap-2 px-4 py-2 rounded-full mb-8 wt-fade-in-down"
-          style={{ background: `${T.blue}12`, border: `1px solid ${T.blue}30`, maxWidth: "100%" }}>
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
-          <span className="text-xs font-semibold" style={{ color: T.text }}>Bêta · Lancement 1er septembre</span>
-          <span className="flex items-center gap-1.5 text-xs font-bold tabular-nums shrink-0" style={{ color: "#22d3ee" }}>
-            {[{ v: countdown.d, u: "j" }, { v: countdown.h, u: "h" }, { v: countdown.m, u: "m" }, { v: countdown.s, u: "s" }].map(({ v, u }) => (
-              <span key={u} className="flex items-center gap-0.5">
-                <span className="min-w-[18px] text-right">{String(v).padStart(2, "0")}</span>
-                <span style={{ color: T.muted }}>{u}</span>
-              </span>
+        {/* Countdown spectaculaire */}
+        <div className="flex flex-col items-center gap-4 mb-10 wt-fade-in-down">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
+            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.25)", color: "#22d3ee", letterSpacing: "0.08em" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22d3ee", boxShadow: "0 0 8px #22d3ee", animation: "wt-pulse 2s infinite" }} />
+            BÊTA OUVERTE · LANCEMENT 1ER SEPTEMBRE
+          </div>
+          <div className="flex items-end gap-2 sm:gap-4">
+            {[{ v: countdown.d, u: "jours" }, { v: countdown.h, u: "heures" }, { v: countdown.m, u: "minutes" }, { v: countdown.s, u: "secondes" }].map(({ v, u }, i) => (
+              <React.Fragment key={u}>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="rounded-2xl px-3 sm:px-5 py-3 sm:py-4 tabular-nums"
+                    style={{
+                      background: "rgba(34,211,238,0.06)",
+                      border: "1px solid rgba(34,211,238,0.20)",
+                      boxShadow: "0 0 24px rgba(34,211,238,0.10), inset 0 1px 0 rgba(255,255,255,0.05)",
+                      minWidth: 64,
+                    }}>
+                    <div className="text-3xl sm:text-5xl font-black leading-none"
+                      style={{ color: "#22d3ee", textShadow: "0 0 20px rgba(34,211,238,0.5)", fontVariantNumeric: "tabular-nums" }}>
+                      {String(v).padStart(2, "0")}
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: T.muted }}>{u}</div>
+                </div>
+                {i < 3 && <div className="text-2xl sm:text-4xl font-black mb-7" style={{ color: "rgba(34,211,238,0.35)" }}>:</div>}
+              </React.Fragment>
             ))}
-          </span>
+          </div>
         </div>
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-0.02em" }}>

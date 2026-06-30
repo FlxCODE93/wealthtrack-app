@@ -834,17 +834,17 @@ export default function Landing({ onStart, onLogin = onStart }) {
           <span className="block w-6 h-0.5 rounded-full transition-all" style={{ background: "#fff", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }} />
         </button>
       </nav>
-      {/* Menu mobile déroulant */}
+      {/* Dropdown mobile — reste sur la landing */}
       {mobileMenuOpen && (
-        <div className="sm:hidden fixed inset-0 z-40 flex flex-col pt-20 px-6 gap-3"
-          style={{ background: "rgba(7,13,26,0.97)", backdropFilter: "blur(20px)" }}>
+        <div className="sm:hidden absolute top-full left-0 right-0 z-40 px-6 py-4 flex flex-col gap-3"
+          style={{ background: "rgba(7,13,26,0.96)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${T.border}` }}>
           <button onClick={() => { setMobileMenuOpen(false); onLogin(); }}
-            className="w-full py-4 rounded-2xl text-base font-bold"
+            className="w-full py-3.5 rounded-2xl text-sm font-bold"
             style={{ border: `1px solid ${T.blue}`, color: T.blue, background: "transparent" }}>
             Se connecter
           </button>
           <button onClick={() => { setMobileMenuOpen(false); onStart(); }}
-            className="w-full py-4 rounded-2xl text-base font-bold"
+            className="w-full py-3.5 rounded-2xl text-sm font-bold"
             style={{ background: T.gradientPrimary, color: "#fff", border: "none" }}>
             S'inscrire gratuitement
           </button>

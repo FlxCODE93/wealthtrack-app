@@ -878,12 +878,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
             Voir la démonstration
           </button>
         </div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs mt-1 wt-slide-up"
-          style={{ background: `${T.blue}10`, border: `1px solid ${T.blue}25`, color: T.muted }}>
-          <span className="text-center">
-            Simulation uniquement<span className="hidden sm:inline"> · </span><span className="block sm:inline">Non conseil en investissement (AMF)</span>
-          </span>
-        </div>
       </section>
 
       {/* ── DASHBOARD PREVIEW ── */}

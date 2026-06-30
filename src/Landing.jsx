@@ -1107,14 +1107,14 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     onMouseEnter={(e) => { e.currentTarget.querySelector("h3").style.color = f.color; }}
                     onMouseLeave={(e) => { e.currentTarget.querySelector("h3").style.color = T.text; }}>
                     <div className="flex items-start gap-4">
-                      <div className="rounded-lg p-2 w-fit shrink-0 mt-0.5" style={{ background: f.color + "18" }}>
-                        <Icon size={15} style={{ color: f.color }} />
+                      <div className="rounded-lg p-2.5 w-fit shrink-0 mt-0.5" style={{ background: f.color + "18" }}>
+                        <Icon size={17} style={{ color: f.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="mb-1">
-                          <h3 className="font-bold text-sm" style={{ color: T.text }}>{f.title}</h3>
+                        <div className="mb-1.5">
+                          <h3 className="font-bold text-base" style={{ color: T.text }}>{f.title}</h3>
                         </div>
-                        <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
+                        <p className="text-sm leading-relaxed" style={{ color: T.muted, fontSize: 14 }}>{f.desc}</p>
                       </div>
                     </div>
                   </div>

@@ -1336,7 +1336,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
           )}
         </Reveal>
         <p className="text-center text-xs mt-6" style={{ color: T.subtle2 }}>
-          Tarif fondateur garanti à vie pour les inscrits avant le 1er septembre · Sans engagement · Annulation immédiate
+          Plus d'informations dans la partie <button onClick={onStart} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: T.blue, textDecoration: "underline", font: "inherit", fontSize: "inherit" }}>Tarifs</button> de WealthTrack.
         </p>
       </section>
 

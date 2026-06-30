@@ -737,9 +737,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
   const btn = {
     primary: {
-      background: "linear-gradient(135deg, #92400e 0%, #b45309 45%, #d97706 100%)",
+      background: T.gradientPrimary,
       color: "#fff",
-      boxShadow: "0 0 28px rgba(180, 83, 9, 0.35)",
+      boxShadow: "0 0 28px rgba(29, 78, 216, 0.35)",
     },
     ghost: {
       border: `1px solid ${T.border}`,

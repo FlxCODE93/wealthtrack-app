@@ -80,9 +80,9 @@ function AlertLevelIcon({ level = "info", size = 15 }) {
 // `useLocalStorage` est ré-exporté depuis ./storage.js (cf. import en tête).
 
 const CAT_COLORS = {
-  Logement: "#2f9bff", WPEA: "#22c79a", Bourse: "#f5a623", Alimentation: "#a855f7",
-  Loisirs: "#ff5a5f", "Frais pro": "#14b8a6", Assurances: "#ec4899",
-  Transport: "#eab308", Abonnements: "#8b5cf6", Épargne: "#38bdf8", Santé: "#6366f1",
+  Logement: "#6366f1", WPEA: "#0ea5e9", Bourse: "#14b8a6", Alimentation: "#8b5cf6",
+  Loisirs: "#a78bfa", "Frais pro": "#475569", Assurances: "#94a3b8",
+  Transport: "#38bdf8", Abonnements: "#6366f1", Épargne: "#22d3ee", Santé: "#818cf8",
 };
 
 /* ------------------------------------------------------------------ */
@@ -1400,8 +1400,8 @@ function Dashboard({ totals, baseTotals, monthAdj = {}, onAdjust, setAiObjective
         const dests = [
           ...top.map((b) => ({ name: b.cat, value: b.amount, color: CAT_COLORS[b.cat] || T.muted })),
           ...(autres > 0 ? [{ name: "Autres", value: autres, color: T.muted }] : []),
-          ...(invest > 0 ? [{ name: "Investissements", value: invest, color: T.cyan }] : []),
-          ...(restant > 0 ? [{ name: "Restant à vivre", value: restant, color: T.green }] : []),
+          ...(invest > 0 ? [{ name: "Investissements", value: invest, color: "#3b82f6" }] : []),
+          ...(restant > 0 ? [{ name: "Restant à vivre", value: restant, color: "#22d3ee" }] : []),
         ].filter((d) => d.value > 0);
         if (dests.length === 0) return null;
         const data = {

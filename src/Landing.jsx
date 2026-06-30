@@ -1112,25 +1112,22 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 {/* Ligne reliant les 3 étapes */}
                 <div className="absolute left-5 top-5 bottom-5 w-px" aria-hidden="true"
                   style={{ background: `linear-gradient(to bottom, ${T.violet}80, ${T.blue}80, ${T.green}80)` }} />
-                {STEPS.map((s, i) => {
-                  const Icon = s.icon;
-                  return (
-                    <div key={s.title} className={`relative flex items-start gap-5 ${inView ? "wt-slide-up" : "opacity-0"}`}>
-                      <div className="relative z-10 shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ background: `${s.color}1a`, border: `1px solid ${s.color}40` }}>
-                        <Icon size={18} style={{ color: s.color }} />
-                      </div>
-                      <div className="pt-1">
-                        <div className="text-xs font-black tracking-wide mb-1"
-                          style={{ background: T.gradientPrimary, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                          ÉTAPE 0{i + 1}
-                        </div>
-                        <h3 className="text-base font-bold mb-1.5" style={{ color: T.text }}>{s.title}</h3>
-                        <p className="text-sm leading-relaxed" style={{ color: T.muted, whiteSpace: "pre-line" }}>{s.desc}</p>
-                      </div>
+                {STEPS.map((s, i) => (
+                  <div key={s.title} className={`relative flex items-start gap-5 ${inView ? "wt-slide-up" : "opacity-0"}`}>
+                    {/* Point sur la timeline */}
+                    <div className="relative z-10 shrink-0 w-10 flex justify-center pt-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}80` }} />
                     </div>
-                  );
-                })}
+                    <div className="pt-0.5">
+                      <div className="text-xs font-black tracking-wide mb-1"
+                        style={{ background: T.gradientPrimary, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                        ÉTAPE 0{i + 1}
+                      </div>
+                      <h3 className="text-base font-bold mb-1.5" style={{ color: T.text }}>{s.title}</h3>
+                      <p className="text-sm leading-relaxed" style={{ color: T.muted, whiteSpace: "pre-line" }}>{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
               {/* Mockup téléphone à droite */}
               <div className="hidden lg:flex items-center justify-center">

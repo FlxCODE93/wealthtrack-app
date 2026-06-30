@@ -279,7 +279,7 @@ const LEGAL_CONTENT = {
       },
       {
         heading: "Le localStorage, ce n'est pas un cookie",
-        body: ["Vos données (profil, transactions, objectifs) sont stockées via le localStorage de votre navigateur — une technologie distincte des cookies, qui reste sur votre appareil par défaut et n'est transmise à un serveur que si vous activez explicitement une synchronisation."],
+        body: ["Vos données (profil, transactions, objectifs) sont stockées localement dans votre navigateur (localStorage) ET synchronisées sur nos serveurs Supabase dès que vous êtes connecté. Le localStorage sert de cache instantané pour une expérience hors-ligne fluide — Supabase assure la persistance et la sécurité cloud."],
       },
       {
         heading: "Cookies strictement nécessaires",
@@ -1299,10 +1299,10 @@ export default function Landing({ onStart, onLogin = onStart }) {
           {/* Badges de confiance */}
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pt-8" style={{ borderTop: `1px solid ${T.border}` }}>
             {[
-              { icon: ShieldCheck, label: "RGPD Compliant",          color: T.green },
-              { icon: Database,    label: "Données locales par défaut", color: T.blue },
-              { icon: EyeOff,      label: "Aucun tracking",          color: T.blue },
-              { icon: Award,       label: "Outil pédagogique",       color: "#64748b" },
+              { icon: ShieldCheck, label: "RGPD Compliant",    color: T.green },
+              { icon: Database,    label: "Cloud Supabase",   color: T.blue },
+              { icon: EyeOff,      label: "Aucun tracking",   color: T.blue },
+              { icon: Award,       label: "Outil pédagogique", color: "#64748b" },
             ].map((b) => {
               const Icon = b.icon;
               return (

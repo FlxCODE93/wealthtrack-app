@@ -6173,15 +6173,6 @@ function ObjectifsView({ goals, setGoals, totals }) {
         </Card>
       )}
 
-      {goals.length === 0 && !showAdd && (
-        <Card>
-          <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <Target size={40} style={{ color: T.muted, margin: "0 auto 12px" }} />
-            <p style={{ color: T.text, fontWeight: 600, marginBottom: 6 }}>Aucun objectif défini</p>
-            <p style={{ color: T.muted, fontSize: 13 }}>Créez votre premier objectif pour suivre votre progression.</p>
-          </div>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {goals.map(g => {

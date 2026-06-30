@@ -855,11 +855,6 @@ export default function Landing({ onStart, onLogin = onStart }) {
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
         {/* Countdown spectaculaire */}
         <div className="flex flex-col items-center gap-4 mb-10 wt-fade-in-down">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
-            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.25)", color: "#22d3ee", letterSpacing: "0.08em" }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22d3ee", boxShadow: "0 0 8px #22d3ee", animation: "wt-pulse 2s infinite" }} />
-            BÊTA OUVERTE · LANCEMENT 1ER SEPTEMBRE
-          </div>
           <div className="flex items-end gap-2 sm:gap-4">
             {[{ v: countdown.d, u: "jours" }, { v: countdown.h, u: "heures" }, { v: countdown.m, u: "minutes" }, { v: countdown.s, u: "secondes" }].map(({ v, u }, i) => (
               <React.Fragment key={u}>

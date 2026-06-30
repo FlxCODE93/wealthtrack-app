@@ -728,12 +728,28 @@ function PourquoiModal({ onClose }) {
 
 /* ── Composant principal ───────────────────────────────────────── */
 
+function useCountdown(target) {
+  const [diff, setDiff] = useState(() => Math.max(0, target - Date.now()));
+  useEffect(() => {
+    const id = setInterval(() => setDiff(Math.max(0, target - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return { d, h, m, s };
+}
+
 export default function Landing({ onStart, onLogin = onStart }) {
   const { isDark } = useTheme();
   const T = isDark ? C : CL;
   const [openFaq, setOpenFaq] = useState(null);
   const [legalModal, setLegalModal] = useState(null);
   const [showPourquoi, setShowPourquoi] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistSent, setWaitlistSent] = useState(false);
+  const countdown = useCountdown(new Date("2026-09-01T00:00:00").getTime());
 
   const btn = {
     primary: {
@@ -812,6 +828,20 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
+        {/* Badge bêta + countdown */}
+        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full mb-8 wt-fade-in-down"
+          style={{ background: `${T.blue}12`, border: `1px solid ${T.blue}30` }}>
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
+          <span className="text-xs font-semibold" style={{ color: T.text }}>Bêta ouverte · Lancement le 1er septembre</span>
+          <span className="flex items-center gap-1.5 text-xs font-bold tabular-nums" style={{ color: "#22d3ee" }}>
+            {[{ v: countdown.d, u: "j" }, { v: countdown.h, u: "h" }, { v: countdown.m, u: "m" }, { v: countdown.s, u: "s" }].map(({ v, u }) => (
+              <span key={u} className="flex items-center gap-0.5">
+                <span className="min-w-[18px] text-right">{String(v).padStart(2, "0")}</span>
+                <span style={{ color: T.muted }}>{u}</span>
+              </span>
+            ))}
+          </span>
+        </div>
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
           style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-0.02em" }}>
           <span style={{ color: T.text }}>
@@ -1145,46 +1175,121 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
       </section>
 
-      {/* ── TÉMOIGNAGES ── */}
+      {/* ── BÊTA WAITLIST ── */}
+      <section className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
+        <Reveal>
+          {(ref, inView) => (
+            <div ref={ref} className={`transition-all ${inView ? "opacity-100" : "opacity-0"}`}
+              style={{ borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "48px 0" }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4"
+                    style={{ background: `${T.blue}12`, border: `1px solid ${T.blue}30`, color: "#22d3ee" }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22d3ee" }} />
+                    Bêta en cours · Lancement 1er septembre 2026
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-black mb-3" style={{ color: T.text }}>
+                    Rejoignez la liste d'attente
+                  </h2>
+                  <p className="text-sm leading-relaxed" style={{ color: T.muted }}>
+                    WealthTrack est en bêta fermée. Les premiers inscrits auront accès en priorité et bénéficieront du tarif fondateur.
+                  </p>
+                </div>
+                <div>
+                  {waitlistSent ? (
+                    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl" style={{ background: `${T.green}12`, border: `1px solid ${T.green}30` }}>
+                      <Check size={18} style={{ color: T.green, flexShrink: 0 }} />
+                      <div>
+                        <div className="text-sm font-bold" style={{ color: T.text }}>C'est noté !</div>
+                        <div className="text-xs mt-0.5" style={{ color: T.muted }}>Vous serez parmi les premiers à accéder à WealthTrack.</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={(e) => { e.preventDefault(); if (waitlistEmail) setWaitlistSent(true); }}
+                      className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="email" required placeholder="votre@email.com"
+                        value={waitlistEmail} onChange={(e) => setWaitlistEmail(e.target.value)}
+                        className="flex-1 px-4 py-3 rounded-xl text-sm outline-none wt-input-row"
+                        style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                      <button type="submit"
+                        className="px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap"
+                        style={{ background: T.gradientPrimary, color: "#fff" }}>
+                        Me prévenir
+                      </button>
+                    </form>
+                  )}
+                  <p className="text-xs mt-2" style={{ color: T.subtle2 }}>Pas de spam. Désabonnement en un clic.</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </Reveal>
+      </section>
+
+      {/* ── TARIFS ── */}
       <section className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Ce qu'en disent nos utilisateurs</h2>
-          <p style={{ color: T.muted }}>Retours d'expérience sur la prise en main et les résultats obtenus.</p>
+          <h2 className="text-3xl md:text-4xl font-black mb-3" style={{ color: T.text }}>Tarifs simples</h2>
+          <p style={{ color: T.muted }}>Gratuit pour démarrer. Débloquez les simulations avancées quand vous en avez besoin.</p>
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} className="grid grid-cols-1 md:grid-cols-3" style={{ borderTop: `1px solid ${T.border}` }}>
-              {TESTIMONIALS.map((t, idx) => (
-                <div key={t.name}
-                  className={`flex flex-col transition-all ${inView ? "opacity-100" : "opacity-0"}`}
+            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-3 ${inView ? "" : "opacity-0"}`}
+              style={{ borderTop: `1px solid ${T.border}` }}>
+              {[
+                {
+                  name: "Gratuit", price: "0 €", period: "pour toujours",
+                  color: T.muted,
+                  features: ["Tableau de bord patrimoine", "Suivi budgétaire", "Mes crédits", "Objectifs financiers"],
+                },
+                {
+                  name: "Pro", price: "7,99 €", period: "/mois",
+                  color: T.blue, highlight: true,
+                  features: ["Tout Gratuit +", "Simulations sur 30 ans", "Fiscalité nette (PEA, AV, CTO…)", "Immobilier & FIRE", "Analyse des frais", "Crypto"],
+                },
+                {
+                  name: "Couple", price: "9,99 €", period: "/mois",
+                  color: T.violet,
+                  features: ["Tout Pro +", "Mode couple natif", "2 patrimoines fusionnés", "Objectifs communs", "Plan d'action partagé"],
+                },
+              ].map((plan, idx) => (
+                <div key={plan.name}
+                  className={`flex flex-col transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
                   style={{
-                    padding: "24px 0",
-                    ...(idx > 0 ? { paddingLeft: 28, borderLeft: `1px solid ${T.border}` } : { paddingRight: 28 }),
-                    ...(idx === 1 ? { paddingRight: 28 } : {}),
-                    animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16,1,0.3,1) both` : "none",
+                    padding: "32px 0",
                     animationDelay: `${idx * 80}ms`,
+                    ...(idx > 0 ? { paddingLeft: 32, borderLeft: `1px solid ${T.border}` } : { paddingRight: 32 }),
+                    ...(idx === 1 ? { paddingRight: 32 } : {}),
                   }}>
-                  <div className="inline-flex items-center gap-1 text-xs font-bold mb-3" style={{ color: T.green }}>
-                    <Check size={10} /> {t.result}
+                  <div className="text-xs font-black tracking-wider mb-3" style={{ color: plan.color }}>{plan.name.toUpperCase()}</div>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-3xl font-black" style={{ color: T.text }}>{plan.price}</span>
+                    <span className="text-sm" style={{ color: T.muted }}>{plan.period}</span>
                   </div>
-                  <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: T.muted }}>
-                    «&nbsp;{t.text}&nbsp;»
-                  </p>
-                  <div className="flex items-center gap-3 pt-3" style={{ borderTop: `1px solid ${T.border}` }}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${T.blue} 0%, ${T.violet} 100%)`, color: "#fff" }}>
-                      {t.initials}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold" style={{ color: T.text }}>{t.name}</div>
-                      <div className="text-xs" style={{ color: T.muted }}>{t.role}</div>
-                    </div>
+                  <div className="flex flex-col gap-2 mt-4 flex-1">
+                    {plan.features.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm" style={{ color: T.muted }}>
+                        <Check size={13} style={{ color: plan.color, flexShrink: 0, marginTop: 2 }} />
+                        {f}
+                      </div>
+                    ))}
                   </div>
+                  <button onClick={onStart}
+                    className="mt-6 px-5 py-2.5 rounded-xl text-sm font-bold"
+                    style={plan.highlight
+                      ? { background: T.gradientPrimary, color: "#fff" }
+                      : { border: `1px solid ${T.border}`, color: T.muted, background: "transparent" }}>
+                    {plan.name === "Gratuit" ? "Commencer gratuitement" : `Essayer ${plan.name}`}
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </Reveal>
+        <p className="text-center text-xs mt-6" style={{ color: T.subtle2 }}>
+          Tarif fondateur garanti à vie pour les inscrits avant le 1er septembre · Sans engagement · Annulation immédiate
+        </p>
       </section>
 
       {/* ── FAQ ── */}

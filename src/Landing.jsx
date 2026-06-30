@@ -749,6 +749,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
   const [showPourquoi, setShowPourquoi] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSent, setWaitlistSent] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const countdown = useCountdown(new Date("2026-09-01T00:00:00").getTime());
 
   const btn = {
@@ -810,21 +811,45 @@ export default function Landing({ onStart, onLogin = onStart }) {
           </div>
           <span className="text-sm sm:text-lg font-bold tracking-tight" style={{ fontFamily: "inherit", background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>WealthTrack</span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
-          <button onClick={onLogin} className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all"
+        {/* Boutons desktop */}
+        <div className="hidden sm:flex items-center gap-2.5">
+          <button onClick={onLogin} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
             style={{ background: "transparent", border: `1px solid ${T.blue}`, color: T.blue }}
             onMouseEnter={(e) => { e.currentTarget.style.background = `${T.blue}14`; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
             Se connecter
           </button>
-          <button onClick={onStart} className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all"
+          <button onClick={onStart} className="text-sm font-semibold px-4 py-2 rounded-full transition-all"
             style={{ background: T.blue, border: `1px solid ${T.blue}`, color: "#fff" }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.filter = "brightness(1.08)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.filter = ""; }}>
             S'inscrire
           </button>
         </div>
+        {/* Hamburger mobile */}
+        <button className="sm:hidden flex flex-col gap-1.5 p-2" onClick={() => setMobileMenuOpen(o => !o)}
+          aria-label="Menu" style={{ background: "none", border: "none", cursor: "pointer" }}>
+          <span className="block w-6 h-0.5 rounded-full transition-all" style={{ background: "#fff", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }} />
+          <span className="block w-6 h-0.5 rounded-full transition-all" style={{ background: "#fff", opacity: mobileMenuOpen ? 0 : 1 }} />
+          <span className="block w-6 h-0.5 rounded-full transition-all" style={{ background: "#fff", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }} />
+        </button>
       </nav>
+      {/* Menu mobile déroulant */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden fixed inset-0 z-40 flex flex-col pt-20 px-6 gap-3"
+          style={{ background: "rgba(7,13,26,0.97)", backdropFilter: "blur(20px)" }}>
+          <button onClick={() => { setMobileMenuOpen(false); onLogin(); }}
+            className="w-full py-4 rounded-2xl text-base font-bold"
+            style={{ border: `1px solid ${T.blue}`, color: T.blue, background: "transparent" }}>
+            Se connecter
+          </button>
+          <button onClick={() => { setMobileMenuOpen(false); onStart(); }}
+            className="w-full py-4 rounded-2xl text-base font-bold"
+            style={{ background: T.gradientPrimary, color: "#fff", border: "none" }}>
+            S'inscrire gratuitement
+          </button>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
@@ -1068,11 +1093,10 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 const isLastRow = i >= PERSONAS.length - 2;
                 return (
                   <div key={p.title}
-                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"} ${isRightCol ? "sm:pl-12 sm:border-l" : "sm:pr-12"} ${i < PERSONAS.length - 1 ? "border-b" : ""} ${isLastRow ? "sm:border-b-0" : ""}`}
                     style={{
-                      padding: "36px 0",
-                      ...(isRightCol ? { paddingLeft: 48, borderLeft: `1px solid ${T.border}` } : { paddingRight: 48 }),
-                      ...(!isLastRow ? { borderBottom: `1px solid ${T.border}` } : {}),
+                      paddingTop: 36, paddingBottom: 36,
+                      borderColor: T.border,
                       animationDelay: `${i * 60}ms`,
                     }}
                     onClick={onLogin}
@@ -1110,12 +1134,10 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 const isLastRow = row === totalRows - 1;
                 return (
                   <div key={f.title}
-                    className={`cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    className={`cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"} ${col === 1 ? "lg:pl-7 lg:pr-7 lg:border-l lg:border-r" : ""} ${col === 2 ? "lg:pl-7 lg:border-l" : ""} ${i < FEATURES.length - 1 ? "border-b" : ""} ${isLastRow ? "lg:border-b-0" : ""}`}
                     style={{
-                      padding: "20px 0",
-                      ...(col === 1 ? { paddingLeft: 28, paddingRight: 28, borderLeft: `1px solid ${T.border}`, borderRight: `1px solid ${T.border}` } : {}),
-                      ...(col === 2 ? { paddingLeft: 28, borderLeft: `1px solid ${T.border}` } : {}),
-                      ...(!isLastRow ? { borderBottom: `1px solid ${T.border}` } : {}),
+                      paddingTop: 20, paddingBottom: 20,
+                      borderColor: T.border,
                       animationDelay: `${i * 35}ms`,
                     }}
                     onClick={onLogin}

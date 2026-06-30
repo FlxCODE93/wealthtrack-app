@@ -143,12 +143,12 @@ export default function Auth({ onAuthSuccess, startSignup = false }) {
           maxWidth: 400,
           width: "100%",
           padding: 32,
-          borderRadius: 16,
-          border: `1px solid ${T.border}`,
-          background: "rgba(22,27,46,0.64)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          boxShadow: "0 24px 60px -20px rgba(0,0,0,0.6)",
+          borderRadius: 24,
+          border: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(10,14,30,0.28)",
+          backdropFilter: "blur(40px) saturate(180%)",
+          WebkitBackdropFilter: "blur(40px) saturate(180%)",
+          boxShadow: "0 8px 48px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}
       >
         <div style={{ marginBottom: 28, textAlign: "center" }}>

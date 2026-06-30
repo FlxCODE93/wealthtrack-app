@@ -1323,11 +1323,11 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     animationDelay: `${idx * 80}ms`,
                     borderColor: T.border,
                   }}>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-3">
                     <div className="text-xs font-black tracking-wider" style={{ color: plan.color }}>{plan.name.toUpperCase()}</div>
                     {plan.trial && <div className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${plan.color}18`, color: plan.color }}>{plan.trial}</div>}
                   </div>
-                  <div className="flex items-baseline gap-1 mb-1">
+                  <div className="flex items-baseline justify-center gap-1 mb-1">
                     <span className="text-3xl font-black" style={{ color: T.text }}>{plan.price}</span>
                     <span className="text-sm" style={{ color: T.muted }}>{plan.period}</span>
                   </div>
@@ -1346,7 +1346,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     ))}
                   </div>
                   <button onClick={onStart}
-                    className="mt-6 px-5 py-2.5 rounded-xl text-sm font-bold"
+                    className="mt-6 px-5 py-2.5 rounded-xl text-sm font-bold w-full"
                     style={plan.highlight
                       ? { background: T.gradientPrimary, color: "#fff" }
                       : plan.name === "Couple"

@@ -829,11 +829,11 @@ export default function Landing({ onStart, onLogin = onStart }) {
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-6xl mx-auto wt-stagger text-center">
         {/* Badge bêta + countdown */}
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full mb-8 wt-fade-in-down"
-          style={{ background: `${T.blue}12`, border: `1px solid ${T.blue}30` }}>
+        <div className="inline-flex flex-wrap justify-center items-center gap-2 px-4 py-2 rounded-full mb-8 wt-fade-in-down"
+          style={{ background: `${T.blue}12`, border: `1px solid ${T.blue}30`, maxWidth: "100%" }}>
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
-          <span className="text-xs font-semibold" style={{ color: T.text }}>Bêta ouverte · Lancement le 1er septembre</span>
-          <span className="flex items-center gap-1.5 text-xs font-bold tabular-nums" style={{ color: "#22d3ee" }}>
+          <span className="text-xs font-semibold" style={{ color: T.text }}>Bêta · Lancement 1er septembre</span>
+          <span className="flex items-center gap-1.5 text-xs font-bold tabular-nums shrink-0" style={{ color: "#22d3ee" }}>
             {[{ v: countdown.d, u: "j" }, { v: countdown.h, u: "h" }, { v: countdown.m, u: "m" }, { v: countdown.s, u: "s" }].map(({ v, u }) => (
               <span key={u} className="flex items-center gap-0.5">
                 <span className="min-w-[18px] text-right">{String(v).padStart(2, "0")}</span>
@@ -888,7 +888,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── DASHBOARD PREVIEW ── */}
       <div id="dashboard-preview" className="relative px-6 md:px-16 mb-24 lg:mb-32 max-w-6xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden wt-glow-pulse wt-glass"
+        <div className="relative rounded-3xl overflow-x-auto wt-glow-pulse wt-glass"
           style={{ border: `1px solid ${T.border}`, background: isDark ? "rgba(7,13,26,0.88)" : T.card }}>
 
           {/* Halos lumineux animés */}
@@ -907,7 +907,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
           </div>
 
           {/* Contenu */}
-          <div className="relative flex">
+          <div className="relative flex" style={{ minWidth: 480 }}>
             {/* Sidebar miniature — fonctionnalités réelles de l'app */}
             <div className="hidden md:flex flex-col gap-1 p-3 shrink-0" style={{ width: 176, borderRight: `1px solid ${T.border}` }}>
               {SIDEBAR_PREVIEW_ITEMS.map((it) => {
@@ -1025,14 +1025,15 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
       {/* ── STATS ── */}
       <div className="px-6 md:px-16 mb-20 max-w-6xl mx-auto">
-        <div style={{ display: "flex", flexWrap: "wrap", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "24px 0" }}>
+        <div className="grid grid-cols-2 md:grid-cols-4" style={{ borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "24px 0" }}>
           {[
             { end: 16,  suffix: "",     label: "modules de simulation" },
             { end: 30,  suffix: " ans", label: "d'horizon de projection" },
             { end: 100, suffix: "%",    label: "données sous contrôle" },
             { end: 0,   suffix: " €",   label: "pour commencer" },
           ].map(({ end, suffix, label }, i) => (
-            <div key={label} style={{ flex: 1, minWidth: 120, textAlign: "center", padding: "0 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : {}) }}>
+            <div key={label} className={i % 2 !== 0 || i >= 2 ? "" : ""}
+              style={{ textAlign: "center", padding: "12px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : {}), ...(i === 2 ? { borderLeft: "none", borderTop: `1px solid ${T.border}` } : {}), ...(i === 3 ? { borderTop: `1px solid ${T.border}` } : {}) }}>
               <div className="text-2xl md:text-3xl font-black mb-1" style={{ color: T.blue }}>
                 <CountUpNumber end={end} suffix={suffix} />
               </div>
@@ -1255,12 +1256,11 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 },
               ].map((plan, idx) => (
                 <div key={plan.name}
-                  className={`flex flex-col transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                  className={`flex flex-col transition-all ${inView ? "wt-slide-up" : "opacity-0"} ${idx > 0 ? "md:border-l md:pl-8" : "md:pr-8"} ${idx === 1 ? "md:pr-8" : ""}`}
                   style={{
                     padding: "32px 0",
                     animationDelay: `${idx * 80}ms`,
-                    ...(idx > 0 ? { paddingLeft: 32, borderLeft: `1px solid ${T.border}` } : { paddingRight: 32 }),
-                    ...(idx === 1 ? { paddingRight: 32 } : {}),
+                    borderColor: T.border,
                   }}>
                   <div className="text-xs font-black tracking-wider mb-3" style={{ color: plan.color }}>{plan.name.toUpperCase()}</div>
                   <div className="flex items-baseline gap-1 mb-1">

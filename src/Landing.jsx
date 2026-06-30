@@ -1251,18 +1251,47 @@ export default function Landing({ onStart, onLogin = onStart }) {
               {[
                 {
                   name: "Gratuit", price: "0 €", period: "pour toujours",
-                  color: T.muted,
-                  features: ["Tableau de bord patrimoine", "Suivi budgétaire", "Mes crédits", "Objectifs financiers"],
+                  color: T.muted, trial: null,
+                  features: [
+                    "Tableau de bord patrimoine",
+                    "Suivi des finances & budget",
+                    "Patrimoine (consultation)",
+                    "Simulation ETF basique",
+                    "Mes crédits",
+                    "Objectifs financiers",
+                  ],
+                  locked: ["Simulations avancées", "Fiscalité", "Immobilier", "FIRE", "Crypto", "Mode Couple"],
                 },
                 {
                   name: "Pro", price: "7,99 €", period: "/mois",
-                  color: T.blue, highlight: true,
-                  features: ["Tout Gratuit +", "Simulations sur 30 ans", "Fiscalité nette (PEA, AV, CTO…)", "Immobilier & FIRE", "Analyse des frais", "Crypto"],
+                  color: T.blue, highlight: true, trial: "Essai gratuit 7 jours",
+                  features: [
+                    "Tout le plan Gratuit",
+                    "Indépendance Financière (FIRE)",
+                    "Simulations tous scénarios",
+                    "Fiscalité patrimoniale nette",
+                    "Simulateur Immobilier",
+                    "Analyse des frais (TER)",
+                    "Crypto & marchés live",
+                    "Assistant financier IA",
+                    "Historique illimité",
+                    "Support prioritaire",
+                  ],
+                  locked: ["Mode Couple"],
                 },
                 {
                   name: "Couple", price: "9,99 €", period: "/mois",
-                  color: T.violet,
-                  features: ["Tout Pro +", "Mode couple natif", "2 patrimoines fusionnés", "Objectifs communs", "Plan d'action partagé"],
+                  color: T.violet, trial: "Essai gratuit 7 jours",
+                  features: [
+                    "Tout le plan Pro",
+                    "Patrimoine combiné & objectifs communs",
+                    "Simulation comparée — ensemble vs séparément",
+                    "Partage de compte sécurisé E2E",
+                    "Accès bêta aux nouvelles fonctionnalités",
+                    "Export données Excel",
+                    "Support prioritaire",
+                  ],
+                  locked: [],
                 },
               ].map((plan, idx) => (
                 <div key={plan.name}
@@ -1272,7 +1301,10 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     animationDelay: `${idx * 80}ms`,
                     borderColor: T.border,
                   }}>
-                  <div className="text-xs font-black tracking-wider mb-3" style={{ color: plan.color }}>{plan.name.toUpperCase()}</div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-xs font-black tracking-wider" style={{ color: plan.color }}>{plan.name.toUpperCase()}</div>
+                    {plan.trial && <div className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${plan.color}18`, color: plan.color }}>{plan.trial}</div>}
+                  </div>
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className="text-3xl font-black" style={{ color: T.text }}>{plan.price}</span>
                     <span className="text-sm" style={{ color: T.muted }}>{plan.period}</span>
@@ -1281,6 +1313,12 @@ export default function Landing({ onStart, onLogin = onStart }) {
                     {plan.features.map((f) => (
                       <div key={f} className="flex items-start gap-2 text-sm" style={{ color: T.muted }}>
                         <Check size={13} style={{ color: plan.color, flexShrink: 0, marginTop: 2 }} />
+                        {f}
+                      </div>
+                    ))}
+                    {plan.locked?.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm opacity-35" style={{ color: T.muted }}>
+                        <X size={13} style={{ flexShrink: 0, marginTop: 2 }} />
                         {f}
                       </div>
                     ))}

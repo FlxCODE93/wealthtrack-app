@@ -389,8 +389,8 @@ function HeroOrbs() {
   return (
     <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "100vh", overflow: "hidden", pointerEvents: "none", zIndex: 1 }}>
       <div style={{ position: "absolute", width: 700, height: 700, top: -280, left: -160, borderRadius: "50%", background: "#1e293b", opacity: 0.55, filter: "blur(130px)", animation: "wt-orb-drift 22s ease-in-out infinite", willChange: "transform" }} />
-      <div style={{ position: "absolute", width: 500, height: 500, top: -80, right: -120, borderRadius: "50%", background: "#3b82f6", opacity: 0.08, filter: "blur(110px)", animation: "wt-orb-drift 28s ease-in-out infinite", animationDelay: "-9s", willChange: "transform" }} />
-      <div style={{ position: "absolute", width: 280, height: 280, top: "45%", left: "35%", borderRadius: "50%", background: "#0891b2", opacity: 0.06, filter: "blur(80px)", animation: "wt-orb-drift 17s ease-in-out infinite", animationDelay: "-5s", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 500, height: 500, top: -80, right: -120, borderRadius: "50%", background: "#3b82f6", opacity: 0.14, filter: "blur(110px)", animation: "wt-orb-drift 28s ease-in-out infinite", animationDelay: "-9s", willChange: "transform" }} />
+      <div style={{ position: "absolute", width: 280, height: 280, top: "45%", left: "35%", borderRadius: "50%", background: "#0891b2", opacity: 0.10, filter: "blur(80px)", animation: "wt-orb-drift 17s ease-in-out infinite", animationDelay: "-5s", willChange: "transform" }} />
     </div>
   );
 }
@@ -737,8 +737,9 @@ export default function Landing({ onStart, onLogin = onStart }) {
 
   const btn = {
     primary: {
-      background: T.gradientPrimary,
+      background: "linear-gradient(135deg, #92400e 0%, #b45309 45%, #d97706 100%)",
       color: "#fff",
+      boxShadow: "0 0 28px rgba(180, 83, 9, 0.35)",
     },
     ghost: {
       border: `1px solid ${T.border}`,
@@ -812,7 +813,7 @@ export default function Landing({ onStart, onLogin = onStart }) {
       {/* ── HERO ── */}
       <section className="relative px-6 md:px-16 pt-16 md:pt-24 pb-16 max-w-4xl mx-auto wt-stagger text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-none tracking-tight wt-slide-up wt-hero-enter text-center"
-          style={{ color: T.text, fontFamily: "inherit" }}>
+          style={{ color: T.text, fontFamily: "'Lora', Georgia, serif", letterSpacing: "-0.02em" }}>
           <span style={{ color: T.text }}>
             Simulez.
           </span>{" "}

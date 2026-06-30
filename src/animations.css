@@ -383,8 +383,15 @@
 /* ── Glass morphism utility ──────────────────────────────────── */
 
 .wt-glass {
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+[data-theme="light"] .wt-glass {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.12);
 }
 
 /* Masque la barre de défilement (sidebar) tout en gardant le scroll */

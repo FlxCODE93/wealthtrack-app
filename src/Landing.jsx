@@ -1111,9 +1111,8 @@ export default function Landing({ onStart, onLogin = onStart }) {
                         <Icon size={15} style={{ color: f.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-3 mb-1">
+                        <div className="mb-1">
                           <h3 className="font-bold text-sm" style={{ color: T.text }}>{f.title}</h3>
-                          <span className="text-xs font-semibold shrink-0" style={{ color: f.color }}>{f.stat}</span>
                         </div>
                         <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
                       </div>

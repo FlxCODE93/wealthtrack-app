@@ -1046,21 +1046,28 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
+            <div ref={ref} className={`grid grid-cols-1 sm:grid-cols-2 ${inView ? "wt-stagger" : ""}`} style={{ borderTop: `1px solid ${T.border}` }}>
               {PERSONAS.map((p, i) => {
                 const Icon = p.icon;
+                const isRightCol = i % 2 === 1;
+                const isLastRow = i >= PERSONAS.length - 2;
                 return (
                   <div key={p.title}
-                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ padding: "20px 0", borderBottom: `1px solid ${T.border}`, animationDelay: `${i * 60}ms` }}
+                    className={`flex items-start gap-4 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{
+                      padding: "24px 0",
+                      ...(isRightCol ? { paddingLeft: 32, borderLeft: `1px solid ${T.border}` } : { paddingRight: 32 }),
+                      ...(!isLastRow ? { borderBottom: `1px solid ${T.border}` } : {}),
+                      animationDelay: `${i * 60}ms`,
+                    }}
                     onClick={onLogin}
-                    onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = "8px"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = "0"; }}>
-                    <div className="rounded-xl p-2.5 w-fit shrink-0" style={{ background: `${T.blue}18` }}>
+                    onMouseEnter={(e) => { e.currentTarget.querySelector("h3").style.color = T.blue; }}
+                    onMouseLeave={(e) => { e.currentTarget.querySelector("h3").style.color = T.text; }}>
+                    <div className="rounded-xl p-2.5 w-fit shrink-0 mt-0.5" style={{ background: `${T.blue}18` }}>
                       <Icon size={16} style={{ color: T.blue }} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold mb-1" style={{ color: T.text }}>{p.title}</h3>
+                      <h3 className="text-sm font-bold mb-1.5" style={{ color: T.text }}>{p.title}</h3>
                       <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
                     </div>
                   </div>
@@ -1079,25 +1086,37 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
+            <div ref={ref} className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${inView ? "wt-stagger" : ""}`} style={{ borderTop: `1px solid ${T.border}` }}>
               {FEATURES.map((f, i) => {
                 const Icon = f.icon;
+                const col = i % 3;
+                const totalRows = Math.ceil(FEATURES.length / 3);
+                const row = Math.floor(i / 3);
+                const isLastRow = row === totalRows - 1;
                 return (
                   <div key={f.title}
-                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
-                    style={{ padding: "18px 0", borderBottom: `1px solid ${T.border}`, animationDelay: `${i * 40}ms` }}
+                    className={`cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    style={{
+                      padding: "20px 0",
+                      ...(col === 1 ? { paddingLeft: 28, paddingRight: 28, borderLeft: `1px solid ${T.border}`, borderRight: `1px solid ${T.border}` } : {}),
+                      ...(col === 2 ? { paddingLeft: 28, borderLeft: `1px solid ${T.border}` } : {}),
+                      ...(!isLastRow ? { borderBottom: `1px solid ${T.border}` } : {}),
+                      animationDelay: `${i * 35}ms`,
+                    }}
                     onClick={onLogin}
-                    onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = "8px"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = "0"; }}>
-                    <div className="rounded-lg p-2 w-fit shrink-0" style={{ background: f.color + "18" }}>
-                      <Icon size={15} style={{ color: f.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-4 mb-1">
-                        <h3 className="font-bold text-sm" style={{ color: T.text }}>{f.title}</h3>
-                        <span className="text-xs font-semibold shrink-0" style={{ color: f.color }}>{f.stat}</span>
+                    onMouseEnter={(e) => { e.currentTarget.querySelector("h3").style.color = f.color; }}
+                    onMouseLeave={(e) => { e.currentTarget.querySelector("h3").style.color = T.text; }}>
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-lg p-2 w-fit shrink-0 mt-0.5" style={{ background: f.color + "18" }}>
+                        <Icon size={15} style={{ color: f.color }} />
                       </div>
-                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-3 mb-1">
+                          <h3 className="font-bold text-sm" style={{ color: T.text }}>{f.title}</h3>
+                          <span className="text-xs font-semibold shrink-0" style={{ color: f.color }}>{f.stat}</span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{f.desc}</p>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1160,27 +1179,31 @@ export default function Landing({ onStart, onLogin = onStart }) {
         </div>
         <Reveal>
           {(ref, inView) => (
-            <div ref={ref} style={{ borderTop: `1px solid ${T.border}` }}>
+            <div ref={ref} className="grid grid-cols-1 md:grid-cols-3" style={{ borderTop: `1px solid ${T.border}` }}>
               {TESTIMONIALS.map((t, idx) => (
                 <div key={t.name}
-                  className={`transition-all ${inView ? "opacity-100" : "opacity-0"}`}
-                  style={{ padding: "24px 0", borderBottom: `1px solid ${T.border}`, animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16,1,0.3,1) both` : "none", animationDelay: `${idx * 80}ms` }}>
-                  <div className="flex items-start gap-5">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  className={`flex flex-col transition-all ${inView ? "opacity-100" : "opacity-0"}`}
+                  style={{
+                    padding: "24px 0",
+                    ...(idx > 0 ? { paddingLeft: 28, borderLeft: `1px solid ${T.border}` } : { paddingRight: 28 }),
+                    ...(idx === 1 ? { paddingRight: 28 } : {}),
+                    animation: inView ? `wt-slide-up 0.6s cubic-bezier(0.16,1,0.3,1) both` : "none",
+                    animationDelay: `${idx * 80}ms`,
+                  }}>
+                  <div className="inline-flex items-center gap-1 text-xs font-bold mb-3" style={{ color: T.green }}>
+                    <Check size={10} /> {t.result}
+                  </div>
+                  <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: T.muted }}>
+                    «&nbsp;{t.text}&nbsp;»
+                  </p>
+                  <div className="flex items-center gap-3 pt-3" style={{ borderTop: `1px solid ${T.border}` }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: `linear-gradient(135deg, ${T.blue} 0%, ${T.violet} 100%)`, color: "#fff" }}>
                       {t.initials}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <span className="text-sm font-semibold" style={{ color: T.text }}>{t.name}</span>
-                        <span className="text-xs" style={{ color: T.muted }}>{t.role}</span>
-                        <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: T.green }}>
-                          <Check size={10} /> {t.result}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>
-                        «&nbsp;{t.text}&nbsp;»
-                      </p>
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: T.text }}>{t.name}</div>
+                      <div className="text-xs" style={{ color: T.muted }}>{t.role}</div>
                     </div>
                   </div>
                 </div>

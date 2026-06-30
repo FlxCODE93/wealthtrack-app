@@ -1053,22 +1053,22 @@ export default function Landing({ onStart, onLogin = onStart }) {
                 const isLastRow = i >= PERSONAS.length - 2;
                 return (
                   <div key={p.title}
-                    className={`flex items-start gap-4 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
+                    className={`flex items-start gap-5 cursor-pointer transition-all ${inView ? "wt-slide-up" : "opacity-0"}`}
                     style={{
-                      padding: "24px 0",
-                      ...(isRightCol ? { paddingLeft: 32, borderLeft: `1px solid ${T.border}` } : { paddingRight: 32 }),
+                      padding: "36px 0",
+                      ...(isRightCol ? { paddingLeft: 48, borderLeft: `1px solid ${T.border}` } : { paddingRight: 48 }),
                       ...(!isLastRow ? { borderBottom: `1px solid ${T.border}` } : {}),
                       animationDelay: `${i * 60}ms`,
                     }}
                     onClick={onLogin}
                     onMouseEnter={(e) => { e.currentTarget.querySelector("h3").style.color = T.blue; }}
                     onMouseLeave={(e) => { e.currentTarget.querySelector("h3").style.color = T.text; }}>
-                    <div className="rounded-xl p-2.5 w-fit shrink-0 mt-0.5" style={{ background: `${T.blue}18` }}>
-                      <Icon size={16} style={{ color: T.blue }} />
+                    <div className="rounded-xl p-3 w-fit shrink-0 mt-0.5" style={{ background: `${T.blue}18` }}>
+                      <Icon size={22} style={{ color: T.blue }} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold mb-1.5" style={{ color: T.text }}>{p.title}</h3>
-                      <p className="text-sm leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
+                      <h3 className="text-lg font-bold mb-2" style={{ color: T.text }}>{p.title}</h3>
+                      <p className="text-base leading-relaxed" style={{ color: T.muted }}>{p.desc}</p>
                     </div>
                   </div>
                 );

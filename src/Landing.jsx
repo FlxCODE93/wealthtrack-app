@@ -1061,15 +1061,17 @@ export default function Landing({ onStart, onLogin = onStart }) {
             { end: 30,  suffix: " ans", label: "d'horizon de projection" },
             { end: 100, suffix: "%",    label: "données sous contrôle" },
             { end: 0,   suffix: " €",   label: "pour commencer" },
-          ].map(({ end, suffix, label }, i) => (
-            <div key={label} className={i % 2 !== 0 || i >= 2 ? "" : ""}
-              style={{ textAlign: "center", padding: "12px 24px", ...(i > 0 ? { borderLeft: `1px solid ${T.border}` } : {}), ...(i === 2 ? { borderLeft: "none", borderTop: `1px solid ${T.border}` } : {}), ...(i === 3 ? { borderTop: `1px solid ${T.border}` } : {}) }}>
+          ].map(({ end, suffix, label }, i) => {
+            const bc = ["", "border-l", "border-t md:border-t-0 md:border-l", "border-l border-t md:border-t-0"][i];
+            return (
+            <div key={label} className={bc}
+              style={{ textAlign: "center", padding: "12px 24px", borderColor: T.border }}>
               <div className="text-2xl md:text-3xl font-black mb-1" style={{ color: T.blue }}>
                 <CountUpNumber end={end} suffix={suffix} />
               </div>
               <div className="text-xs leading-tight" style={{ color: T.muted }}>{label}</div>
             </div>
-          ))}
+          ); })}
         </div>
       </div>
 
